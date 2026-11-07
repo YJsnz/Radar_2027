@@ -6,7 +6,13 @@ const ARMOR_PLATE_ART = Object.freeze({
   face: Object.freeze({ x: 103.6, y: 103.6, width: 990, height: 988.9 }),
 });
 const ARMOR_GEOMETRY_STORAGE_KEY = "match-rx.adaptive-armor-geometry.v1";
+const ARMOR_CANDIDATE_STORAGE_KEY = "match-rx.adaptive-armor-candidate.v1";
 let armorGeometryCalibration = loadArmorGeometryCalibration();
+let armorCandidate = loadArmorCandidate();
+let armorCandidateSaved = Boolean(armorCandidate);
+let armorCandidateDragging = false;
+let latestArmorGeometry = null;
+let latestArmorAreaEstimate = null;
 let latestAdaptiveArmorPayload = null;
 let radarEventSource = null;
 let radarReconnectTimer = 0;
@@ -1169,6 +1175,129 @@ function loadArmorGeometryCalibration() {
   }
 }
 
+function loadArmorCandidate() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(ARMOR_CANDIDATE_STORAGE_KEY) || "null");
+    let x = armorNumber(saved?.normalized_x);
+    let y = armorNumber(saved?.normalized_y);
+    if (!(x >= 0 && x <= 1 && y >= 0 && y <= 1)) {
+      const centerXmm = armorNumber(saved?.center_x_mm);
+      const centerYmm = armorNumber(saved?.center_y_mm);
+      const widthMm = armorNumber(saved?.geometry_width_mm);
+      const heightMm = armorNumber(saved?.geometry_height_mm);
+      if (!(centerXmm >= 0 && centerXmm <= widthMm && centerYmm >= 0 && centerYmm <= heightMm && widthMm > 0 && heightMm > 0)) return null;
+      x = centerXmm / widthMm;
+      y = centerYmm / heightMm;
+    }
+    return { x, y };
+  } catch {
+    return null;
+  }
+}
+
+function hasArmorCandidate() {
+  return Boolean(armorCandidate && armorCandidate.x >= 0 && armorCandidate.x <= 1 && armorCandidate.y >= 0 && armorCandidate.y <= 1);
+}
+
+function armorCandidateRadius(geometry, areaEstimate) {
+  if (!hasArmorCandidate() || !geometry || !areaEstimate?.valid) return NaN;
+  const radius = armorNumber(areaEstimate.radiusMm);
+  return radius > 0 ? radius : NaN;
+}
+
+function armorCandidateCircleFits(geometry, radius) {
+  if (!hasArmorCandidate()) return false;
+  if (!geometry || !Number.isFinite(radius)) return true;
+  const centerXmm = armorCandidate.x * geometry.widthMm;
+  const centerYmm = armorCandidate.y * geometry.heightMm;
+  return centerXmm >= radius && centerYmm >= radius
+    && centerXmm + radius <= geometry.widthMm
+    && centerYmm + radius <= geometry.heightMm;
+}
+
+function renderArmorCandidate(geometry, areaEstimate) {
+  const overlay = $("armorCandidateOverlay");
+  const stage = $("armorPlateStage");
+  stage.classList.add("armor-stage-selectable");
+  stage.setAttribute("aria-disabled", "false");
+  overlay.innerHTML = "";
+
+  const hasCandidate = hasArmorCandidate();
+  const radius = armorCandidateRadius(geometry, areaEstimate);
+  if (hasCandidate) {
+    const { face } = ARMOR_PLATE_ART;
+    const cx = face.x + armorCandidate.x * face.width;
+    const cy = face.y + (1 - armorCandidate.y) * face.height;
+    const crossRadius = 15;
+    const circle = geometry && Number.isFinite(radius)
+      ? `<ellipse cx="${cx}" cy="${cy}" rx="${radius / geometry.widthMm * face.width}" ry="${radius / geometry.heightMm * face.height}" class="armor-candidate-ellipse" />`
+      : "";
+    overlay.innerHTML = `${circle}
+      <path d="M ${cx - crossRadius} ${cy} H ${cx + crossRadius} M ${cx} ${cy - crossRadius} V ${cy + crossRadius}" class="armor-candidate-cross" />
+      <circle cx="${cx}" cy="${cy}" r="9" class="armor-candidate-center" />`;
+  }
+
+  $("armorCandidateCenter").textContent = hasCandidate
+    ? geometry
+      ? armorCenterText(armorCandidate.x * geometry.widthMm, armorCandidate.y * geometry.heightMm)
+      : `(${(armorCandidate.x * 100).toFixed(1)}%, ${(armorCandidate.y * 100).toFixed(1)}%) · 未标定`
+    : "—";
+  $("armorCandidateRadius").textContent = hasCandidate
+    ? Number.isFinite(radius) ? `${radius.toFixed(1)} mm${armorCandidateCircleFits(geometry, radius) ? "" : " · 越界"}` : geometry ? "等待有效面积估计" : "未标定"
+    : "—";
+  const saveButton = $("armorSaveCandidate");
+  const clearButton = $("armorClearCandidate");
+  const status = $("armorCandidateStatus");
+  const canSave = hasCandidate && armorCandidateCircleFits(geometry, radius);
+  saveButton.disabled = !canSave;
+  clearButton.disabled = !hasCandidate;
+  if (!geometry) {
+    status.textContent = hasCandidate
+      ? `候选点已${armorCandidateSaved ? "保存" : "选择"}为本机预览相对位置；尚无毫米换算，不能用于发令。请用检测面实测尺寸标定。`
+      : "可直接在装甲检测面上点击或拖动选点；未标定时仅记录图上相对位置。";
+  } else if (hasCandidate && Number.isFinite(radius) && !armorCandidateCircleFits(geometry, radius)) {
+    status.textContent = "候选圆超出检测面边界；请拖动圆心，使整个预览圆落在检测面内。";
+  } else if (hasCandidate && armorCandidateSaved) {
+    status.textContent = Number.isFinite(radius)
+      ? "候选圆心已保存到本机预览；圆半径随有效统计更新，尚未发送加固指令。"
+      : "候选圆心已保存到本机预览；有效面积统计到达后才显示半径，尚未发送加固指令。";
+  } else if (hasCandidate) {
+    status.textContent = Number.isFinite(radius)
+      ? "候选点仅用于本机预览；保存圆心后，候选圆会随最新有效面积估计更新。"
+      : "候选点仅用于本机预览；目前可保存圆心，圆半径需等待有效面积统计。";
+  } else {
+    status.textContent = "在装甲检测面内点击或拖动选择候选圆心；保存只写入本机预览，不会发送指令。";
+  }
+}
+
+function armorCenterFromPointer(event, clampToFace = false) {
+  const stage = $("armorPlateStage");
+  const rect = stage.getBoundingClientRect();
+  if (!(rect.width > 0 && rect.height > 0)) return null;
+  const { face } = ARMOR_PLATE_ART;
+  let imageX = (event.clientX - rect.left) / rect.width * ARMOR_PLATE_ART.width;
+  let imageY = (event.clientY - rect.top) / rect.height * ARMOR_PLATE_ART.height;
+  if (clampToFace) {
+    imageX = Math.min(face.x + face.width, Math.max(face.x, imageX));
+    imageY = Math.min(face.y + face.height, Math.max(face.y, imageY));
+  } else if (imageX < face.x || imageX > face.x + face.width || imageY < face.y || imageY > face.y + face.height) {
+    return null;
+  }
+  return {
+    x: Math.min(1, Math.max(0, (imageX - face.x) / face.width)),
+    y: Math.min(1, Math.max(0, 1 - (imageY - face.y) / face.height)),
+  };
+}
+
+function updateArmorCandidateFromPointer(event, clampToFace = false) {
+  const point = armorCenterFromPointer(event, clampToFace);
+  if (!point) return false;
+  armorCandidate = point;
+  armorCandidateSaved = false;
+  renderArmorCandidate(latestArmorGeometry, latestArmorAreaEstimate);
+  return true;
+}
+
 function resolveArmorGeometry(stats) {
   const statusWidth = armorNumber(stats.plate_width_mm ?? stats.detection_surface_width_mm);
   const statusHeight = armorNumber(stats.plate_height_mm ?? stats.detection_surface_height_mm);
@@ -1287,6 +1416,8 @@ function renderAdaptiveArmor(payload) {
   const hasCurrentRange = ownActive && currentRadius > 0;
   const plateGeometry = resolveArmorGeometry(armorStats);
   const areaEstimate = calculateArmorAreaEstimate(armorStats, plateGeometry);
+  latestArmorGeometry = plateGeometry;
+  latestArmorAreaEstimate = areaEstimate;
   const enemySeen = Object.keys(enemyEntry).length > 0 && Object.keys(enemyArmor).length > 0;
   const enemyRadius = Number(enemyArmor.radius_mm);
   const enemyActive = enemySeen && enemyArmor.active === true && Number.isFinite(enemyRadius) && enemyRadius > 0;
@@ -1305,6 +1436,7 @@ function renderAdaptiveArmor(payload) {
     ? `${Number(own.fortify_radius_mm)} mm`
     : "—";
   renderArmorPlateOverlay(own, ownValid, ownActive, plateGeometry);
+  renderArmorCandidate(plateGeometry, areaEstimate);
   $("armorRangeBadge").className = `badge ${hasCurrentRange && plateGeometry ? "ok" : ownRadiusMismatch ? "warn" : hasCurrentRange ? "warn" : "unknown"}`;
   $("armorRangeBadge").textContent = hasCurrentRange
     ? plateGeometry ? "裁判已确认范围" : "待检测面尺寸标定"
@@ -1929,6 +2061,42 @@ $("armorApplyGeometry").addEventListener("click", () => {
   }
   renderAdaptiveArmor(latestAdaptiveArmorPayload || state.latest || {});
   if (!storageAvailable) status.textContent = "已应用到当前页面；浏览器禁止本地存储，刷新后需重新标定。";
+});
+
+const armorPlateStage = $("armorPlateStage");
+armorPlateStage.addEventListener("pointerdown", (event) => {
+  if (event.button !== 0 || !event.isPrimary) return;
+  if (!updateArmorCandidateFromPointer(event)) return;
+  armorCandidateDragging = true;
+  armorPlateStage.setPointerCapture(event.pointerId);
+});
+armorPlateStage.addEventListener("pointermove", (event) => {
+  if (armorCandidateDragging) updateArmorCandidateFromPointer(event, true);
+});
+const stopArmorCandidateDrag = () => { armorCandidateDragging = false; };
+armorPlateStage.addEventListener("pointerup", stopArmorCandidateDrag);
+armorPlateStage.addEventListener("pointercancel", stopArmorCandidateDrag);
+
+$("armorSaveCandidate").addEventListener("click", () => {
+  if (!hasArmorCandidate()
+      || !armorCandidateCircleFits(latestArmorGeometry, armorCandidateRadius(latestArmorGeometry, latestArmorAreaEstimate))) return;
+  try {
+    localStorage.setItem(ARMOR_CANDIDATE_STORAGE_KEY, JSON.stringify({
+      normalized_x: armorCandidate.x,
+      normalized_y: armorCandidate.y,
+    }));
+    armorCandidateSaved = true;
+    renderArmorCandidate(latestArmorGeometry, latestArmorAreaEstimate);
+  } catch {
+    armorCandidateSaved = false;
+    $("armorCandidateStatus").textContent = "浏览器禁止本地存储；候选点仍在当前页面预览中，刷新后不会保留。";
+  }
+});
+$("armorClearCandidate").addEventListener("click", () => {
+  armorCandidate = null;
+  armorCandidateSaved = false;
+  try { localStorage.removeItem(ARMOR_CANDIDATE_STORAGE_KEY); } catch { /* 当前页候选点仍可清除 */ }
+  renderArmorCandidate(latestArmorGeometry, latestArmorAreaEstimate);
 });
 
 refresh();

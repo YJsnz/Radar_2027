@@ -225,6 +225,12 @@ button.danger { color: #fff; background: var(--bad); border-color: var(--bad); }
 .armor-sample-meta { margin: 8px 2px 0; color: var(--muted); font-size: 10px; }
 .armor-formula { margin: 10px 0 0; padding: 10px; border-radius: 7px; background: var(--panel-soft); color: var(--muted); font-size: 10px; line-height: 1.55; }
 .armor-map-figure { display: flex; min-width: 0; min-height: 0; flex: 1 1 auto; flex-direction: column; margin: 0; }
+.armor-center-tools { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0 0 9px; padding: 8px 10px; border: 1px solid var(--line-soft); border-radius: 8px; background: var(--panel-soft); }
+.armor-center-tools-copy { display: grid; min-width: 0; gap: 3px; }
+.armor-center-tools-copy strong { font-size: 11px; }
+.armor-center-tools-copy span { color: var(--muted); font-size: 10px; line-height: 1.4; }
+.armor-center-tools-actions { display: flex; flex: 0 0 auto; flex-wrap: wrap; gap: 6px; }
+.armor-center-tools-actions button { min-height: 32px; padding: 5px 9px; font-size: 11px; }
 .armor-map-plot {
   position: relative;
   display: flex;
@@ -260,6 +266,7 @@ button.danger { color: #fff; background: var(--bad); border-color: var(--bad); }
   overflow: hidden;
   background: transparent;
 }
+.armor-plate-stage.armor-stage-selectable { cursor: crosshair; touch-action: none; }
 .armor-plate-stage > img, .armor-plate-overlay { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
 .armor-plate-stage > img { object-fit: fill; }
 .armor-plate-overlay { overflow: hidden; pointer-events: none; }
@@ -267,6 +274,9 @@ button.danger { color: #fff; background: var(--bad); border-color: var(--bad); }
 .armor-reinforcement-ellipse { fill: rgba(140, 92, 197, .48); stroke: #d5adff; stroke-width: 5; vector-effect: non-scaling-stroke; }
 .armor-reinforcement-center { fill: #fff; stroke: #674090; stroke-width: 4; vector-effect: non-scaling-stroke; }
 .armor-reinforcement-cross { fill: none; stroke: #fff; stroke-width: 4; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.armor-candidate-ellipse { fill: rgba(232, 137, 61, .19); stroke: #e87932; stroke-width: 4; stroke-dasharray: 9 6; vector-effect: non-scaling-stroke; }
+.armor-candidate-center { fill: #fff8e9; stroke: #bd5b1e; stroke-width: 4; vector-effect: non-scaling-stroke; }
+.armor-candidate-cross { fill: none; stroke: #fff8e9; stroke-width: 4; stroke-linecap: round; vector-effect: non-scaling-stroke; }
 .armor-current-center { display: grid; grid-template-columns: max-content minmax(0, 1fr) max-content minmax(0, 1fr); align-items: center; gap: 8px 12px; padding: 10px 2px 6px; }
 .armor-current-center span { color: var(--muted); font-size: 10px; }
 .armor-current-center strong { min-width: 0; overflow-wrap: anywhere; font-size: 12px; font-variant-numeric: tabular-nums; }
@@ -289,6 +299,7 @@ button.danger { color: #fff; background: var(--bad); border-color: var(--bad); }
 .armor-damage-legend span { display: inline-flex; align-items: center; gap: 5px; }
 .armor-damage-legend i { width: 10px; height: 10px; border-radius: 50%; }
 .armor-damage-legend i.reinforced { background: #7748a8; }
+.armor-damage-legend i.candidate { border: 2px dashed #e87932; background: rgba(232, 137, 61, .22); }
 .armor-damage-legend i.unreinforced { background: #d98154; }
 .armor-damage-legend i.default { background: #aab3bc; }
 .armor-scale-note { margin: 9px 0 0; color: var(--muted); font-size: 10px; line-height: 1.5; }
@@ -523,6 +534,8 @@ button.danger { color: #fff; background: var(--bad); border-color: var(--bad); }
   .armor-map-plot { min-height: 360px; height: 58vh; }
   .armor-plate-stage { width: min(88%, 600px); }
   .armor-current-center { grid-template-columns: max-content minmax(0, 1fr); }
+  .armor-center-tools { align-items: flex-start; flex-direction: column; }
+  .armor-center-tools-actions { width: 100%; }
   .armor-geometry-controls { align-items: stretch; }
   .armor-geometry-controls label { flex: 1 1 125px; }
   .armor-geometry-status { flex: 1 1 100%; }
