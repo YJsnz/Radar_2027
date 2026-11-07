@@ -1,0 +1,2 @@
+# MindVision MV-SUA133GC-T (USB vendor/product ID observed on this system).
+SUBSYSTEM=="usb", ATTR{idVendor}=="f622", ATTR{idProduct}=="d132", GROUP="plugdev", MODE="0664"

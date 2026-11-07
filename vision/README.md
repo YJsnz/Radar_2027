@@ -108,6 +108,13 @@ cp scripts/mindvision.env.example ~/.config/shark-radar/mindvision.env
 
 `start_launcher.sh` 会读取该用户配置文件，因此命令行、桌面自启动和 `start_match.sh` 使用同一套 SDK 环境。SDK 中的 Python 包必须能被启动台使用的 Python（优先项目 `.venv`）导入。曝光设置单位是 μs，SUA133GC 规格范围为 4～32400 μs；界面不把旧海康的 dB 增益值映射到迈德威视相机。默认相机模式为 `mindvision`。
 
+如果相机节点没有对 `plugdev` 组开放读写权限，安装本项目提供的 USB udev 规则，然后重新插拔相机：
+
+```bash
+sudo cp scripts/99-mindvision-usb.rules /etc/udev/rules.d/
+sudo udevadm control --reload-rules && sudo udevadm trigger
+```
+
 首次切换后必须重新运行标定。程序会校验标定记录中的相机模式和实际帧尺寸，缺少新来源信息或分辨率不一致时停止比赛启动并提示重标；改变相机 ROI/分辨率后也要重新标定。
 
 ### 4.3 海康 MVS SDK
