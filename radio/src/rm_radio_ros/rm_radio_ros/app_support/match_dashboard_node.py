@@ -1684,7 +1684,8 @@ class RadioDashboardNode(Node):
                 value = 0.0
             metrics[key] = min(max(value, 0.0), 100_000.0)
         metrics["stream_state"] = str(data.get("stream_state", "unknown"))[:32]
-        metrics["active_page"] = "radar" if str(data.get("active_page")) == "radar" else "radio"
+        active_page = str(data.get("active_page", "radar"))
+        metrics["active_page"] = active_page if active_page in {"radar", "radio", "armor"} else "radar"
         metrics["received_at"] = _now()
         with self._lock:
             previous_dropped = int(self.state.display_metrics.get("dropped_waterfall_rows", 0) or 0)

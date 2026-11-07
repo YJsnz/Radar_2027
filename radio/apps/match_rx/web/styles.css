@@ -179,6 +179,62 @@ button.danger { color: #fff; background: var(--bad); border-color: var(--bad); }
 
 /* ---------- Radar map page ---------- */
 .radar-page { overflow: hidden; }
+.armor-page { overflow-y: auto; }
+.armor-layout {
+  flex: 1 1 auto;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-content: start;
+  gap: 12px;
+  padding: 12px;
+}
+.armor-state-panel, .armor-readiness-panel { min-width: 0; }
+.armor-readiness-panel { grid-column: 1 / -1; }
+.armor-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+.armor-metric {
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: var(--panel-soft);
+}
+.armor-metric span, .armor-metric small { display: block; color: var(--muted); }
+.armor-metric span { font-size: 11px; }
+.armor-metric strong {
+  display: block;
+  margin-top: 5px;
+  overflow-wrap: anywhere;
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+}
+.armor-metric small { margin-top: 4px; font-size: 10px; }
+.armor-source-note {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid #efd7a6;
+  border-left: 4px solid var(--warn);
+  border-radius: 8px;
+  background: var(--warn-soft);
+}
+.armor-source-note strong { font-size: 12px; }
+.armor-source-note p { margin: 4px 0 0; color: #69501f; line-height: 1.5; }
+.armor-command-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px 12px;
+  margin-top: 10px;
+  padding: 9px 10px;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: var(--panel-soft);
+}
+.armor-command-row span { color: var(--muted); font-size: 10px; }
+.armor-command-row strong { min-width: 0; overflow-wrap: anywhere; font-size: 12px; }
+.armor-formula { margin: 10px 0 0; color: var(--muted); font-size: 11px; line-height: 1.5; }
 .radar-layout {
   flex: 1 1 auto;
   display: grid;
@@ -380,6 +436,9 @@ button.danger { color: #fff; background: var(--bad); border-color: var(--bad); }
   .radar-layout { grid-template-columns: minmax(220px, 260px) minmax(430px, 1fr); align-items: stretch; min-height: 760px; }
   .radar-sidebar { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 1fr); overflow: visible; }
   .radar-health-rail, .radar-map-panel { min-height: 680px; }
+  .armor-layout { grid-template-columns: minmax(0, 1fr); }
+  .armor-readiness-panel { grid-column: auto; }
+  .armor-metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 .col {
   display: flex;

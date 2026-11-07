@@ -1,5 +1,5 @@
 const state = { latest: null, busy: false };
-let activePage = location.hash === "#radio" ? "radio" : "radar";
+let activePage = location.hash === "#radio" ? "radio" : location.hash === "#armor" ? "armor" : "radar";
 let radarEventSource = null;
 let radarReconnectTimer = 0;
 let radarStreamState = "closed";
@@ -10,6 +10,10 @@ let selectedRobot = null;
 let radarMapOwnSide = "red";
 const radarDisplayPositions = {};
 const radarHitTargets = [];
+
+function isRadarDataPage(page = activePage) {
+  return page === "radar" || page === "armor";
+}
 
 // 每路保留"每个命令号最近一帧"，让信息波(0x0A01~05轮播)能同时稳定显示全部字段，
 // 而不是只显示碰巧最后到达的那一个命令。key: role -> { cmd_hex -> {frame,timestamp} }
@@ -809,7 +813,7 @@ function render(data) {
   renderLossDiagnostics(data);
   renderReception(get(data, ["health", "modules"], {}));
   renderReferee(data);
-  if (activePage === "radar") {
+  if (isRadarDataPage()) {
     radarLatest = { radar: data.radar, vision_radar: data.vision_radar };
     renderRadarData(radarLatest);
     radarDirty = true;
@@ -962,7 +966,7 @@ async function updateDisplayPerformance() {
     latency_ms: mean(displayPerf.latencySamples),
     transport_ms: mean(displayPerf.transportSamples),
     dropped_waterfall_rows: displayPerf.droppedWaterfallRows,
-    stream_state: activePage === "radar" ? radarStreamState : spectrumStreamState,
+    stream_state: isRadarDataPage() ? radarStreamState : spectrumStreamState,
     active_page: activePage,
   };
   displayPerf.latest = metrics;
@@ -1132,6 +1136,81 @@ function renderRadarHealth(payload, fusion, vision, radio) {
   }).join("") : `<div class="radar-issue-empty">暂无 ERROR / WARN，所有项目均已检测</div>`;
 }
 
+function armorCenterText(x, y) {
+  const centerX = Number(x);
+  const centerY = Number(y);
+  return Number.isFinite(centerX) && Number.isFinite(centerY)
+    ? `(${centerX}, ${centerY}) mm`
+    : "—";
+}
+
+function renderAdaptiveArmor(payload) {
+  const integrationEntry = payload?.radar || get(state.latest, ["radar"], {});
+  const fusion = integrationEntry?.data || {};
+  const strategy = fusion.strategy || {};
+  const own = strategyPayload(strategy, "RadarDecisionSync");
+  const enemyEntry = strategy.RadarEnemyBuffStatus || {};
+  const enemyStatus = strategyPayload(strategy, "RadarEnemyBuffStatus");
+  const enemyArmor = enemyStatus.enemy_armor_fortification || {};
+  const serial = fusion.referee_serial || get(state.latest, ["statuses", "referee", "data"], {});
+  const ownValid = own.valid_radar_info_length === true;
+  const ownActive = ownValid && own.armor_fortify_active === true;
+  const enemySeen = Object.keys(enemyEntry).length > 0 && Object.keys(enemyArmor).length > 0;
+  const enemyRadius = Number(enemyArmor.radius_mm);
+  const enemyActive = enemySeen && enemyArmor.active === true && Number.isFinite(enemyRadius) && enemyRadius > 0;
+  const enemyInactive = enemySeen && enemyArmor.active === false && Number.isFinite(enemyRadius) && enemyRadius === 0;
+
+  $("armorOwnBadge").className = `badge ${ownValid ? "ok" : "unknown"}`;
+  $("armorOwnBadge").textContent = ownValid ? "裁判状态有效" : "等待 0x020E";
+  $("armorOwnOpportunities").textContent = ownValid
+    ? String(own.remaining_fortify_opportunities ?? "—")
+    : "—";
+  $("armorOwnActive").textContent = ownValid ? (ownActive ? "已生效" : "未生效") : "—";
+  $("armorOwnCenter").textContent = ownValid && ownActive
+    ? armorCenterText(own.fortify_center_x_mm, own.fortify_center_y_mm)
+    : "—";
+  $("armorOwnRadius").textContent = ownValid && ownActive && Number.isFinite(Number(own.fortify_radius_mm))
+    ? `${Number(own.fortify_radius_mm)} mm`
+    : "—";
+
+  $("armorEnemyBadge").className = `badge ${enemySeen ? (enemyActive ? "ok" : "warn") : "unknown"}`;
+  $("armorEnemyBadge").textContent = !enemySeen
+    ? "等待 0x0A05"
+    : enemyActive ? "已报告加固区" : enemyInactive ? "未报告生效区域" : "状态字段异常";
+  $("armorEnemyActive").textContent = enemySeen ? (enemyActive ? "已生效" : enemyInactive ? "无生效区" : "数据异常") : "—";
+  $("armorEnemyCenter").textContent = enemyActive
+    ? armorCenterText(enemyArmor.center_x_mm, enemyArmor.center_y_mm)
+    : "—";
+  $("armorEnemyRadius").textContent = enemyActive || enemyInactive ? `${enemyRadius} mm` : "—";
+
+  $("armorReadinessBadge").className = "badge warn";
+  $("armorReadinessBadge").textContent = "命中事件未接入";
+  $("armorOwnHitCount").textContent = "不可用";
+  $("armorHitRates").textContent = "— / —";
+  $("armorSpreads").textContent = "— / —";
+  $("armorAreaEstimate").textContent = "— / —";
+  $("armorHitSourceNote").textContent =
+    "2027 规则要求将攻击命中信息同步给雷达，但仓库内的通信协议未给出攻击方可解析的命令号和载荷布局。0x0206 是通过常规链路发给受击机器人的事件，不能替代攻击方样本。接口定义接入前，不估算命中率、散布和加固面积，也不生成或发送自动选点请求。";
+
+  const lastFortifyCommand = Number(serial.last_armor_fortify_cmd_value || 0);
+  const commandCenterMatches = ownValid && ownActive && lastFortifyCommand > 0
+    && Number(own.fortify_center_x_mm) === Number(serial.last_armor_fortify_center_x_mm)
+    && Number(own.fortify_center_y_mm) === Number(serial.last_armor_fortify_center_y_mm);
+  $("armorLastCommand").textContent = Number.isFinite(lastFortifyCommand) && lastFortifyCommand > 0
+    ? String(Math.floor(lastFortifyCommand))
+    : "尚未提交";
+  $("armorLastCommandCenter").textContent = Number.isFinite(lastFortifyCommand) && lastFortifyCommand > 0
+    ? armorCenterText(serial.last_armor_fortify_center_x_mm, serial.last_armor_fortify_center_y_mm)
+    : "—";
+  $("armorCommandConfirmation").textContent = commandCenterMatches
+    ? "0x020E 圆心匹配最近命令"
+    : lastFortifyCommand > 0 && ownValid && ownActive
+      ? "已有生效区，圆心与最近命令不匹配"
+      : lastFortifyCommand > 0 && ownValid
+        ? "0x020E 尚未报告生效区"
+        : "等待 0x020E 裁判回报";
+}
+
 function renderRadarData(payload) {
   const integrationEntry = payload?.radar || get(state.latest, ["radar"], {});
   const visionEntry = payload?.vision_radar || get(state.latest, ["vision_radar"], {});
@@ -1239,6 +1318,7 @@ function renderRadarData(payload) {
     <span>密码冷却拦截</span><strong>${serial.password_verify_suppressed_count ?? 0}</strong>
     <span>干扰等级 / 自动跟随</span><strong>L${serial.rx_interference_level ?? "—"} / ${serial.auto_rx_interference_level ? "开启" : "关闭"}</strong>
     <span>串口重连</span><strong>${Math.max(0, Number(serial.serial_open_count || 0) - 1)}</strong>`;
+  renderAdaptiveArmor(payload);
 }
 
 function drawRadarMap() {
@@ -1332,7 +1412,7 @@ function stopRadarStream() {
 }
 
 function startRadarStream() {
-  if (activePage !== "radar" || document.hidden || typeof EventSource === "undefined") return;
+  if (!isRadarDataPage() || document.hidden || typeof EventSource === "undefined") return;
   stopRadarStream();
   radarStreamState = "connecting";
   const source = new EventSource(`/api/radar-stream?generation=${radarGeneration}`);
@@ -1366,19 +1446,22 @@ function startRadarStream() {
 }
 
 function setActivePage(page) {
-  activePage = page === "radar" ? "radar" : "radio";
-  history.replaceState(null, "", activePage === "radio" ? "#radio" : location.pathname + location.search);
-  $("radioPage").hidden = activePage !== "radio";
-  $("radarPage").hidden = activePage !== "radar";
-  $("radioPage").classList.toggle("active", activePage === "radio");
-  $("radarPage").classList.toggle("active", activePage === "radar");
-  $("radioTab").classList.toggle("active", activePage === "radio");
-  $("radarTab").classList.toggle("active", activePage === "radar");
-  if (activePage === "radar") {
+  activePage = ["radar", "radio", "armor"].includes(page) ? page : "radar";
+  const pageHash = activePage === "radar" ? "" : `#${activePage}`;
+  history.replaceState(null, "", `${location.pathname}${location.search}${pageHash}`);
+  for (const name of ["radar", "radio", "armor"]) {
+    $(`${name}Page`).hidden = activePage !== name;
+    $(`${name}Page`).classList.toggle("active", activePage === name);
+    $(`${name}Tab`).classList.toggle("active", activePage === name);
+  }
+  if (isRadarDataPage()) {
     stopSpectrumStream();
-    fitRadarMapStage();
+    if (activePage === "radar") fitRadarMapStage();
     radarDirty = true;
-    if (state.latest) renderRadarData({ radar: state.latest.radar, vision_radar: state.latest.vision_radar });
+    if (state.latest) {
+      radarLatest = { radar: state.latest.radar, vision_radar: state.latest.vision_radar };
+      renderRadarData(radarLatest);
+    }
     startRadarStream();
   } else {
     stopRadarStream();
@@ -1566,7 +1649,7 @@ if (typeof ResizeObserver !== "undefined") {
 }
 document.addEventListener("visibilitychange", () => {
   if (document.hidden) { stopSpectrumStream(); stopRadarStream(); }
-  else if (activePage === "radar") startRadarStream();
+  else if (isRadarDataPage()) startRadarStream();
   else startSpectrumStream();
 });
 window.addEventListener("beforeunload", () => { stopSpectrumStream(); stopRadarStream(); });
