@@ -4,7 +4,6 @@
 # 门控卡尔曼滤波
 # config
 import atexit
-import importlib.util
 import json
 import os
 
@@ -28,18 +27,26 @@ from information_ui import draw_information_ui
 import cv2
 
 
-def _force_pyqt5_qt_plugin_path():
-    """Restore the Qt plugin path after OpenCV rewrites it during import."""
-    spec = importlib.util.find_spec("PyQt5")
-    if not spec or not spec.origin:
+def _force_opencv_qt_plugin_path():
+    """Use the xcb plugin shipped with OpenCV's bundled Qt runtime."""
+    if not sys.platform.startswith("linux"):
         return
-    plugins = Path(spec.origin).resolve().parent / "Qt5" / "plugins"
-    if (plugins / "platforms" / "libqxcb.so").is_file():
-        os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = str(plugins)
+
+    qt_directory = Path(cv2.__file__).resolve().parent / "qt"
+    plugin_directories = [qt_directory / "plugins"]
+    plugin_directories.extend(
+        directory
+        for directory in sorted(qt_directory.glob("plugins*"))
+        if directory.is_dir() and directory not in plugin_directories
+    )
+    for plugins in plugin_directories:
+        if (plugins / "platforms" / "libqxcb.so").is_file():
+            os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = str(plugins)
+            break
     os.environ.pop("QT_PLUGIN_PATH", None)
 
 
-_force_pyqt5_qt_plugin_path()
+_force_opencv_qt_plugin_path()
 
 import numpy as np
 from detect_function import YOLOv5Detector
