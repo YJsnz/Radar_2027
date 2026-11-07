@@ -4,6 +4,7 @@
 # 门控卡尔曼滤波
 # config
 import atexit
+import importlib.util
 import json
 import os
 
@@ -25,6 +26,21 @@ import serial
 from camera_availability import wait_for_initial_camera_frame
 from information_ui import draw_information_ui
 import cv2
+
+
+def _force_pyqt5_qt_plugin_path():
+    """Restore the Qt plugin path after OpenCV rewrites it during import."""
+    spec = importlib.util.find_spec("PyQt5")
+    if not spec or not spec.origin:
+        return
+    plugins = Path(spec.origin).resolve().parent / "Qt5" / "plugins"
+    if (plugins / "platforms" / "libqxcb.so").is_file():
+        os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = str(plugins)
+    os.environ.pop("QT_PLUGIN_PATH", None)
+
+
+_force_pyqt5_qt_plugin_path()
+
 import numpy as np
 from detect_function import YOLOv5Detector
 from frame_rate import RecentFrameRate
