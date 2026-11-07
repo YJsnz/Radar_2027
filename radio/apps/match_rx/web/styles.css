@@ -228,7 +228,7 @@ button.danger { color: #fff; background: var(--bad); border-color: var(--bad); }
 }
 .armor-plate-stage {
   position: relative;
-  width: min(100%, 860px);
+  width: min(100%, 600px);
   aspect-ratio: 1197 / 1097;
   overflow: hidden;
   border-radius: 8px;
@@ -241,13 +241,13 @@ button.danger { color: #fff; background: var(--bad); border-color: var(--bad); }
 .armor-reinforcement-ellipse { fill: rgba(140, 92, 197, .48); stroke: #d5adff; stroke-width: 5; vector-effect: non-scaling-stroke; }
 .armor-reinforcement-center { fill: #fff; stroke: #674090; stroke-width: 4; vector-effect: non-scaling-stroke; }
 .armor-reinforcement-cross { fill: none; stroke: #fff; stroke-width: 4; stroke-linecap: round; vector-effect: non-scaling-stroke; }
-.armor-geometry-controls { display: flex; width: min(100%, 860px); align-items: end; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.armor-geometry-controls { display: flex; width: min(100%, 600px); align-items: end; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 .armor-geometry-controls label { display: grid; min-width: 120px; grid-template-columns: 1fr auto; align-items: center; gap: 5px; color: var(--muted); font-size: 11px; }
 .armor-geometry-controls label span { color: var(--muted); }
 .armor-geometry-controls input { grid-column: 1 / -1; width: 100%; min-height: 34px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; color: var(--text); background: var(--panel-soft); font: inherit; font-variant-numeric: tabular-nums; }
 .armor-geometry-controls button { min-height: 34px; padding: 6px 11px; }
 .armor-geometry-status { align-self: center; color: var(--muted); font-size: 11px; line-height: 1.4; }
-.armor-plate-figure figcaption { width: min(100%, 860px); margin-top: 7px; color: var(--muted); font-size: 10px; line-height: 1.45; }
+.armor-plate-figure figcaption { width: min(100%, 600px); margin-top: 7px; color: var(--muted); font-size: 10px; line-height: 1.45; }
 .armor-area-results { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
 .armor-result { min-width: 0; padding: 9px 10px; border: 1px solid var(--line-soft); border-radius: 8px; background: var(--panel-soft); }
 .armor-result span, .armor-result small { display: block; color: var(--muted); }
