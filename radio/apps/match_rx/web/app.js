@@ -1338,16 +1338,27 @@ function renderAdaptiveArmor(payload) {
   $("armorEnemyRadius").textContent = enemyActive || enemyInactive ? `${enemyRadius} mm` : "—";
 
   const ownHitCount = armorNumber(armorStats.own_hit_count);
-  $("armorOwnHitCount").textContent = Number.isFinite(ownHitCount) ? `${Math.floor(ownHitCount)} / 10` : "— / 10";
-  $("armorHitRates").textContent = areaEstimate.valid
-    ? `${(areaEstimate.ownHitRate * 100).toFixed(1)}% / ${(areaEstimate.enemyHitRate * 100).toFixed(1)}%`
-    : "— / —";
-  $("armorSpreads").textContent = areaEstimate.valid
-    ? `${areaEstimate.ownSpread.toFixed(1)} / ${areaEstimate.enemySpread.toFixed(1)} mm`
-    : "— / —";
-  $("armorAreaEstimate").textContent = areaEstimate.valid
-    ? `${areaEstimate.relativeAccuracy.toFixed(2)} / ${(areaEstimate.areaRatio * 100).toFixed(2)}%`
-    : "— / —";
+  const hasHitCount = Number.isFinite(ownHitCount) && ownHitCount >= 0;
+  const displayedHitCount = hasHitCount ? Math.floor(ownHitCount) : NaN;
+  const hitThresholdProgress = hasHitCount ? Math.min(100, displayedHitCount / 10 * 100) : 0;
+  $("armorOwnHitCount").textContent = hasHitCount ? `${displayedHitCount} / 10` : "— / 10";
+  $("armorHitThresholdProgress").style.width = `${hitThresholdProgress}%`;
+  $("armorHitThresholdProgress").parentElement.setAttribute("aria-valuenow", String(Math.min(10, displayedHitCount || 0)));
+  $("armorHitThresholdStatus").textContent = hasHitCount
+    ? `${displayedHitCount} / 10 发 · ${displayedHitCount >= 10 ? "命中门槛已达到" : "等待达到命中门槛"}`
+    : "等待裁判 / 无线电命中数据";
+  $("armorRightHitGate").textContent = hasHitCount
+    ? displayedHitCount >= 10 ? "已达到 ≥10 发" : `未达到（${displayedHitCount} / 10 发）`
+    : "等待命中样本";
+  $("armorRightOpportunities").textContent = ownValid
+    ? String(own.remaining_fortify_opportunities ?? "—")
+    : "等待裁判数据";
+  $("armorOwnHitRate").textContent = areaEstimate.valid ? `${(areaEstimate.ownHitRate * 100).toFixed(1)}%` : "—";
+  $("armorEnemyHitRate").textContent = areaEstimate.valid ? `${(areaEstimate.enemyHitRate * 100).toFixed(1)}%` : "—";
+  $("armorOwnSpread").textContent = areaEstimate.valid ? `${areaEstimate.ownSpread.toFixed(1)} mm` : "—";
+  $("armorEnemySpread").textContent = areaEstimate.valid ? `${areaEstimate.enemySpread.toFixed(1)} mm` : "—";
+  $("armorAccuracyRatio").textContent = areaEstimate.valid ? areaEstimate.relativeAccuracy.toFixed(2) : "—";
+  $("armorAreaEstimate").textContent = areaEstimate.valid ? `${(areaEstimate.areaRatio * 100).toFixed(2)}%` : "—";
   const ownSampleCount = armorNumber(armorStats.own_sample_count);
   const enemySampleCount = armorNumber(armorStats.opponent_sample_count);
   const statsWindow = armorNumber(armorStats.window_sec);
@@ -1363,8 +1374,11 @@ function renderAdaptiveArmor(payload) {
   $("armorReadinessBadge").textContent = areaEstimate.valid ? "规则面积已计算" : "等待有效命中统计";
   $("armorHitSourceTitle").textContent = areaEstimate.valid ? "面积已按有效统计计算；自动选点仍未接入" : "自动选点暂不可用";
   $("armorHitSourceNote").textContent = areaEstimate.valid
-    ? `统计字段来自算法状态；面积按 ρ²/(2+ρ²) 计算，累计命中 ${Number.isFinite(ownHitCount) ? Math.floor(ownHitCount) : "未知"} 发。圆心仍以 0x020E 裁判回报为准。`
-    : "2027 规则要求将攻击命中信息同步给雷达，但仓库内的通信协议未给出攻击方可解析的命令号和载荷布局。0x0206 是通过常规链路发给受击机器人的事件，不能替代攻击方样本。收到有效的己方/对方命中率与散布前，不估算 ρ 或面积占比；缺少板面面积时不换算 mm²，也不生成自动选点。";
+    ? "算法状态已提供有效样本；实际加固区域仍以裁判 0x020E 回报为准。"
+    : "等待有效的己方 / 对方命中率与散布；当前不会估算规则面积或生成自动选点请求。";
+  $("armorHitSourceDetail").textContent = areaEstimate.valid
+    ? "当前面积估计仅供预览，自动选点和命令发送尚未接入。Dashboard 依据算法状态中的有效统计计算面积；实际加固区域以 0x020E 裁判回报为准。"
+    : "2027 规则要求将攻击命中信息同步给雷达，但仓库内的通信协议未给出攻击方可解析的命令号和载荷布局。0x0206 是通过常规链路发给受击机器人的事件，不能替代攻击方样本。收到有效统计前不估算 ρ 或面积占比，也不生成自动选点请求。";
 
   const lastFortifyCommand = Number(serial.last_armor_fortify_cmd_value || 0);
   const commandCenterMatches = ownValid && ownActive && lastFortifyCommand > 0

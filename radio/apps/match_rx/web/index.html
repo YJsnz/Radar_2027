@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>SharkRadio 比赛接收台</title>
-    <link rel="stylesheet" href="/styles.css?v=rx-20261107-adaptive-armor-v14" />
+    <link rel="stylesheet" href="/styles.css?v=rx-20261107-adaptive-armor-v15" />
   </head>
   <body>
     <header class="app-header">
@@ -240,48 +240,45 @@
 
     <section id="armorPage" class="app-page armor-page" hidden>
       <div class="armor-layout">
-        <section class="panel armor-state-panel">
+        <section class="panel armor-summary-panel">
           <div class="panel-head">
             <div>
-              <h2>己方装甲加固</h2>
-              <span class="muted">裁判同步 · 0x020E</span>
+              <h2>自适应装甲</h2>
+              <span class="muted">按 2027 赛季规则跟踪命中数据并管理加固区域</span>
             </div>
             <span id="armorOwnBadge" class="badge unknown">等待裁判</span>
           </div>
-          <div class="armor-metric-grid">
-            <article class="armor-metric"><span>加固机会</span><strong id="armorOwnOpportunities">—</strong><small>可累积次数</small></article>
-            <article class="armor-metric"><span>生效状态</span><strong id="armorOwnActive">—</strong><small>裁判回报为准</small></article>
-            <article class="armor-metric"><span>加固圆心</span><strong id="armorOwnCenter">—</strong><small>装甲检测面坐标 · mm</small></article>
-            <article class="armor-metric"><span>加固半径</span><strong id="armorOwnRadius">—</strong><small>装甲检测面坐标 · mm</small></article>
+          <div class="armor-summary-primary">
+            <article class="armor-metric"><span>可用加固机会</span><strong id="armorOwnOpportunities">—</strong><small>裁判 0x020E 回报 · 可累积</small></article>
+            <article class="armor-metric"><span>本局累计命中</span><strong id="armorOwnHitCount">— / 10</strong><small>≥10 发为命中门槛，还需有剩余机会</small></article>
           </div>
+          <div class="armor-hit-threshold">
+            <div class="armor-hit-track" role="progressbar" aria-label="本局加固命中门槛进度" aria-valuemin="0" aria-valuemax="10" aria-valuenow="0"><i id="armorHitThresholdProgress"></i></div>
+            <span id="armorHitThresholdStatus">等待裁判 / 无线电命中数据</span>
+          </div>
+          <div class="armor-estimate-grid">
+            <article class="armor-metric"><span>己方命中率 η</span><strong id="armorOwnHitRate">—</strong><small>有效命中数 / 发射数</small></article>
+            <article class="armor-metric"><span>对方命中率 η</span><strong id="armorEnemyHitRate">—</strong><small>有效命中数 / 发射数</small></article>
+            <article class="armor-metric"><span>己方散布 σ</span><strong id="armorOwnSpread">—</strong><small>命中点中位半径 · mm</small></article>
+            <article class="armor-metric"><span>对方散布 σ</span><strong id="armorEnemySpread">—</strong><small>命中点中位半径 · mm</small></article>
+            <article class="armor-metric"><span>相对准确率 ρ</span><strong id="armorAccuracyRatio">—</strong><small>Λ己 / Λ对</small></article>
+            <article class="armor-metric"><span>可加固面积占比</span><strong id="armorAreaEstimate">—</strong><small>按 2027 规则公式计算</small></article>
+          </div>
+          <p id="armorSampleSummary" class="armor-sample-meta">样本数、统计窗口与置信度等待上游有效状态</p>
+          <p class="armor-formula">η = 命中弹丸数 / 发射弹丸数；σ = 命中点到中位坐标的距离中位数；Λ = η / σ；ρ = Λ己 / Λ对；A = S板 × ρ² / (2 + ρ²)。</p>
         </section>
 
-        <section class="panel armor-state-panel">
+        <section class="panel armor-map-panel">
           <div class="panel-head">
             <div>
-              <h2>对方公开加固区</h2>
-              <span class="muted">雷达无线信息 · 0x0A05</span>
-            </div>
-            <span id="armorEnemyBadge" class="badge unknown">等待信息波</span>
-          </div>
-          <div class="armor-metric-grid">
-            <article class="armor-metric"><span>加固状态</span><strong id="armorEnemyActive">—</strong><small>对方自定义装甲模块</small></article>
-            <article class="armor-metric"><span>加固圆心</span><strong id="armorEnemyCenter">—</strong><small>装甲检测面坐标 · mm</small></article>
-            <article class="armor-metric"><span>加固半径</span><strong id="armorEnemyRadius">—</strong><small>半径为 0 表示未报告生效区域</small></article>
-            <article class="armor-metric"><span>状态来源</span><strong>裁判信息波</strong><small>不使用本地模拟数据</small></article>
-          </div>
-        </section>
-
-        <section class="panel armor-visual-panel">
-          <div class="panel-head">
-            <div>
-              <h2>装甲板与当前加固范围</h2>
-              <span class="muted">0x020E 裁判确认圆直接叠加在装甲检测面上</span>
+              <h2>加固中心与区域预览</h2>
+              <span class="muted">裁判确认的加固范围直接叠加在装甲检测面上</span>
             </div>
             <span id="armorRangeBadge" class="badge unknown">等待 0x020E</span>
           </div>
-          <div class="armor-visual-grid">
-            <figure class="armor-plate-figure">
+          <figure class="armor-map-figure">
+            <div class="armor-map-plot">
+              <span class="armor-axis-label armor-axis-y">y</span>
               <div class="armor-plate-art">
                 <div class="armor-plate-stage" id="armorPlateStage">
                   <img src="/assets/adaptive-armor-plate.png" alt="裁切后的 1 号装甲板正视示例图" />
@@ -294,15 +291,14 @@
                   </svg>
                 </div>
               </div>
-              <div class="armor-geometry-controls">
-                <label>检测面宽 <span>mm</span><input id="armorPlateWidthMm" type="number" min="1" max="5000" step="1" inputmode="numeric" placeholder="实际宽度" /></label>
-                <label>检测面高 <span>mm</span><input id="armorPlateHeightMm" type="number" min="1" max="5000" step="1" inputmode="numeric" placeholder="实际高度" /></label>
-                <button id="armorApplyGeometry" type="button">应用尺寸</button>
-                <span id="armorGeometryStatus" class="armor-geometry-status" role="status">请按装甲模块检测面的实测宽高标定。</span>
-              </div>
-              <figcaption>坐标原点为检测面左下角，x 向右、y 向上。录入检测面的真实宽高后，图片按实测比例显示；装饰性插画本身不作为尺寸来源。</figcaption>
-            </figure>
-          </div>
+              <span class="armor-axis-label armor-axis-x">x</span>
+            </div>
+            <div class="armor-current-center">
+              <span>当前加固中心</span><strong id="armorOwnCenter">—</strong>
+              <span>加固半径</span><strong id="armorOwnRadius">—</strong>
+            </div>
+            <figcaption>坐标原点为检测面左下角，x 向右、y 向上。网格用于位置参照；圆心和半径以裁判回报为准。</figcaption>
+          </figure>
           <div class="armor-area-results">
             <article class="armor-result"><span>裁判确认圆面积</span><strong id="armorCurrentCircleArea">—</strong><small>0x020E 半径 r · πr²</small></article>
             <article class="armor-result"><span>规则计算面积</span><strong id="armorCalculatedArea">—</strong><small id="armorCalculatedAreaNote">等待有效双方 η、σ</small></article>
@@ -314,33 +310,59 @@
             <span><i class="default"></i>默认 ×1.0</span>
           </div>
           <p id="armorRangeNote" class="armor-scale-note">等待有效 0x020E 状态和检测面真实尺寸；尺寸缺失时不把毫米值映射成图片像素。</p>
+          <details class="armor-geometry-details">
+            <summary>检测面尺寸标定</summary>
+            <div class="armor-geometry-controls">
+              <label>检测面宽 <span>mm</span><input id="armorPlateWidthMm" type="number" min="1" max="5000" step="1" inputmode="numeric" placeholder="实际宽度" /></label>
+              <label>检测面高 <span>mm</span><input id="armorPlateHeightMm" type="number" min="1" max="5000" step="1" inputmode="numeric" placeholder="实际高度" /></label>
+              <button id="armorApplyGeometry" type="button">应用尺寸</button>
+              <span id="armorGeometryStatus" class="armor-geometry-status" role="status">请按装甲模块检测面的实测宽高标定。</span>
+            </div>
+          </details>
         </section>
 
-        <section class="panel armor-readiness-panel">
+        <section class="panel armor-mechanism-panel">
           <div class="panel-head">
             <div>
-              <h2>命中统计与决策</h2>
-              <span class="muted">真实受击事件接入后计算命中率、散布与建议区域</span>
+              <h2>机制状态</h2>
+              <span class="muted">条件、通信与最近操作</span>
             </div>
             <span id="armorReadinessBadge" class="badge warn">等待命中数据</span>
           </div>
-          <div class="armor-metric-grid armor-estimate-grid">
-            <article class="armor-metric"><span>本局累计命中</span><strong id="armorOwnHitCount">— / 10</strong><small>自动加固门槛：≥10 发</small></article>
-            <article class="armor-metric"><span>己方 / 对方命中率 η</span><strong id="armorHitRates">— / —</strong><small>有效命中数 / 发射数</small></article>
-            <article class="armor-metric"><span>己方 / 对方散布 σ</span><strong id="armorSpreads">— / —</strong><small>命中点中位半径 · mm</small></article>
-            <article class="armor-metric"><span>相对准确率 ρ / 面积占比</span><strong id="armorAreaEstimate">— / —</strong><small>按 2027 规则公式计算</small></article>
+          <div class="armor-mechanism-list">
+            <div class="armor-mechanism-row"><span>加固机会</span><strong id="armorRightOpportunities">等待数据</strong></div>
+            <div class="armor-mechanism-row"><span>命中条件</span><strong id="armorRightHitGate">等待命中样本</strong></div>
+            <div class="armor-mechanism-row"><span>己方生效状态</span><strong id="armorOwnActive">—</strong></div>
+            <div class="armor-mechanism-row"><span>区域伤害倍率</span><strong>加固 ×0.5 · 未加固 ×1.5</strong></div>
           </div>
-          <p id="armorSampleSummary" class="armor-sample-meta">样本数、统计窗口与置信度等待上游有效状态</p>
           <div class="armor-source-note" role="status">
-            <strong id="armorHitSourceTitle">自动选点暂不可用</strong>
-            <p id="armorHitSourceNote">等待真实命中统计。没有有效样本时不估算命中率、散布或规则面积，也不生成自动选点请求。</p>
+            <span class="armor-source-dot" aria-hidden="true"></span>
+            <div class="armor-source-content">
+              <strong id="armorHitSourceTitle">自动选点暂不可用</strong>
+              <p id="armorHitSourceNote">等待自适应装甲统计接入；没有有效样本时保持面积和自动选点不可用。</p>
+              <details class="armor-source-details">
+                <summary>命中数据说明</summary>
+                <p id="armorHitSourceDetail">2027 规则要求将攻击命中信息同步给雷达，但仓库内的通信协议未给出攻击方可解析的命令号和载荷布局。0x0206 是通过常规链路发给受击机器人的事件，不能替代攻击方样本。</p>
+              </details>
+            </div>
           </div>
-          <div class="armor-command-row">
-            <span>最近 0x0121 加固计数</span><strong id="armorLastCommand">尚未提交</strong>
-            <span>当前圆心</span><strong id="armorLastCommandCenter">—</strong>
-            <span>生效确认</span><strong id="armorCommandConfirmation">以 0x020E 回报为准</strong>
-          </div>
-          <p class="armor-formula">η = 命中弹丸数 / 发射弹丸数；σ = 命中点到命中点中位坐标的距离中位数；Λ = η / σ；ρ = Λ己 / Λ对；A = S板 × ρ² / (2 + ρ²)。检测面左下角为原点，x 向右、y 向上。</p>
+          <section class="armor-opponent-state">
+            <div class="armor-subhead">
+              <div><h3>对方公开加固区</h3><span>雷达无线信息 · 0x0A05</span></div>
+              <span id="armorEnemyBadge" class="badge unknown">等待信息波</span>
+            </div>
+            <div class="armor-mechanism-list">
+              <div class="armor-mechanism-row"><span>加固状态</span><strong id="armorEnemyActive">—</strong></div>
+              <div class="armor-mechanism-row"><span>加固圆心</span><strong id="armorEnemyCenter">—</strong></div>
+              <div class="armor-mechanism-row"><span>加固半径</span><strong id="armorEnemyRadius">—</strong></div>
+            </div>
+          </section>
+          <section class="armor-recent-command">
+            <h3>最近状态</h3>
+            <div class="armor-mechanism-row"><span>0x0121 加固计数</span><strong id="armorLastCommand">尚未提交</strong></div>
+            <div class="armor-mechanism-row"><span>最近命令圆心</span><strong id="armorLastCommandCenter">—</strong></div>
+            <div class="armor-mechanism-row"><span>生效确认</span><strong id="armorCommandConfirmation">以 0x020E 回报为准</strong></div>
+          </section>
         </section>
       </div>
     </section>
@@ -386,6 +408,6 @@
       </div>
     </div>
 
-    <script src="/app.js?v=rx-20261107-adaptive-armor-v14"></script>
+    <script src="/app.js?v=rx-20261107-adaptive-armor-v15"></script>
   </body>
 </html>
