@@ -1,0 +1,51 @@
+# ROS/colcon build products
+build/
+install/
+log/
+
+# Python caches and test caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Local editor/tooling state
+.DS_Store
+.vscode/
+.claude/
+.codex/
+.agents/
+
+# Local machine configuration and runtime output
+.env
+*.local
+*.log
+*.out
+*.pid
+RadioTX/local.env
+Double_Radio_Version/local.env
+
+# RadioTX generated lab artifacts
+RadioTX/generated/
+apps/lab_tx/generated/
+
+# Large captured IQ/sample data and ROS bags
+*.fc32
+*.rmiq
+*.rmiq.part
+*.raw
+*.iq
+*.cfile
+*.sigmf-data
+*.sigmf-meta
+*.bag
+*.db3
+src/rm_radio_ros/information/RX_*
+src/rm_radio_ros/information/RX_*\ *
+src/rm_radio_ros/information/*_ganrao_*
+
+# Generated scan summaries
+src/rm_radio_ros/test_results/

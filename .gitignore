@@ -1,0 +1,28 @@
+# Python-generated files and test caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Runtime and hardware SDK logs
+*.log
+MvSdkLog/
+
+# Local system packages
+*.deb
+
+# Editor and operating-system metadata
+.DS_Store
+Thumbs.db
+*~
+
+# Tech report: publish the built PDF, keep the LaTeX sources local
+docs/tech-report/*
+!docs/tech-report/SHARK-RM2026-Radio-Radar-Report.pdf
+
+# Forum submission draft and diagram sources: local only
+docs/forum-post.md
+docs/diagrams/
+
+# Only images referenced by this README are published
+docs/images/*
+!docs/images/dashboard-radar-map.png
