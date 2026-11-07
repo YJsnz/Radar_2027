@@ -188,7 +188,8 @@ button.danger { color: #fff; background: var(--bad); border-color: var(--bad); }
   gap: 12px;
   padding: 12px;
 }
-.armor-state-panel, .armor-readiness-panel { min-width: 0; }
+.armor-state-panel, .armor-visual-panel, .armor-readiness-panel { min-width: 0; }
+.armor-visual-panel { grid-column: 1 / -1; }
 .armor-readiness-panel { grid-column: 1 / -1; }
 .armor-metric-grid {
   display: grid;
@@ -212,6 +213,61 @@ button.danger { color: #fff; background: var(--bad); border-color: var(--bad); }
   font-variant-numeric: tabular-nums;
 }
 .armor-metric small { margin-top: 4px; font-size: 10px; }
+.armor-sample-meta { margin: 8px 2px 0; color: var(--muted); font-size: 10px; }
+.armor-visual-grid {
+  display: grid;
+  grid-template-columns: minmax(260px, .78fr) minmax(380px, 1.22fr);
+  align-items: stretch;
+  gap: 12px;
+  margin-top: 10px;
+}
+.armor-plate-figure { display: flex; min-width: 0; flex-direction: column; margin: 0; }
+.armor-plate-art {
+  display: grid;
+  min-height: 300px;
+  flex: 1 1 auto;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid #353d45;
+  border-radius: 9px;
+  background: #242b32;
+}
+.armor-plate-art img { display: block; width: 100%; max-height: 440px; object-fit: contain; }
+.armor-plate-figure figcaption { margin-top: 6px; color: var(--muted); font-size: 10px; line-height: 1.45; }
+.armor-range-card {
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--line-soft);
+  border-radius: 9px;
+  background: var(--panel-soft);
+}
+.armor-range-card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.armor-range-card-head strong { font-size: 12px; }
+.armor-range-card-head span { color: var(--muted); font-size: 10px; }
+.armor-range-plot { display: block; width: min(100%, 540px); height: auto; margin: 4px auto 0; overflow: visible; }
+.armor-range-plot-bg { fill: #fbfcfe; stroke: #cbd5df; stroke-width: 1.5; }
+.armor-range-grid-line { stroke: #e1e7ee; stroke-width: 1; }
+.armor-range-tick, .armor-range-axis-label { fill: #647383; font-family: inherit; font-size: 11px; }
+.armor-range-axis-label { font-size: 12px; font-weight: 700; }
+.armor-range-caption { fill: #573b79; font-family: inherit; font-size: 14px; font-weight: 700; }
+.armor-range-empty { fill: #7a8794; font-family: inherit; font-size: 17px; font-weight: 650; }
+.armor-range-circle { fill: rgba(140, 92, 197, .22); stroke: #7748a8; stroke-width: 4; }
+.armor-range-center-mark { stroke: #674090; stroke-width: 2; }
+.armor-range-center-dot { fill: #fff; stroke: #674090; stroke-width: 3; }
+.armor-range-note { min-height: 30px; margin: 2px 4px 0; color: var(--muted); font-size: 10px; line-height: 1.45; }
+.armor-area-results { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
+.armor-result { min-width: 0; padding: 9px 10px; border: 1px solid var(--line-soft); border-radius: 8px; background: var(--panel-soft); }
+.armor-result span, .armor-result small { display: block; color: var(--muted); }
+.armor-result span { font-size: 11px; }
+.armor-result strong { display: block; margin-top: 5px; overflow-wrap: anywhere; font-size: 15px; font-variant-numeric: tabular-nums; }
+.armor-result small { margin-top: 4px; font-size: 10px; }
+.armor-damage-legend { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 10px; color: var(--muted); font-size: 11px; }
+.armor-damage-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.armor-damage-legend i { width: 10px; height: 10px; border-radius: 50%; }
+.armor-damage-legend i.reinforced { background: #7748a8; }
+.armor-damage-legend i.unreinforced { background: #d98154; }
+.armor-damage-legend i.default { background: #aab3bc; }
+.armor-scale-note { margin: 9px 0 0; color: var(--muted); font-size: 10px; line-height: 1.5; }
 .armor-source-note {
   margin-top: 10px;
   padding: 10px 12px;
@@ -439,6 +495,12 @@ button.danger { color: #fff; background: var(--bad); border-color: var(--bad); }
   .armor-layout { grid-template-columns: minmax(0, 1fr); }
   .armor-readiness-panel { grid-column: auto; }
   .armor-metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .armor-visual-panel { grid-column: auto; }
+}
+@media (max-width: 720px) {
+  .armor-visual-grid { grid-template-columns: minmax(0, 1fr); }
+  .armor-plate-art { min-height: 220px; }
+  .armor-area-results { grid-template-columns: minmax(0, 1fr); }
 }
 .col {
   display: flex;

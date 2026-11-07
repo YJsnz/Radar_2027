@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>SharkRadio 比赛接收台</title>
-    <link rel="stylesheet" href="/styles.css?v=rx-20261107-adaptive-armor-v13" />
+    <link rel="stylesheet" href="/styles.css?v=rx-20261107-adaptive-armor-v14" />
   </head>
   <body>
     <header class="app-header">
@@ -272,6 +272,43 @@
           </div>
         </section>
 
+        <section class="panel armor-visual-panel">
+          <div class="panel-head">
+            <div>
+              <h2>装甲板与当前加固范围</h2>
+              <span class="muted">示例装甲板 + 0x020E 毫米坐标下的裁判确认圆</span>
+            </div>
+            <span id="armorRangeBadge" class="badge unknown">等待 0x020E</span>
+          </div>
+          <div class="armor-visual-grid">
+            <figure class="armor-plate-figure">
+              <div class="armor-plate-art">
+                <img src="/assets/adaptive-armor-plate.png" alt="参考项目提供的 1 号装甲板示例图片" />
+              </div>
+              <figcaption>装甲板示例图。图片未提供实体尺寸标定，不作为毫米坐标比例尺。</figcaption>
+            </figure>
+            <div class="armor-range-card">
+              <div class="armor-range-card-head">
+                <strong>当前裁判确认的加固圆</strong>
+                <span>坐标单位：mm</span>
+              </div>
+              <svg id="armorRangePlot" class="armor-range-plot" viewBox="0 0 640 640" role="img" aria-label="当前加固范围毫米坐标图"></svg>
+              <p id="armorRangePlotNote" class="armor-range-note">等待有效 0x020E 生效圆；图中坐标窗口以毫米标注，x 向右、y 向上。</p>
+            </div>
+          </div>
+          <div class="armor-area-results">
+            <article class="armor-result"><span>裁判确认圆面积</span><strong id="armorCurrentCircleArea">—</strong><small>0x020E 半径 r · πr²</small></article>
+            <article class="armor-result"><span>规则计算面积</span><strong id="armorCalculatedArea">—</strong><small id="armorCalculatedAreaNote">等待有效双方 η、σ</small></article>
+            <article class="armor-result"><span>规则计算半径</span><strong id="armorCalculatedRadius">—</strong><small>r = √(A / π)</small></article>
+          </div>
+          <div class="armor-damage-legend" aria-label="装甲区域伤害倍率">
+            <span><i class="reinforced"></i>已加固 ×0.5</span>
+            <span><i class="unreinforced"></i>未加固 ×1.5</span>
+            <span><i class="default"></i>默认 ×1.0</span>
+          </div>
+          <p class="armor-scale-note">坐标图按 0x020E 的圆心和半径等比例绘制，并自动缩放到圆周附近的局部窗口；示例照片不参与尺度换算。规则面积需有效的双方命中率、散布和装甲板面积数据，未收到这些真实字段时保持不可计算。</p>
+        </section>
+
         <section class="panel armor-readiness-panel">
           <div class="panel-head">
             <div>
@@ -281,21 +318,22 @@
             <span id="armorReadinessBadge" class="badge warn">等待命中数据</span>
           </div>
           <div class="armor-metric-grid armor-estimate-grid">
-            <article class="armor-metric"><span>本局累计命中</span><strong id="armorOwnHitCount">不可用</strong><small>自动加固门槛：≥10 发</small></article>
-            <article class="armor-metric"><span>己方 / 对方命中率 η</span><strong id="armorHitRates">— / —</strong><small>需真实命中与发射样本</small></article>
-            <article class="armor-metric"><span>己方 / 对方散布 σ</span><strong id="armorSpreads">— / —</strong><small>检测面统一坐标系 · mm</small></article>
-            <article class="armor-metric"><span>相对准确率 ρ / 面积 A</span><strong id="armorAreaEstimate">— / —</strong><small>按 2027 规则公式计算</small></article>
+            <article class="armor-metric"><span>本局累计命中</span><strong id="armorOwnHitCount">— / 10</strong><small>自动加固门槛：≥10 发</small></article>
+            <article class="armor-metric"><span>己方 / 对方命中率 η</span><strong id="armorHitRates">— / —</strong><small>有效命中数 / 发射数</small></article>
+            <article class="armor-metric"><span>己方 / 对方散布 σ</span><strong id="armorSpreads">— / —</strong><small>命中点中位半径 · mm</small></article>
+            <article class="armor-metric"><span>相对准确率 ρ / 面积占比</span><strong id="armorAreaEstimate">— / —</strong><small>按 2027 规则公式计算</small></article>
           </div>
+          <p id="armorSampleSummary" class="armor-sample-meta">样本数、统计窗口与置信度等待上游有效状态</p>
           <div class="armor-source-note" role="status">
-            <strong>自动决策暂不可用</strong>
-            <p id="armorHitSourceNote">等待裁判提供攻击方命中事件载荷。没有真实样本时不估算命中率、不生成圆心，也不发送加固请求。</p>
+            <strong id="armorHitSourceTitle">自动选点暂不可用</strong>
+            <p id="armorHitSourceNote">等待真实命中统计。没有有效样本时不估算命中率、散布或规则面积，也不生成自动选点请求。</p>
           </div>
           <div class="armor-command-row">
             <span>最近 0x0121 加固计数</span><strong id="armorLastCommand">尚未提交</strong>
             <span>当前圆心</span><strong id="armorLastCommandCenter">—</strong>
             <span>生效确认</span><strong id="armorCommandConfirmation">以 0x020E 回报为准</strong>
           </div>
-          <p class="armor-formula">ρ = (η己 / σ己) ÷ (η对 / σ对)；A = 装甲板面积 × ρ² / (2 + ρ²)。检测面左下角为原点，x 向右、y 向上。坐标和估计值仅在有效真实样本到达后显示。</p>
+          <p class="armor-formula">η = 命中弹丸数 / 发射弹丸数；σ = 命中点到命中点中位坐标的距离中位数；Λ = η / σ；ρ = Λ己 / Λ对；A = S板 × ρ² / (2 + ρ²)。检测面左下角为原点，x 向右、y 向上。</p>
         </section>
       </div>
     </section>
@@ -341,6 +379,6 @@
       </div>
     </div>
 
-    <script src="/app.js?v=rx-20261107-adaptive-armor-v13"></script>
+    <script src="/app.js?v=rx-20261107-adaptive-armor-v14"></script>
   </body>
 </html>

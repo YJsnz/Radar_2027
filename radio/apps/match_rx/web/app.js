@@ -1144,33 +1144,147 @@ function armorCenterText(x, y) {
     : "—";
 }
 
+function armorNumber(value) {
+  if (value === null || value === undefined || value === "") return NaN;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : NaN;
+}
+
+function calculateArmorAreaEstimate(stats) {
+  const ownHitRate = armorNumber(stats.own_hit_rate);
+  const enemyHitRate = armorNumber(stats.opponent_hit_rate);
+  const ownSpread = armorNumber(stats.own_spread_mm);
+  const enemySpread = armorNumber(stats.opponent_spread_mm);
+  const plateArea = armorNumber(stats.plate_area_mm2);
+  const valid = stats.estimate_valid === true
+    && ownHitRate >= 0 && ownHitRate <= 1
+    && enemyHitRate > 0 && enemyHitRate <= 1
+    && ownSpread > 0 && enemySpread > 0;
+  if (!valid) return { valid: false };
+
+  const ownAccuracy = ownHitRate / ownSpread;
+  const enemyAccuracy = enemyHitRate / enemySpread;
+  const relativeAccuracy = ownAccuracy / enemyAccuracy;
+  const ratioSquared = relativeAccuracy ** 2;
+  const areaRatio = ratioSquared / (2 + ratioSquared);
+  const areaMm2 = Number.isFinite(plateArea) && plateArea > 0 ? plateArea * areaRatio : NaN;
+  const radiusMm = Number.isFinite(areaMm2) ? Math.sqrt(areaMm2 / Math.PI) : NaN;
+  if (![relativeAccuracy, areaRatio].every(Number.isFinite)) return { valid: false };
+  return { valid: true, ownHitRate, enemyHitRate, ownSpread, enemySpread, relativeAccuracy, areaRatio, areaMm2, radiusMm, plateArea };
+}
+
+function renderArmorRangePlot(own, ownValid, ownActive) {
+  const svg = $("armorRangePlot");
+  const centerX = armorNumber(own.fortify_center_x_mm);
+  const centerY = armorNumber(own.fortify_center_y_mm);
+  const radius = armorNumber(own.fortify_radius_mm);
+  const hasRange = ownValid && ownActive && centerX >= 0 && centerY >= 0 && radius > 0;
+  if (!hasRange) {
+    svg.setAttribute("aria-label", "等待裁判确认当前加固范围");
+    svg.innerHTML = `
+      <defs><pattern id="armorRangeGridEmpty" width="48" height="48" patternUnits="userSpaceOnUse"><path d="M 48 0 L 0 0 0 48" fill="none" stroke="#e1e7ee" stroke-width="1" /></pattern></defs>
+      <rect x="62" y="42" width="516" height="516" rx="12" fill="url(#armorRangeGridEmpty)" stroke="#cbd5df" stroke-dasharray="7 6" />
+      <line x1="82" y1="538" x2="548" y2="538" stroke="#708090" stroke-width="2" />
+      <line x1="82" y1="538" x2="82" y2="72" stroke="#708090" stroke-width="2" />
+      <text x="315" y="310" text-anchor="middle" class="armor-range-empty">${ownValid ? "当前没有生效加固圆" : "等待有效 0x020E"}</text>
+      <text x="552" y="560" class="armor-range-axis-label">x · mm</text>
+      <text x="65" y="68" class="armor-range-axis-label">y · mm</text>`;
+    return;
+  }
+
+  const plotLeft = 104;
+  const plotTop = 58;
+  const plotSize = 470;
+  const halfWindow = Math.max(radius * 2, 40);
+  const viewMinX = centerX - halfWindow;
+  const viewMinY = centerY - halfWindow;
+  const circleRadius = radius / (halfWindow * 2) * plotSize;
+  const grid = [];
+  for (let index = 0; index <= 4; index += 1) {
+    const offset = plotSize * index / 4;
+    const xValue = viewMinX + halfWindow * index / 2;
+    const yValue = viewMinY + halfWindow * (4 - index) / 2;
+    const x = plotLeft + offset;
+    const y = plotTop + offset;
+    grid.push(`<line x1="${x}" y1="${plotTop}" x2="${x}" y2="${plotTop + plotSize}" class="armor-range-grid-line" />`);
+    grid.push(`<line x1="${plotLeft}" y1="${y}" x2="${plotLeft + plotSize}" y2="${y}" class="armor-range-grid-line" />`);
+    grid.push(`<text x="${x}" y="${plotTop + plotSize + 22}" text-anchor="middle" class="armor-range-tick">${xValue.toFixed(0)}</text>`);
+    grid.push(`<text x="${plotLeft - 10}" y="${y + 4}" text-anchor="end" class="armor-range-tick">${yValue.toFixed(0)}</text>`);
+  }
+  svg.setAttribute("aria-label", `裁判确认加固圆，圆心 ${centerX}、${centerY} 毫米，半径 ${radius} 毫米`);
+  svg.innerHTML = `
+    <rect x="${plotLeft}" y="${plotTop}" width="${plotSize}" height="${plotSize}" rx="8" class="armor-range-plot-bg" />
+    ${grid.join("")}
+    <circle cx="${plotLeft + plotSize / 2}" cy="${plotTop + plotSize / 2}" r="${circleRadius}" class="armor-range-circle" />
+    <line x1="${plotLeft + plotSize / 2 - 7}" y1="${plotTop + plotSize / 2}" x2="${plotLeft + plotSize / 2 + 7}" y2="${plotTop + plotSize / 2}" class="armor-range-center-mark" />
+    <line x1="${plotLeft + plotSize / 2}" y1="${plotTop + plotSize / 2 - 7}" x2="${plotLeft + plotSize / 2}" y2="${plotTop + plotSize / 2 + 7}" class="armor-range-center-mark" />
+    <circle cx="${plotLeft + plotSize / 2}" cy="${plotTop + plotSize / 2}" r="4.5" class="armor-range-center-dot" />
+    <text x="${plotLeft + plotSize / 2}" y="32" text-anchor="middle" class="armor-range-caption">当前生效范围 · r ${radius} mm</text>
+    <text x="${plotLeft + plotSize + 6}" y="${plotTop + plotSize + 22}" class="armor-range-axis-label">x →</text>
+    <text x="${plotLeft - 10}" y="${plotTop - 8}" text-anchor="end" class="armor-range-axis-label">y ↑</text>`;
+}
+
 function renderAdaptiveArmor(payload) {
   const integrationEntry = payload?.radar || get(state.latest, ["radar"], {});
   const fusion = integrationEntry?.data || {};
   const strategy = fusion.strategy || {};
   const own = strategyPayload(strategy, "RadarDecisionSync");
+  const armorEntry = payload?.adaptive_armor
+    || get(state.latest, ["adaptive_armor"], null)
+    || fusion.adaptive_armor
+    || strategy.AdaptiveArmorStatus;
+  const armorStats = armorEntry?.data || armorEntry?.payload || armorEntry || {};
   const enemyEntry = strategy.RadarEnemyBuffStatus || {};
   const enemyStatus = strategyPayload(strategy, "RadarEnemyBuffStatus");
   const enemyArmor = enemyStatus.enemy_armor_fortification || {};
   const serial = fusion.referee_serial || get(state.latest, ["statuses", "referee", "data"], {});
   const ownValid = own.valid_radar_info_length === true;
-  const ownActive = ownValid && own.armor_fortify_active === true;
+  const currentRadius = armorNumber(own.fortify_radius_mm);
+  const ownActiveFlag = own.armor_fortify_active === true;
+  const ownRadiusMismatch = ownValid && ownActiveFlag && !(currentRadius > 0);
+  const ownActive = ownValid && ownActiveFlag && currentRadius > 0;
+  const hasCurrentRange = ownActive && currentRadius > 0;
+  const areaEstimate = calculateArmorAreaEstimate(armorStats);
   const enemySeen = Object.keys(enemyEntry).length > 0 && Object.keys(enemyArmor).length > 0;
   const enemyRadius = Number(enemyArmor.radius_mm);
   const enemyActive = enemySeen && enemyArmor.active === true && Number.isFinite(enemyRadius) && enemyRadius > 0;
   const enemyInactive = enemySeen && enemyArmor.active === false && Number.isFinite(enemyRadius) && enemyRadius === 0;
 
-  $("armorOwnBadge").className = `badge ${ownValid ? "ok" : "unknown"}`;
-  $("armorOwnBadge").textContent = ownValid ? "裁判状态有效" : "等待 0x020E";
+  $("armorOwnBadge").className = `badge ${ownRadiusMismatch ? "warn" : ownValid ? "ok" : "unknown"}`;
+  $("armorOwnBadge").textContent = ownRadiusMismatch ? "加固字段不一致" : ownValid ? "裁判状态有效" : "等待 0x020E";
   $("armorOwnOpportunities").textContent = ownValid
     ? String(own.remaining_fortify_opportunities ?? "—")
     : "—";
-  $("armorOwnActive").textContent = ownValid ? (ownActive ? "已生效" : "未生效") : "—";
+  $("armorOwnActive").textContent = ownValid ? (ownActive ? "已生效" : ownRadiusMismatch ? "字段异常" : "未生效") : "—";
   $("armorOwnCenter").textContent = ownValid && ownActive
     ? armorCenterText(own.fortify_center_x_mm, own.fortify_center_y_mm)
     : "—";
   $("armorOwnRadius").textContent = ownValid && ownActive && Number.isFinite(Number(own.fortify_radius_mm))
     ? `${Number(own.fortify_radius_mm)} mm`
+    : "—";
+  renderArmorRangePlot(own, ownValid, ownActive);
+  $("armorRangeBadge").className = `badge ${hasCurrentRange ? "ok" : ownRadiusMismatch ? "warn" : "unknown"}`;
+  $("armorRangeBadge").textContent = hasCurrentRange ? "裁判已确认范围" : ownRadiusMismatch ? "加固字段不一致" : ownValid ? "当前无生效圆" : "等待 0x020E";
+  const currentCircleArea = hasCurrentRange ? Math.PI * currentRadius ** 2 : NaN;
+  $("armorCurrentCircleArea").textContent = Number.isFinite(currentCircleArea)
+    ? `${currentCircleArea.toFixed(0)} mm² · ${(currentCircleArea / 100).toFixed(2)} cm²`
+    : "—";
+  $("armorRangePlotNote").textContent = hasCurrentRange
+    ? `圆心 ${armorCenterText(own.fortify_center_x_mm, own.fortify_center_y_mm)} · 半径 ${currentRadius} mm · 图表窗口为圆心附近局部坐标。`
+    : ownValid ? "裁判当前未报告生效加固圆。" : "等待有效 0x020E 生效圆；坐标窗口使用毫米标注，x 向右、y 向上。";
+
+  $("armorCalculatedArea").textContent = areaEstimate.valid
+    ? Number.isFinite(areaEstimate.areaMm2)
+      ? `${areaEstimate.areaMm2.toFixed(0)} mm² · ${(areaEstimate.areaMm2 / 100).toFixed(2)} cm²`
+      : `${(areaEstimate.areaRatio * 100).toFixed(2)}% 板面`
+    : "—";
+  $("armorCalculatedAreaNote").textContent = areaEstimate.valid
+    ? Number.isFinite(areaEstimate.areaMm2)
+      ? `${(areaEstimate.areaRatio * 100).toFixed(2)}% 板面 · S=${areaEstimate.plateArea.toFixed(0)} mm²`
+      : "面积比例已计算；待提供板面面积 S 换算 mm²"
+    : "等待有效双方 η、σ";
+  $("armorCalculatedRadius").textContent = areaEstimate.valid
+    ? Number.isFinite(areaEstimate.radiusMm) ? `${areaEstimate.radiusMm.toFixed(1)} mm` : `${Math.sqrt(areaEstimate.areaRatio / Math.PI).toFixed(3)} × √S板`
     : "—";
 
   $("armorEnemyBadge").className = `badge ${enemySeen ? (enemyActive ? "ok" : "warn") : "unknown"}`;
@@ -1183,14 +1297,34 @@ function renderAdaptiveArmor(payload) {
     : "—";
   $("armorEnemyRadius").textContent = enemyActive || enemyInactive ? `${enemyRadius} mm` : "—";
 
-  $("armorReadinessBadge").className = "badge warn";
-  $("armorReadinessBadge").textContent = "命中事件未接入";
-  $("armorOwnHitCount").textContent = "不可用";
-  $("armorHitRates").textContent = "— / —";
-  $("armorSpreads").textContent = "— / —";
-  $("armorAreaEstimate").textContent = "— / —";
-  $("armorHitSourceNote").textContent =
-    "2027 规则要求将攻击命中信息同步给雷达，但仓库内的通信协议未给出攻击方可解析的命令号和载荷布局。0x0206 是通过常规链路发给受击机器人的事件，不能替代攻击方样本。接口定义接入前，不估算命中率、散布和加固面积，也不生成或发送自动选点请求。";
+  const ownHitCount = armorNumber(armorStats.own_hit_count);
+  $("armorOwnHitCount").textContent = Number.isFinite(ownHitCount) ? `${Math.floor(ownHitCount)} / 10` : "— / 10";
+  $("armorHitRates").textContent = areaEstimate.valid
+    ? `${(areaEstimate.ownHitRate * 100).toFixed(1)}% / ${(areaEstimate.enemyHitRate * 100).toFixed(1)}%`
+    : "— / —";
+  $("armorSpreads").textContent = areaEstimate.valid
+    ? `${areaEstimate.ownSpread.toFixed(1)} / ${areaEstimate.enemySpread.toFixed(1)} mm`
+    : "— / —";
+  $("armorAreaEstimate").textContent = areaEstimate.valid
+    ? `${areaEstimate.relativeAccuracy.toFixed(2)} / ${(areaEstimate.areaRatio * 100).toFixed(2)}%`
+    : "— / —";
+  const ownSampleCount = armorNumber(armorStats.own_sample_count);
+  const enemySampleCount = armorNumber(armorStats.opponent_sample_count);
+  const statsWindow = armorNumber(armorStats.window_sec);
+  const confidence = armorNumber(armorStats.confidence);
+  const sampleParts = [];
+  if (Number.isFinite(ownSampleCount) && Number.isFinite(enemySampleCount)) {
+    sampleParts.push(`样本 ${Math.floor(ownSampleCount)} / ${Math.floor(enemySampleCount)}`);
+  }
+  if (Number.isFinite(statsWindow) && statsWindow > 0) sampleParts.push(`窗口 ${statsWindow.toFixed(0)} s`);
+  if (Number.isFinite(confidence) && confidence >= 0 && confidence <= 1) sampleParts.push(`置信度 ${(confidence * 100).toFixed(0)}%`);
+  $("armorSampleSummary").textContent = sampleParts.length ? sampleParts.join(" · ") : "样本数、统计窗口与置信度等待上游有效状态";
+  $("armorReadinessBadge").className = `badge ${areaEstimate.valid ? "ok" : "warn"}`;
+  $("armorReadinessBadge").textContent = areaEstimate.valid ? "规则面积已计算" : "等待有效命中统计";
+  $("armorHitSourceTitle").textContent = areaEstimate.valid ? "面积已按有效统计计算；自动选点仍未接入" : "自动选点暂不可用";
+  $("armorHitSourceNote").textContent = areaEstimate.valid
+    ? `统计字段来自算法状态；面积按 ρ²/(2+ρ²) 计算，累计命中 ${Number.isFinite(ownHitCount) ? Math.floor(ownHitCount) : "未知"} 发。圆心仍以 0x020E 裁判回报为准。`
+    : "2027 规则要求将攻击命中信息同步给雷达，但仓库内的通信协议未给出攻击方可解析的命令号和载荷布局。0x0206 是通过常规链路发给受击机器人的事件，不能替代攻击方样本。收到有效的己方/对方命中率与散布前，不估算 ρ 或面积占比；缺少板面面积时不换算 mm²，也不生成自动选点。";
 
   const lastFortifyCommand = Number(serial.last_armor_fortify_cmd_value || 0);
   const commandCenterMatches = ownValid && ownActive && lastFortifyCommand > 0

@@ -52,6 +52,7 @@ EXPECTED_BROADCAST_COMMANDS = {
     "0x0A05": "增益状态",
 }
 EXPECTED_INTERFERENCE_COMMAND = "0x0A06"
+ADAPTIVE_ARMOR_STATUS_TOPIC = "/rm_radar_algorithm/adaptive_armor"
 
 
 def _now() -> float:
@@ -187,6 +188,7 @@ class DashboardState:
     bridge_outputs: Deque[dict[str, Any]] = field(default_factory=lambda: deque(maxlen=200))
     radar: dict[str, Any] = field(default_factory=dict)
     vision_radar: dict[str, Any] = field(default_factory=dict)
+    adaptive_armor: dict[str, Any] = field(default_factory=dict)
     sdr_checks: dict[str, Any] = field(default_factory=dict)
     events: Deque[dict[str, Any]] = field(default_factory=lambda: deque(maxlen=120))
     process_specs: dict[str, Any] = field(default_factory=dict)
@@ -245,6 +247,9 @@ class RadioDashboardNode(Node):
         )
         self.create_subscription(
             String, "/rm_radar_integration/status", self._radar_callback("radar_integration"), 10
+        )
+        self.create_subscription(
+            String, ADAPTIVE_ARMOR_STATUS_TOPIC, self._adaptive_armor_callback, 10
         )
 
         self.create_timer(3.0, self._schedule_sdr_check)
@@ -468,6 +473,15 @@ class RadioDashboardNode(Node):
                 self._stream_condition.notify_all()
 
         return callback
+
+    def _adaptive_armor_callback(self, msg: String) -> None:
+        data = _json_safe_loads(msg.data, {})
+        if not isinstance(data, dict):
+            data = {"estimate_valid": False, "error": "自适应装甲状态必须为 JSON 对象"}
+        with self._stream_condition:
+            self.state.adaptive_armor = {"timestamp": _now(), "data": data}
+            self._radar_generation = int(getattr(self, "_radar_generation", 0)) + 1
+            self._stream_condition.notify_all()
 
     def _spectrum_callback(self, role: str, tap: str = "raw") -> Callable[[String], None]:
         def callback(msg: String) -> None:
@@ -801,6 +815,7 @@ class RadioDashboardNode(Node):
                 "health": self._health_unlocked(now=now),
                 "radar": self.state.radar,
                 "vision_radar": self.state.vision_radar,
+                "adaptive_armor": self.state.adaptive_armor,
                 # Streaming data has a dedicated incremental endpoint. Keep a
                 # short compatibility tail here so a 2-second state refresh
                 # never serializes hundreds of large information-wave frames.
@@ -1625,6 +1640,7 @@ class RadioDashboardNode(Node):
                 "now": now,
                 "radar": self.state.radar,
                 "vision_radar": self.state.vision_radar,
+                "adaptive_armor": self.state.adaptive_armor,
                 "reception_rates": self._reception_rates_unlocked(now=now),
                 "health": self._health_unlocked(now=now),
             }
