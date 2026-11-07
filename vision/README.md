@@ -18,7 +18,7 @@
 
 雷达要在比赛中持续告诉裁判系统"对方每台机器人在哪"。视觉链路做的事：
 
-1. **取图** — 海康工业相机 4024×3036，也支持 USB 相机与视频/图片测试模式。
+1. **取图** — 默认迈德威视 MV-SUA133GC-T；也保留海康、USB 相机与视频/图片测试模式。
 2. **车辆检测** — YOLOv5 车辆模型输出车体框。
 3. **装甲板识别** — 每个车框 ROI 归一化到 320×320，拼 batch 送装甲板模型，得到编号与颜色。
 4. **阵营与身份确认** — 结合装甲板模型输出与灯条几何颜色，连续多帧一致才确认；已确认身份切换需要更多帧。
@@ -32,7 +32,7 @@
 
 ```mermaid
 flowchart LR
-  CAM["相机取图<br/>hik / video / test"] --> CAR["车辆检测<br/>car.engine 640x640"]
+  CAM["相机取图<br/>mindvision / hik / video / test"] --> CAR["车辆检测<br/>car.engine 640x640"]
   CAR --> ROI["ROI 裁剪归一化<br/>320x320 x N"]
   ROI --> ARM["装甲板批量识别<br/>armor_batch.engine<br/>动态 batch 1~16"]
   ARM --> CLR["灯条颜色分析<br/>vehicle_color"]
@@ -74,8 +74,8 @@ flowchart LR
 | TensorRT | 10.13.3.9 |
 | PyTorch | 2.11.0+cu128 |
 | Python | 3.10 |
-| 相机 | 海康工业相机 USB3，4024×3036 |
-| 相机 SDK | 海康 MVS（Linux） |
+| 默认相机 | 迈德威视 MV-SUA133GC-T，官方 SUA133GC 参数为 1280×1024 |
+| 相机 SDK | 迈德威视 Linux SDK + Python 开发包；海康模式仍使用 MVS |
 | Qt | PyQt5 5.15.11 |
 
 `requirements.txt` 里的版本是锁死的。TensorRT 引擎与构建时的 TensorRT 版本强绑定，换版本必须重新转换引擎；PyTorch 与 CUDA 的组合也要对应，否则 `.pt → .onnx` 这一步会出问题。
@@ -95,7 +95,22 @@ pip install -r requirements.txt
 
 启动脚本会优先用项目内的 `.venv/bin/python`，找不到才回落系统 `python3`。建议就用 `.venv`。
 
-### 4.2 海康 MVS SDK
+### 4.2 迈德威视 MV-SUA133GC-T
+
+从[迈德威视软件下载页](https://www.mindvision.com.cn/archives/category/software/sdk-installation-package)获取 Linux SDK，并从[Python 开发例程页](https://www.mindvision.com.cn/archives/category/software/demo-development-routine)获取 Linux Python 开发包。厂商下载需要注册账号。将 SDK 解压到本机目录后，通过 `MINDVISION_SDK_ROOT` 指向该目录启动，脚本会将其中的 `mvsdk.py` 和 MindVision `.so` 目录加入比赛启动器环境：
+
+```bash
+mkdir -p ~/.config/shark-radar
+cp scripts/mindvision.env.example ~/.config/shark-radar/mindvision.env
+# 编辑 ~/.config/shark-radar/mindvision.env，将 MINDVISION_SDK_ROOT 改为实际 SDK 路径
+./scripts/start_launcher.sh
+```
+
+`start_launcher.sh` 会读取该用户配置文件，因此命令行、桌面自启动和 `start_match.sh` 使用同一套 SDK 环境。SDK 中的 Python 包必须能被启动台使用的 Python（优先项目 `.venv`）导入。曝光设置单位是 μs，SUA133GC 规格范围为 4～32400 μs；界面不把旧海康的 dB 增益值映射到迈德威视相机。默认相机模式为 `mindvision`。
+
+首次切换后必须重新运行标定。程序会校验标定记录中的相机模式和实际帧尺寸，缺少新来源信息或分辨率不一致时停止比赛启动并提示重标；改变相机 ROI/分辨率后也要重新标定。
+
+### 4.3 海康 MVS SDK
 
 从海康官网下载 Linux 版 MVS 安装。启动脚本会在 `/opt/MVS/lib`、`/opt/MVS`、`/usr/local/MVS/lib` 三个常见位置自动探测 `libMvCameraControl.so` 并设置 `MVCAM_COMMON_RUNENV` 与 `LD_LIBRARY_PATH` — 桌面自启动不会读交互式 shell，所以这一步必须由脚本自己做。
 
@@ -106,7 +121,7 @@ sudo cp scripts/99-hikrobot-usb.rules /etc/udev/rules.d/
 sudo udevadm control --reload-rules && sudo udevadm trigger
 ```
 
-### 4.3 模型引擎转换
+### 4.4 模型引擎转换
 
 仓库里带了 `.pt` / `.onnx` / `.engine` 三种形态。**`.engine` 与构建机器的 GPU 和 TensorRT 版本绑定，换机器必须重新生成**：
 
@@ -140,7 +155,7 @@ python3 scripts/build_armor_batch_engine.py \
 三种入口，用途不同：
 
 ```bash
-./scripts/start_launcher.sh    # 推荐。加载 ROS 与 MVS 环境后启动 Qt 启动台
+./scripts/start_launcher.sh    # 推荐。加载 ROS、相机 SDK 环境后启动 Qt 启动台
 python3 launcher.py            # 直接起启动台（需自己保证环境变量已就绪）
 python3 main.py                # 跳过启动台与标定，直接用现有配置和标定文件比赛
 python3 calibration.py         # 单独进标定
@@ -161,8 +176,9 @@ python3 config_editor.py       # 单独改配置
 
 | 项 | 说明 |
 | --- | --- |
-| 相机类型 | 海康工业相机 / USB 相机 |
-| 相机序列号 | 留空则使用第一台海康相机 |
+| 相机类型 | 迈德威视 MV-SUA133GC-T / 海康工业相机 / USB 相机 / 测试视频或图片 |
+| 相机序列号 | 仅海康模式使用；迈德威视模式取 SDK 枚举的第一台相机 |
+| 曝光 / 增益 | 迈德威视可设曝光时间；旧 dB 增益控件仅用于海康模式 |
 | 录制视觉画面 + 标定地图 | 启动比赛后自动录制 |
 | 录像目录 | 优先扫描已挂载可写的外接硬盘，未检测到则用项目内 `save_img/`。可手动「选择录像存储目录」 |
 | 通信方式 | 无线电 ROS2（比赛默认）/ 传统串口 |
@@ -193,6 +209,8 @@ python3 config_editor.py       # 单独改配置
 分 0 cm 与 300 cm 两个高度层，每层各标 `points_per_layer` 个点（默认 6）。层数固定为 2，对应地面和高地/环形高地的落点高度。点数超过 4 时用多点最小二乘拟合而不是四点透视，抗单点误差更好。
 
 点位共线或顺序错误时会报"高度 N 多点拟合失败"，检查点的分布和点击顺序。
+
+标定保存时会记录相机模式与图像宽高。迈德威视模式启动比赛前强制检查这份来源记录；此前海康模式生成的矩阵没有这些字段，不能直接用于新相机。
 
 ### 7.2 己方阵营
 

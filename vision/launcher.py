@@ -346,6 +346,7 @@ class MatchLauncher(QMainWindow):
         match_form.addRow("己方阵营", side_row)
 
         self.camera_mode = QComboBox()
+        self.camera_mode.addItem("迈德威视 MV-SUA133GC-T", "mindvision")
         self.camera_mode.addItem("海康工业相机", "hik")
         self.camera_mode.addItem("USB 相机", "video")
         self.camera_mode.addItem("测试视频 / 图片", "test")
@@ -427,6 +428,7 @@ class MatchLauncher(QMainWindow):
         self.camera_serial = QLineEdit()
         self.camera_serial.setPlaceholderText("留空则使用第一台海康相机")
         serial_form.addRow("相机序列号", self.camera_serial)
+        self.camera_serial_label = serial_form.labelForField(self.camera_serial)
 
         camera_params = QWidget()
         camera_params_layout = QHBoxLayout(camera_params)
@@ -681,9 +683,25 @@ class MatchLauncher(QMainWindow):
 
     def _update_mode_fields(self):
         mode = self.camera_mode.currentData()
+        mindvision = mode == "mindvision"
+        hik = mode == "hik"
         self.camera_serial.setEnabled(mode == "hik")
-        self.exposure.setEnabled(mode == "hik")
-        self.gain.setEnabled(mode == "hik")
+        self.camera_serial_label.setText("相机序列号（仅海康）")
+        self.camera_serial.setPlaceholderText(
+            "留空则使用第一台海康相机" if hik else "当前模式不使用海康序列号"
+        )
+        self.exposure.setEnabled(hik or mindvision)
+        if mindvision:
+            self.exposure.setRange(4.0, 32400.0)
+            self.exposure.setToolTip("迈德威视曝光时间，范围 4～32400 μs")
+        else:
+            self.exposure.setRange(10.0, 1000000.0)
+            self.exposure.setToolTip("海康相机曝光时间，单位 μs")
+        self.gain.setEnabled(hik)
+        self.gain.setToolTip(
+            "海康相机增益，单位 dB。迈德威视增益由设备默认值控制，不直接映射该数值。"
+            if mindvision else "海康相机增益，单位 dB"
+        )
         self.test_video.setEnabled(mode == "test")
         self.browse_video_button.setEnabled(mode == "test")
 

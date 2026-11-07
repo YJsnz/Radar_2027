@@ -11,8 +11,8 @@
 ### 1.1 三层启动
 
 1. **仓库根 `start_match.sh`（一键双链路）**：定义 `RADIO_START=$ROOT_DIR/radio/apps/match_rx/start.sh`、`VISION_START=$ROOT_DIR/vision/scripts/start_launcher.sh`（均可用 `MATCH_RADIO_START`/`MATCH_VISION_START` 覆盖）；生成并导出统一的 `SHARK_MATCH_RUN_ID`（默认 `match_YYYYmmdd_HHMMSS_$$`，正则 `^[A-Za-z0-9][A-Za-z0-9_.-]*$`、≤88 字符，不合法直接 exit 2）；用 `setsid` 分别起两侧进程组，**单侧退出只重启故障侧**（`MATCH_RESTART_DELAY_SEC` 默认 2s），Ctrl+C 时按进程组 TERM→10s→KILL 收尾。
-2. **`vision/scripts/start_launcher.sh`**：`set -eu`；先 `set +u` 临时加载 `/opt/ros/humble/setup.sh`（radio_ros 模式必需）；再探测海康 MVS 运行库（`MVCAM_COMMON_RUNENV` 候选 `/opt/MVS/lib`、`/opt/MVS`、`/usr/local/MVS/lib`，命中则并入 `LD_LIBRARY_PATH`）；Python 解释器优先 `$PROJECT_ROOT/.venv/bin/python`，否则 `python3`；`cd "$PROJECT_ROOT"` 后 `exec python -u launcher.py "$@"`。**注意 cwd 必须是 vision/**，因为 `main.py:65`、`calibration.py:55`、`launcher.py:63` 都按相对路径读 `config.yaml`。
-3. **`vision/launcher.py`（Qt5 启动台，1098 行）**：`MatchLauncher(QMainWindow)`（`vision/launcher.py:245`）分四块 UI：比赛设置（己方阵营、相机模式 hik/video/test、算法模式 legacy/hkust_tracker、多车识别、录像开关与目录、测试视频）、裁判系统与设备（通信模式 radio_ros/legacy_serial、串口端口、相机序列号、曝光/增益）、标定与测试（地图预制方案、标定点数、保存后自动进比赛）、日志。`_load_settings`（`vision/launcher.py:574`）回填配置，`poll_timer`（`:261`）每秒 `_poll_status`（`:934`）读 `.runtime/radar_status.json` 刷新"相机 / 裁判"两枚状态灯（相机 <5FPS 判红、<10FPS 判黄；裁判 2s 无有效帧判红）。
+2. **`vision/scripts/start_launcher.sh`**：`set -eu`；先从 `~/.config/shark-radar/mindvision.env` 读取可选的 `MINDVISION_SDK_ROOT`（使桌面自启动也能找到 SDK），为该目录中的 `mvsdk.py` 与 MindVision `.so` 配置 Python/动态库路径；再临时加载 `/opt/ros/humble/setup.sh`（radio_ros 模式必需）并探测海康 MVS 运行库；Python 解释器优先 `$PROJECT_ROOT/.venv/bin/python`，否则 `python3`；`cd "$PROJECT_ROOT"` 后 `exec python -u launcher.py "$@"`。**注意 cwd 必须是 vision/**，因为程序按相对路径读 `config.yaml`。
+3. **`vision/launcher.py`（Qt5 启动台）**：`MatchLauncher(QMainWindow)` 分比赛设置、裁判系统与设备、标定与测试、日志四块 UI；相机模式现为 mindvision/hik/video/test，MindVision 使用可配置曝光（4～32400 μs），海康序列号和 dB 增益控件仅适用于 Hik。启动台保存配置后拉起 `main.py` 或 `calibration.py`，二者继承启动器加载的 SDK 环境。
 
 ### 1.2 配置回写与子进程
 
@@ -25,6 +25,10 @@
 `main.py` 启动即：读 config → 校验 `algorithm.mode`/`filter.type`/阈值（`main.py:123-136`、`:193-225`）→ 按 `referee.transport` 建 `RefereeTransport`（`:95`）→ 若 legacy_serial 才开串口（`:140-155`）→ 加载标定数组与地图/掩码（`:511-532`）→ 加载两个引擎（`:1827-1859`）→ 起相机线程并等待首帧（`:1939`）→ 起发送线程（`:1884-1895`）→ 初始化录像（`:1976-2052`）→ 主循环（`:2175`）。`ESC/q` 或 SIGINT/SIGTERM（`:85-91`）退出，收尾在 `:2640-2646`。
 
 **两人操作**：一人负责无线电侧（`radio/apps/match_rx/start.sh` + Dashboard 8765），一人负责视觉台（启动台里选阵营/相机/通信/录像目录 → 保存 → 启动比赛；换场先"开始标定"）。**单人操作**：`./start_match.sh` 同时拉起两侧，视觉台里标定完成且 `calibration.run_after_save=true` 时，`calibration.py:908-911` 用 `os.execv(sys.executable, [sys.executable,'-u','main.py'])` 直接把标定进程替换成比赛进程，一跳进入比赛。
+
+### 1.4 相机迁移记录（2026-11-07）
+
+视觉默认输入已切换为迈德威视 MV-SUA133GC-T，通过独立的 `mindvision_camera.py` 调用厂商 `mvsdk` Python 包，将帧统一转换为 OpenCV BGR。标定文件的 `_points.npz` 增加 `camera_mode`、`image_width`、`image_height`；MindVision 比赛启动时强制比较来源和实拍尺寸，不匹配就要求重新标定。海康、USB 与测试输入保留。当前环境未安装 MindVision SDK，也未接入实机，因此还未完成设备取流、曝光效果、稳定帧率和新标定点实测；详见根目录 README 的相机迁移 TODO。
 
 ---
 
@@ -169,7 +173,7 @@ referee = (display_x, 1500 - display_y)
 | global | 1 | state、camera_mode、multi_car_recognition、use_serial、save_img、map_size:[2800,1500]、test.video_path/loop/start_frame/playback_speed |
 | algorithm | 17 | mode(legacy/hkust_tracker)、vehicle_tracker(0.30/0.10/2/3.0s)、armor_roi(320/0.08/2/1280)、identity(0.85/0.60/0.15/3/5)、lost_target.predict_seconds 0.8 |
 | calibration | 40 | points_per_layer、run_after_save |
-| recording | 44 | fps 20、codec、camera_max_width 2560（注释：4024×3036 按比例缩到 2560×1932）、map_max_width 1920、queue_size、max_catchup、prefer_external、selected_root |
+| recording | 44 | fps 20、codec、camera_max_width 2560（MindVision 1280×1024 保持原尺寸）、map_max_width 1920、queue_size、max_catchup、prefer_external、selected_root |
 | projection | 56 | point_source、car_x/y_ratio(0.5/0.92)、armor_x/y_ratio(0.5/1.5) |
 | inference | 66 | car 640、armor 1280、armor_canvas 640、armor_conf 0.4 |
 | armor_selection | 72 | mode(center/confidence) |
@@ -223,7 +227,7 @@ referee = (display_x, 1500 - display_y)
 | 中 | `main.py:1122-1558`（整段发送逻辑） | legacy 与 radio_ros 两套发送/盲区/易伤代码并存，`chances_flag`、`guess_value` 等全局状态多；2027 若彻底改 ROS 通信，建议删除 legacy 路径收敛到 telemetry |
 | 中 | `config.yaml:191`（blind_zone.points） | 吊射点是 2026 场地像素坐标（按 calib 地图系），换场地全废；`base_time/offset_time=4.7s` 也是 2026 节奏调出来的 |
 | 中 | `main.py:594` vs `config.yaml:198` | `blind_zone.roles` 配置存在但代码不用（硬编码 `{'1','2','7'}`），属"改了配置不生效"的陷阱 |
-| 低 | `config.yaml:185-190` | 曝光 11000（≈30ms，满幅 29.26FPS）与增益 17.9 是特定场馆光照下调的，换馆需重调；相机型号 4024×3036 未在代码硬编码（尺寸从首帧取），换相机相对友好 |
+| 低 | `config.yaml:185-190` | 曝光 11000 μs 与海康增益 17.9 dB 来自旧相机配置；MindVision 当前只应用曝光且需现场复核，增益控件不跨厂商映射；标定来源与帧尺寸现由 `_points.npz` 记录 |
 | 低 | `main.py:1976-2052`、`recording_storage.py` | 录像依赖 `/proc`、sysfs 与外置盘挂载，2027 若换主机/换发行版需回归测试（有单测覆盖） |
 | 低 | `launcher.py:804-824` | 启动台写死的 20 个键若与新版 config 结构不一致会在 `update_config_values` 抛 `KeyError`（有校验，失败时不落盘） |
 

@@ -23,6 +23,7 @@ from collections import deque
 from pathlib import Path
 import serial
 from camera_availability import wait_for_initial_camera_frame
+from camera_calibration import validate_camera_calibration
 from information_ui import draw_information_ui
 import cv2
 
@@ -163,7 +164,7 @@ assert config['filter']['type'] in ['sliding_window', 'hybrid_gated_kalman', 'hy
 if config['filter']['type'] == 'sliding_window':
     assert 1 <= config['filter']['sliding_window']['window_size'] <= 20, "滑动窗口大小应在1-20之间"
 # 图像测试模式
-camera_mode = config['global']['camera_mode']  # 'test':测试模式,'hik':海康相机,'video':USB相机（videocapture）
+camera_mode = config['global']['camera_mode']  # test / hik / mindvision / video
 serial_error = None
 if referee_mode == 'legacy_serial':
     try:
@@ -1066,6 +1067,29 @@ def video_capture_get():
             cam.release()
             print("摄像头资源已释放")
 
+
+def mindvision_camera_get():
+    from mindvision_camera import (
+        MindVisionCamera,
+        MindVisionNoCamera,
+        MindVisionSDKUnavailable,
+    )
+
+    exposure_time = config.get('camera_params', {}).get('exposure_time', 11000)
+    while not stop_requested:
+        try:
+            with MindVisionCamera(exposure_time_us=exposure_time) as camera:
+                while not stop_requested:
+                    publish_camera_frame(camera.get_frame(timeout_ms=1000))
+        except MindVisionSDKUnavailable:
+            raise
+        except MindVisionNoCamera as error:
+            set_camera_error(str(error))
+            time.sleep(1.0)
+        except Exception as error:
+            set_camera_error(f"迈德威视相机采集失败，等待重连：{error}")
+            time.sleep(1.0)
+
 # 测试视频
 def _test_video_capture_get_opencv(video_path, loop=True, start_frame=0, playback_speed=1.0):
     global camera_image
@@ -1960,6 +1984,9 @@ elif camera_mode == 'hik':
     # 海康相机图像获取线程
     thread_camera = threading.Thread(target=run_camera_worker, args=(hik_camera_get,), daemon=True)
     thread_camera.start()
+elif camera_mode == 'mindvision':
+    thread_camera = threading.Thread(target=run_camera_worker, args=(mindvision_camera_get,), daemon=True)
+    thread_camera.start()
 elif camera_mode == 'video':
     # USB相机图像获取线程
     thread_camera = threading.Thread(target=run_camera_worker, args=(video_capture_get,), daemon=True)
@@ -1980,6 +2007,22 @@ if initial_camera_frame is None:
         recording=False,
     )
     sys.exit(0)
+
+if camera_mode == 'mindvision':
+    calibration_path = config['paths']['calibration']['red' if state == 'R' else 'blue']
+    try:
+        validate_camera_calibration(calibration_path, camera_mode, initial_camera_frame.shape)
+    except ValueError as error:
+        detail = f"新相机尚未完成匹配标定：{error}。请先运行 calibration.py 重新标定。"
+        print(detail)
+        set_camera_error(detail)
+        report_runtime_status(
+            phase="stopped",
+            stopped_at=time.time(),
+            camera_ready=False,
+            recording=False,
+        )
+        sys.exit(2)
 
 # 获取相机图像的画幅，限制点不超限
 img0 = initial_camera_frame.copy()

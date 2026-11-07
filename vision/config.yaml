@@ -1,6 +1,6 @@
 global:
   state: 'R'  # 己方颜色 R/B，由手动标定窗口的“对方阵营”选项自动更新
-  camera_mode: 'hik'  # 'test':测试模式,'hik':海康相机,'video':USB相机（videocapture）
+  camera_mode: 'mindvision'  # 默认迈德威视 MV-SUA133GC-T；其他可选：hik / video / test
   # 多车同时识别：true=本帧所有车 ROI 拼接批量装甲板识别；false=仅对置信度最高的一辆车走装甲板与滤波
   multi_car_recognition: true
   use_serial: false  # 兼容旧配置；实际通信方式由 referee.transport 决定
@@ -44,7 +44,7 @@ calibration:
 recording:
   fps: 20.0  # 录像时间轴与目标帧率
   codec: 'h264_nvenc'  # 优先使用RTX硬件H.264；不可用时自动回退libx264/mp4v/MJPG
-  camera_max_width: 2560  # 4024x3036输入按比例录成2560x1932，给20 FPS保留编码余量
+  camera_max_width: 2560  # 只缩小宽度超过上限的输入；MindVision 1280×1024保持原尺寸
   map_max_width: 1920  # 2800x1500地图按比例录成1920x1028
   queue_size: 4  # 约0.2秒短缓冲，吸收编码抖动；满队列才计为真正的录像丢帧
   max_catchup_seconds: 1.0  # 主循环偶发停顿时允许补齐时间轴，避免成片时长被压缩
@@ -183,9 +183,9 @@ paths:
     armor_batch: 'models/armor_batch.engine'  # 动态 batch 1..16；不存在时自动使用 4x4 静态拼图
 
 camera_params:
-  exposure_time: 11000.0  # 30ms，不限制满幅模式约29.26 FPS
-  gain: 17.9  # 增益值
-  # 多相机时填写目标相机序列号（与 MVS 枚举一致）；留空则默认使用枚举列表中的第一台（索引 0）
+  exposure_time: 11000.0  # 曝光时间，单位 μs；迈德威视支持 4～32400 μs
+  gain: 17.9  # 海康增益值（dB）；迈德威视模式不应用此字段
+  # 仅海康模式按 MVS 序列号选设备；迈德威视当前使用 SDK 枚举的第一台相机
   device_serial: 'DA7873943'
 
 blind_zone:

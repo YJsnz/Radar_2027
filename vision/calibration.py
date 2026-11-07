@@ -274,6 +274,33 @@ def video_capture_get():
             time.sleep(0.016)  # 60fps
 
 
+def mindvision_camera_get():
+    global camera_image, camera_error
+    from mindvision_camera import (
+        MindVisionCamera,
+        MindVisionNoCamera,
+        MindVisionSDKUnavailable,
+    )
+
+    exposure_time = config.get('camera_params', {}).get('exposure_time', 11000)
+    while True:
+        try:
+            with MindVisionCamera(exposure_time_us=exposure_time) as camera:
+                print("迈德威视相机已连接，开始标定取图")
+                while True:
+                    camera_image = camera.get_frame(timeout_ms=1000)
+        except MindVisionSDKUnavailable as error:
+            camera_error = str(error)
+            return
+        except MindVisionNoCamera as error:
+            print(f"{error}，1 秒后重试")
+            time.sleep(1.0)
+        except Exception as error:
+            camera_error = f"迈德威视相机采集失败：{error}"
+            print(camera_error)
+            return
+
+
 color = [(255, 255, 255), (0, 255, 0), (0, 0, 255)]
 
 
@@ -891,6 +918,11 @@ class MyUI(QWidget):
                 f"mean={errors.mean():.2f}, max={errors.max():.2f}, all={np.round(errors, 2).tolist()}"
             )
 
+        calibration_frame = camera_image
+        if calibration_frame is None:
+            self.append_text('当前没有相机图像，无法记录标定相机尺寸')
+            return
+        image_height, image_width = calibration_frame.shape[:2]
         update_config_state(self.state)
         np.save(self.save_path, self.T)
         points_save_path = self.save_path.replace('.npy', '_points.npz')
@@ -899,6 +931,9 @@ class MyUI(QWidget):
             matrices=np.array(matrices),
             image_points=np.array(self.image_points, dtype=np.float32),
             map_points=np.array(self.map_points, dtype=np.float32),
+            camera_mode=np.array(camera_mode),
+            image_width=np.int32(image_width),
+            image_height=np.int32(image_height),
         )
 
         self.append_text('保存计算')
@@ -932,8 +967,9 @@ class MyUI(QWidget):
 
 
 if __name__ == '__main__':
-    camera_mode = config['global']['camera_mode']  # 'test':测试模式,'hik':海康相机,'video':USB相机（videocapture）
+    camera_mode = config['global']['camera_mode']  # test / hik / mindvision / video
     camera_image = None
+    camera_error = None
     state = config['global']['state']  # R:红方/B:蓝方
 
     if camera_mode == 'test':
@@ -946,8 +982,13 @@ if __name__ == '__main__':
         # USB相机图像获取线程
         thread_camera = threading.Thread(target=video_capture_get, daemon=True)
         thread_camera.start()
+    elif camera_mode == 'mindvision':
+        thread_camera = threading.Thread(target=mindvision_camera_get, daemon=True)
+        thread_camera.start()
 
     while camera_image is None:
+        if camera_error:
+            raise RuntimeError(camera_error)
         print("等待图像。。。")
         time.sleep(0.5)
     app = QApplication(sys.argv)
