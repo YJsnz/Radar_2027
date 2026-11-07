@@ -2,6 +2,8 @@
 import os
 import sys
 import platform
+import hashlib
+import tempfile
 import time
 from pathlib import Path, PurePosixPath, WindowsPath
 
@@ -29,8 +31,88 @@ import numpy as np
 from utils.general import non_max_suppression, xyxy2xywh
 from utils.torch_utils import select_device
 from utils.plots import Annotator
-from models.common import DetectMultiBackend
+from models.common import DetectMultiBackend, get_tensorrt_logger
 from utils.augmentations import letterbox
+
+
+def _resolve_tensorrt_engine(weights_path, device):
+    """Rebuild a stale static TensorRT engine from its adjacent ONNX file."""
+    engine_path = Path(weights_path).expanduser()
+    if engine_path.suffix.lower() != '.engine' or not engine_path.is_file():
+        return weights_path
+
+    try:
+        import tensorrt as trt
+    except ImportError:
+        return weights_path
+
+    logger = get_tensorrt_logger(trt)
+
+    def can_load(path):
+        if not path.is_file():
+            return False
+        try:
+            with trt.Runtime(logger) as runtime:
+                return runtime.deserialize_cuda_engine(path.read_bytes()) is not None
+        except Exception:
+            return False
+
+    if can_load(engine_path):
+        return str(engine_path)
+
+    onnx_path = engine_path.with_suffix('.onnx')
+    if not onnx_path.is_file():
+        return str(engine_path)
+
+    major, minor = torch.cuda.get_device_capability(device)
+    cache_dir = FILE.parent / '.cache' / 'tensorrt' / trt.__version__ / f'sm{major}{minor}'
+    model_fingerprint = hashlib.sha256(onnx_path.read_bytes()).hexdigest()[:16]
+    cache_path = cache_dir / f'{engine_path.stem}-{model_fingerprint}.engine'
+    if can_load(cache_path):
+        LOGGER.info(f"使用当前 TensorRT/GPU 缓存引擎: {cache_path}")
+        return str(cache_path)
+
+    LOGGER.warning(
+        f"{engine_path} 无法被当前 TensorRT {trt.__version__} 加载，"
+        f"将从 {onnx_path.name} 重建本机引擎。"
+    )
+    builder = trt.Builder(logger)
+    network_flags = 0
+    if hasattr(trt.NetworkDefinitionCreationFlag, 'EXPLICIT_BATCH'):
+        network_flags = 1 << int(trt.NetworkDefinitionCreationFlag.EXPLICIT_BATCH)
+    network = builder.create_network(network_flags)
+    parser = trt.OnnxParser(network, logger)
+    if not parser.parse_from_file(str(onnx_path)):
+        errors = '; '.join(str(parser.get_error(i)) for i in range(parser.num_errors))
+        raise RuntimeError(f"TensorRT 无法解析 ONNX 模型 {onnx_path}: {errors}")
+
+    if any(-1 in tuple(network.get_input(i).shape) for i in range(network.num_inputs)):
+        raise RuntimeError(f"{onnx_path} 含动态输入，不能自动重建静态 TensorRT 引擎")
+
+    config = builder.create_builder_config()
+    config.set_memory_pool_limit(trt.MemoryPoolType.WORKSPACE, 4 << 30)
+    if getattr(builder, 'platform_has_fast_fp16', False):
+        config.set_flag(trt.BuilderFlag.FP16)
+    serialized_engine = builder.build_serialized_network(network, config)
+    if serialized_engine is None:
+        raise RuntimeError(f"TensorRT 重建引擎失败: {onnx_path}")
+
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    temporary_path = None
+    try:
+        with tempfile.NamedTemporaryFile(dir=cache_dir, suffix='.engine.tmp', delete=False) as temporary:
+            temporary_path = Path(temporary.name)
+            temporary.write(serialized_engine)
+        os.replace(temporary_path, cache_path)
+    finally:
+        if temporary_path and temporary_path.exists():
+            temporary_path.unlink()
+
+    if not can_load(cache_path):
+        cache_path.unlink(missing_ok=True)
+        raise RuntimeError(f"TensorRT 重建的本机引擎无法加载: {cache_path}")
+    LOGGER.info(f"本机 TensorRT 引擎已就绪: {cache_path}")
+    return str(cache_path)
 
 
 class YOLOv5Detector:
@@ -77,6 +159,8 @@ class YOLOv5Detector:
         print(f"使用设备: {self.device} (requested={device})")
 
         # 加载模型 - 比赛显式使用 GPU；CPU模式仅供未指定设备的非 engine 模型回退。
+        if engine_model:
+            weights_path = _resolve_tensorrt_engine(weights_path, self.device)
         self.model = DetectMultiBackend(weights_path, device=self.device, dnn=dnn, fp16=False, data=data)
 
         stride, self.names, pt, jit, onnx, engine = self.model.stride, self.model.names, self.model.pt, self.model.jit, self.model.onnx, self.model.engine

@@ -33,6 +33,16 @@ from utils.general import (LOGGER, ROOT, Profile, check_requirements, check_suff
 from utils.plots import Annotator, colors, save_one_box
 from utils.torch_utils import copy_attr, smart_inference_mode
 
+_TENSORRT_LOGGER = None
+
+
+def get_tensorrt_logger(trt):
+    """Share one logger across TensorRT builders and runtimes in this process."""
+    global _TENSORRT_LOGGER
+    if _TENSORRT_LOGGER is None:
+        _TENSORRT_LOGGER = trt.Logger(trt.Logger.INTERNAL_ERROR)
+    return _TENSORRT_LOGGER
+
 
 def autopad(k, p=None, d=1):  # kernel, padding, dilation
     # Pad to 'same' shape outputs
@@ -393,9 +403,14 @@ class DetectMultiBackend(nn.Module):
             if device.type == 'cpu':
                 device = torch.device('cuda:0')
             Binding = namedtuple('Binding', ('name', 'dtype', 'shape', 'data', 'ptr'))
-            logger = trt.Logger(trt.Logger.INFO)
+            logger = get_tensorrt_logger(trt)
             with open(w, 'rb') as f, trt.Runtime(logger) as runtime:
                 model = runtime.deserialize_cuda_engine(f.read())
+            if model is None:
+                raise RuntimeError(
+                    f"TensorRT 无法反序列化引擎 {w}；请检查 TensorRT 版本，"
+                    "并确认存在可用于重建的同名 ONNX 模型。"
+                )
             context = model.create_execution_context()
             bindings = OrderedDict()
             output_names = []
