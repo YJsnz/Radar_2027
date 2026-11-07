@@ -144,3 +144,6 @@ save_img/
 calibration_backup_*/
 models/engine_backup_*/
 .runtime/
+
+# MindVision SDK per-camera settings generated at runtime
+Camera/

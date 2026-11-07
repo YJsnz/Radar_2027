@@ -28,7 +28,7 @@
 
 ### 1.4 相机迁移记录（2026-11-07）
 
-视觉默认输入已切换为迈德威视 MV-SUA133GC-T，通过独立的 `mindvision_camera.py` 调用厂商 `mvsdk` Python 包，将帧统一转换为 OpenCV BGR。标定文件的 `_points.npz` 增加 `camera_mode`、`image_width`、`image_height`；MindVision 比赛启动时强制比较来源和实拍尺寸，不匹配就要求重新标定。海康、USB 与测试输入保留。当前环境未安装 MindVision SDK，也未接入实机，因此还未完成设备取流、曝光效果、稳定帧率和新标定点实测；详见根目录 README 的相机迁移 TODO。
+视觉默认输入已切换为迈德威视 MV-SUA133GC-T，通过独立的 `mindvision_camera.py` 调用厂商 `mvsdk` Python 包，将帧统一转换为 OpenCV BGR。标定文件的 `_points.npz` 增加 `camera_mode`、`image_width`、`image_height`；MindVision 比赛启动时强制比较来源和实拍尺寸，不匹配就要求重新标定。海康、USB 与测试输入保留。2026-11-07 在实机上使用 `vision/.venv` 验证 SDK 2.1.0.37：相机可枚举并成功输出 1280×1024 BGR 帧，连续采集 10.01 秒共 913 帧（91.21 FPS），曝光 11000 μs 的 SDK 回读为 11001.7 μs。比赛启动台/桌面入口取流、红蓝现场标定和 ROI 变化后的重标仍待验证；详见根目录 README 的相机迁移 TODO。
 
 ---
 
