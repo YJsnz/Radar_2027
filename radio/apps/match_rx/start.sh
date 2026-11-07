@@ -92,7 +92,11 @@ runtime_audit_args=()
 if [[ "${RM_RADIO_REQUIRE_LATEST_RUNTIME:-false}" == "true" ]]; then
   runtime_audit_args+=(--require-latest)
 fi
-python3 "$RM_RADIO_WS/apps/common/check_gnuradio_runtime.py" "${runtime_audit_args[@]}"
+if [[ "${RUN_RX,,}" =~ ^(1|true|yes|on)$ ]]; then
+  python3 "$RM_RADIO_WS/apps/common/check_gnuradio_runtime.py" "${runtime_audit_args[@]}"
+else
+  echo "[match-rx] RX 已关闭，跳过 GNU Radio 运行时检查。"
+fi
 
 # 每次启动都替换旧的 RX 套件；BASHPID/祖先进程过滤保证不会误杀本次启动器。
 MATCH_RESIDUAL_PATTERNS=(

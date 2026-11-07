@@ -27,6 +27,7 @@ usage() {
   2. 视觉雷达比赛启动台（可配置、标定并启动比赛主程序）
 
 常用参数会原样传给无线电启动器，例如：
+  --panel-only      仅启动 Dashboard（不启动 RX/裁判串口；仍会打开视觉启动台）
   --no-browser       不自动打开 RX Dashboard
   --headless         不打开 GNU Radio 原生窗口
   --native-gui       打开 GNU Radio 原生诊断窗口

@@ -234,7 +234,7 @@
 
 ### 6.1 配置分层（准确链路）
 
-`radio/apps/match_rx/start.sh` 是唯一入口（**仓库中没有 `start_match.sh`**；`apps/match_rx` 仅 5 个文件：`config.yaml`、`env.sh`、`start.sh`、`doctor.sh`、`optional_algorithm.sh`）。链路：
+`radio/apps/match_rx/start.sh` 是无线电侧入口；仓库根目录的 `start_match.sh` 会同时监督无线电启动器和视觉启动台。`apps/match_rx` 的入口文件包括 `config.yaml`、`env.sh`、`start.sh`、`doctor.sh`、`optional_algorithm.sh`。无线电启动链路：
 
 ```
 config.yaml ──┐
