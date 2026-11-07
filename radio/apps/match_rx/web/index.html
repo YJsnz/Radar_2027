@@ -276,25 +276,32 @@
           <div class="panel-head">
             <div>
               <h2>装甲板与当前加固范围</h2>
-              <span class="muted">示例装甲板 + 0x020E 毫米坐标下的裁判确认圆</span>
+              <span class="muted">0x020E 裁判确认圆直接叠加在装甲检测面上</span>
             </div>
             <span id="armorRangeBadge" class="badge unknown">等待 0x020E</span>
           </div>
           <div class="armor-visual-grid">
             <figure class="armor-plate-figure">
               <div class="armor-plate-art">
-                <img src="/assets/adaptive-armor-plate.png" alt="参考项目提供的 1 号装甲板示例图片" />
+                <div class="armor-plate-stage" id="armorPlateStage">
+                  <img src="/assets/adaptive-armor-plate.png" alt="裁切后的 1 号装甲板正视示例图" />
+                  <svg id="armorPlateOverlay" class="armor-plate-overlay" viewBox="0 0 1197 1097" preserveAspectRatio="none" role="img" aria-label="装甲检测面与裁判确认加固范围">
+                    <defs>
+                      <clipPath id="armorDetectionFaceClip"><rect x="103.6" y="103.6" width="990" height="988.9" /></clipPath>
+                    </defs>
+                    <rect class="armor-detection-face-outline" x="103.6" y="103.6" width="990" height="988.9" />
+                    <g id="armorReinforcementOverlay" clip-path="url(#armorDetectionFaceClip)"></g>
+                  </svg>
+                </div>
               </div>
-              <figcaption>装甲板示例图。图片未提供实体尺寸标定，不作为毫米坐标比例尺。</figcaption>
+              <div class="armor-geometry-controls">
+                <label>检测面宽 <span>mm</span><input id="armorPlateWidthMm" type="number" min="1" max="5000" step="1" inputmode="numeric" placeholder="实际宽度" /></label>
+                <label>检测面高 <span>mm</span><input id="armorPlateHeightMm" type="number" min="1" max="5000" step="1" inputmode="numeric" placeholder="实际高度" /></label>
+                <button id="armorApplyGeometry" type="button">应用尺寸</button>
+                <span id="armorGeometryStatus" class="armor-geometry-status" role="status">请按装甲模块检测面的实测宽高标定。</span>
+              </div>
+              <figcaption>坐标原点为检测面左下角，x 向右、y 向上。录入检测面的真实宽高后，图片按实测比例显示；装饰性插画本身不作为尺寸来源。</figcaption>
             </figure>
-            <div class="armor-range-card">
-              <div class="armor-range-card-head">
-                <strong>当前裁判确认的加固圆</strong>
-                <span>坐标单位：mm</span>
-              </div>
-              <svg id="armorRangePlot" class="armor-range-plot" viewBox="0 0 640 640" role="img" aria-label="当前加固范围毫米坐标图"></svg>
-              <p id="armorRangePlotNote" class="armor-range-note">等待有效 0x020E 生效圆；图中坐标窗口以毫米标注，x 向右、y 向上。</p>
-            </div>
           </div>
           <div class="armor-area-results">
             <article class="armor-result"><span>裁判确认圆面积</span><strong id="armorCurrentCircleArea">—</strong><small>0x020E 半径 r · πr²</small></article>
@@ -306,7 +313,7 @@
             <span><i class="unreinforced"></i>未加固 ×1.5</span>
             <span><i class="default"></i>默认 ×1.0</span>
           </div>
-          <p class="armor-scale-note">坐标图按 0x020E 的圆心和半径等比例绘制，并自动缩放到圆周附近的局部窗口；示例照片不参与尺度换算。规则面积需有效的双方命中率、散布和装甲板面积数据，未收到这些真实字段时保持不可计算。</p>
+          <p id="armorRangeNote" class="armor-scale-note">等待有效 0x020E 状态和检测面真实尺寸；尺寸缺失时不把毫米值映射成图片像素。</p>
         </section>
 
         <section class="panel armor-readiness-panel">

@@ -1,5 +1,13 @@
 const state = { latest: null, busy: false };
 let activePage = location.hash === "#radio" ? "radio" : location.hash === "#armor" ? "armor" : "radar";
+const ARMOR_PLATE_ART = Object.freeze({
+  width: 1197,
+  height: 1097,
+  face: Object.freeze({ x: 103.6, y: 103.6, width: 990, height: 988.9 }),
+});
+const ARMOR_GEOMETRY_STORAGE_KEY = "match-rx.adaptive-armor-geometry.v1";
+let armorGeometryCalibration = loadArmorGeometryCalibration();
+let latestAdaptiveArmorPayload = null;
 let radarEventSource = null;
 let radarReconnectTimer = 0;
 let radarStreamState = "closed";
@@ -1150,12 +1158,38 @@ function armorNumber(value) {
   return Number.isFinite(number) ? number : NaN;
 }
 
-function calculateArmorAreaEstimate(stats) {
+function loadArmorGeometryCalibration() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(ARMOR_GEOMETRY_STORAGE_KEY) || "null");
+    const widthMm = armorNumber(saved?.width_mm);
+    const heightMm = armorNumber(saved?.height_mm);
+    return widthMm > 0 && heightMm > 0 ? { widthMm, heightMm } : null;
+  } catch {
+    return null;
+  }
+}
+
+function resolveArmorGeometry(stats) {
+  const statusWidth = armorNumber(stats.plate_width_mm ?? stats.detection_surface_width_mm);
+  const statusHeight = armorNumber(stats.plate_height_mm ?? stats.detection_surface_height_mm);
+  if (statusWidth > 0 && statusHeight > 0) {
+    return { widthMm: statusWidth, heightMm: statusHeight, source: "算法状态" };
+  }
+  if (armorGeometryCalibration?.widthMm > 0 && armorGeometryCalibration?.heightMm > 0) {
+    return { ...armorGeometryCalibration, source: "本机标定" };
+  }
+  return null;
+}
+
+function calculateArmorAreaEstimate(stats, geometry) {
   const ownHitRate = armorNumber(stats.own_hit_rate);
   const enemyHitRate = armorNumber(stats.opponent_hit_rate);
   const ownSpread = armorNumber(stats.own_spread_mm);
   const enemySpread = armorNumber(stats.opponent_spread_mm);
-  const plateArea = armorNumber(stats.plate_area_mm2);
+  const suppliedPlateArea = armorNumber(stats.plate_area_mm2);
+  const plateArea = suppliedPlateArea > 0
+    ? suppliedPlateArea
+    : geometry ? geometry.widthMm * geometry.heightMm : NaN;
   const valid = stats.estimate_valid === true
     && ownHitRate >= 0 && ownHitRate <= 1
     && enemyHitRate > 0 && enemyHitRate <= 1
@@ -1170,61 +1204,68 @@ function calculateArmorAreaEstimate(stats) {
   const areaMm2 = Number.isFinite(plateArea) && plateArea > 0 ? plateArea * areaRatio : NaN;
   const radiusMm = Number.isFinite(areaMm2) ? Math.sqrt(areaMm2 / Math.PI) : NaN;
   if (![relativeAccuracy, areaRatio].every(Number.isFinite)) return { valid: false };
-  return { valid: true, ownHitRate, enemyHitRate, ownSpread, enemySpread, relativeAccuracy, areaRatio, areaMm2, radiusMm, plateArea };
+  return {
+    valid: true,
+    ownHitRate,
+    enemyHitRate,
+    ownSpread,
+    enemySpread,
+    relativeAccuracy,
+    areaRatio,
+    areaMm2,
+    radiusMm,
+    plateArea,
+    plateAreaSource: suppliedPlateArea > 0 ? "算法状态" : geometry ? "检测面宽×高" : "未标定",
+  };
 }
 
-function renderArmorRangePlot(own, ownValid, ownActive) {
-  const svg = $("armorRangePlot");
+function renderArmorPlateOverlay(own, ownValid, ownActive, geometry) {
+  const stage = $("armorPlateStage");
+  const overlay = $("armorReinforcementOverlay");
+  const note = $("armorRangeNote");
+  const geometryStatus = $("armorGeometryStatus");
+  if (geometry) {
+    const faceAspect = ARMOR_PLATE_ART.face.width / ARMOR_PLATE_ART.face.height;
+    const imageAspect = ARMOR_PLATE_ART.width / ARMOR_PLATE_ART.height;
+    const imageAspectForPhysicalScale = (geometry.widthMm / geometry.heightMm) / faceAspect * imageAspect;
+    stage.style.aspectRatio = String(imageAspectForPhysicalScale);
+    geometryStatus.textContent = `${geometry.source}：检测面 ${geometry.widthMm} × ${geometry.heightMm} mm`;
+  } else {
+    stage.style.aspectRatio = `${ARMOR_PLATE_ART.width} / ${ARMOR_PLATE_ART.height}`;
+    geometryStatus.textContent = "检测面真实宽高未标定；请实测后应用，未标定前不叠加毫米圆。";
+  }
+
   const centerX = armorNumber(own.fortify_center_x_mm);
   const centerY = armorNumber(own.fortify_center_y_mm);
   const radius = armorNumber(own.fortify_radius_mm);
-  const hasRange = ownValid && ownActive && centerX >= 0 && centerY >= 0 && radius > 0;
-  if (!hasRange) {
-    svg.setAttribute("aria-label", "等待裁判确认当前加固范围");
-    svg.innerHTML = `
-      <defs><pattern id="armorRangeGridEmpty" width="48" height="48" patternUnits="userSpaceOnUse"><path d="M 48 0 L 0 0 0 48" fill="none" stroke="#e1e7ee" stroke-width="1" /></pattern></defs>
-      <rect x="62" y="42" width="516" height="516" rx="12" fill="url(#armorRangeGridEmpty)" stroke="#cbd5df" stroke-dasharray="7 6" />
-      <line x1="82" y1="538" x2="548" y2="538" stroke="#708090" stroke-width="2" />
-      <line x1="82" y1="538" x2="82" y2="72" stroke="#708090" stroke-width="2" />
-      <text x="315" y="310" text-anchor="middle" class="armor-range-empty">${ownValid ? "当前没有生效加固圆" : "等待有效 0x020E"}</text>
-      <text x="552" y="560" class="armor-range-axis-label">x · mm</text>
-      <text x="65" y="68" class="armor-range-axis-label">y · mm</text>`;
+  const hasRange = ownValid && ownActive && Number.isFinite(centerX) && Number.isFinite(centerY) && radius > 0;
+  if (!geometry || !hasRange) {
+    overlay.innerHTML = "";
+    note.textContent = !geometry
+      ? hasRange
+        ? `裁判已回报圆心 (${centerX}, ${centerY}) mm、半径 ${radius} mm；等待检测面真实宽高，暂不映射到图片。`
+        : "检测面真实尺寸未标定；输入实测宽高后，裁判回报的毫米坐标才会映射到图片。"
+      : ownValid ? "裁判当前未报告生效加固圆。" : "等待有效 0x020E 状态。";
     return;
   }
 
-  const plotLeft = 104;
-  const plotTop = 58;
-  const plotSize = 470;
-  const halfWindow = Math.max(radius * 2, 40);
-  const viewMinX = centerX - halfWindow;
-  const viewMinY = centerY - halfWindow;
-  const circleRadius = radius / (halfWindow * 2) * plotSize;
-  const grid = [];
-  for (let index = 0; index <= 4; index += 1) {
-    const offset = plotSize * index / 4;
-    const xValue = viewMinX + halfWindow * index / 2;
-    const yValue = viewMinY + halfWindow * (4 - index) / 2;
-    const x = plotLeft + offset;
-    const y = plotTop + offset;
-    grid.push(`<line x1="${x}" y1="${plotTop}" x2="${x}" y2="${plotTop + plotSize}" class="armor-range-grid-line" />`);
-    grid.push(`<line x1="${plotLeft}" y1="${y}" x2="${plotLeft + plotSize}" y2="${y}" class="armor-range-grid-line" />`);
-    grid.push(`<text x="${x}" y="${plotTop + plotSize + 22}" text-anchor="middle" class="armor-range-tick">${xValue.toFixed(0)}</text>`);
-    grid.push(`<text x="${plotLeft - 10}" y="${y + 4}" text-anchor="end" class="armor-range-tick">${yValue.toFixed(0)}</text>`);
-  }
-  svg.setAttribute("aria-label", `裁判确认加固圆，圆心 ${centerX}、${centerY} 毫米，半径 ${radius} 毫米`);
-  svg.innerHTML = `
-    <rect x="${plotLeft}" y="${plotTop}" width="${plotSize}" height="${plotSize}" rx="8" class="armor-range-plot-bg" />
-    ${grid.join("")}
-    <circle cx="${plotLeft + plotSize / 2}" cy="${plotTop + plotSize / 2}" r="${circleRadius}" class="armor-range-circle" />
-    <line x1="${plotLeft + plotSize / 2 - 7}" y1="${plotTop + plotSize / 2}" x2="${plotLeft + plotSize / 2 + 7}" y2="${plotTop + plotSize / 2}" class="armor-range-center-mark" />
-    <line x1="${plotLeft + plotSize / 2}" y1="${plotTop + plotSize / 2 - 7}" x2="${plotLeft + plotSize / 2}" y2="${plotTop + plotSize / 2 + 7}" class="armor-range-center-mark" />
-    <circle cx="${plotLeft + plotSize / 2}" cy="${plotTop + plotSize / 2}" r="4.5" class="armor-range-center-dot" />
-    <text x="${plotLeft + plotSize / 2}" y="32" text-anchor="middle" class="armor-range-caption">当前生效范围 · r ${radius} mm</text>
-    <text x="${plotLeft + plotSize + 6}" y="${plotTop + plotSize + 22}" class="armor-range-axis-label">x →</text>
-    <text x="${plotLeft - 10}" y="${plotTop - 8}" text-anchor="end" class="armor-range-axis-label">y ↑</text>`;
+  const { face } = ARMOR_PLATE_ART;
+  const cx = face.x + centerX / geometry.widthMm * face.width;
+  const cy = face.y + (1 - centerY / geometry.heightMm) * face.height;
+  const rx = radius / geometry.widthMm * face.width;
+  const ry = radius / geometry.heightMm * face.height;
+  const crossRadius = 12;
+  overlay.innerHTML = `
+    <ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" class="armor-reinforcement-ellipse" />
+    <path d="M ${cx - crossRadius} ${cy} H ${cx + crossRadius} M ${cx} ${cy - crossRadius} V ${cy + crossRadius}" class="armor-reinforcement-cross" />
+    <circle cx="${cx}" cy="${cy}" r="7" class="armor-reinforcement-center" />`;
+  const clipped = centerX - radius < 0 || centerY - radius < 0
+    || centerX + radius > geometry.widthMm || centerY + radius > geometry.heightMm;
+  note.textContent = `${geometry.source}尺寸 ${geometry.widthMm} × ${geometry.heightMm} mm · 圆心 (${centerX}, ${centerY}) mm · 半径 ${radius} mm${clipped ? " · 超出检测面部分已裁切显示" : ""}`;
 }
 
 function renderAdaptiveArmor(payload) {
+  latestAdaptiveArmorPayload = payload || {};
   const integrationEntry = payload?.radar || get(state.latest, ["radar"], {});
   const fusion = integrationEntry?.data || {};
   const strategy = fusion.strategy || {};
@@ -1244,7 +1285,8 @@ function renderAdaptiveArmor(payload) {
   const ownRadiusMismatch = ownValid && ownActiveFlag && !(currentRadius > 0);
   const ownActive = ownValid && ownActiveFlag && currentRadius > 0;
   const hasCurrentRange = ownActive && currentRadius > 0;
-  const areaEstimate = calculateArmorAreaEstimate(armorStats);
+  const plateGeometry = resolveArmorGeometry(armorStats);
+  const areaEstimate = calculateArmorAreaEstimate(armorStats, plateGeometry);
   const enemySeen = Object.keys(enemyEntry).length > 0 && Object.keys(enemyArmor).length > 0;
   const enemyRadius = Number(enemyArmor.radius_mm);
   const enemyActive = enemySeen && enemyArmor.active === true && Number.isFinite(enemyRadius) && enemyRadius > 0;
@@ -1262,17 +1304,15 @@ function renderAdaptiveArmor(payload) {
   $("armorOwnRadius").textContent = ownValid && ownActive && Number.isFinite(Number(own.fortify_radius_mm))
     ? `${Number(own.fortify_radius_mm)} mm`
     : "—";
-  renderArmorRangePlot(own, ownValid, ownActive);
-  $("armorRangeBadge").className = `badge ${hasCurrentRange ? "ok" : ownRadiusMismatch ? "warn" : "unknown"}`;
-  $("armorRangeBadge").textContent = hasCurrentRange ? "裁判已确认范围" : ownRadiusMismatch ? "加固字段不一致" : ownValid ? "当前无生效圆" : "等待 0x020E";
+  renderArmorPlateOverlay(own, ownValid, ownActive, plateGeometry);
+  $("armorRangeBadge").className = `badge ${hasCurrentRange && plateGeometry ? "ok" : ownRadiusMismatch ? "warn" : hasCurrentRange ? "warn" : "unknown"}`;
+  $("armorRangeBadge").textContent = hasCurrentRange
+    ? plateGeometry ? "裁判已确认范围" : "待检测面尺寸标定"
+    : ownRadiusMismatch ? "加固字段不一致" : ownValid ? "当前无生效圆" : "等待 0x020E";
   const currentCircleArea = hasCurrentRange ? Math.PI * currentRadius ** 2 : NaN;
   $("armorCurrentCircleArea").textContent = Number.isFinite(currentCircleArea)
     ? `${currentCircleArea.toFixed(0)} mm² · ${(currentCircleArea / 100).toFixed(2)} cm²`
     : "—";
-  $("armorRangePlotNote").textContent = hasCurrentRange
-    ? `圆心 ${armorCenterText(own.fortify_center_x_mm, own.fortify_center_y_mm)} · 半径 ${currentRadius} mm · 图表窗口为圆心附近局部坐标。`
-    : ownValid ? "裁判当前未报告生效加固圆。" : "等待有效 0x020E 生效圆；坐标窗口使用毫米标注，x 向右、y 向上。";
-
   $("armorCalculatedArea").textContent = areaEstimate.valid
     ? Number.isFinite(areaEstimate.areaMm2)
       ? `${areaEstimate.areaMm2.toFixed(0)} mm² · ${(areaEstimate.areaMm2 / 100).toFixed(2)} cm²`
@@ -1280,7 +1320,7 @@ function renderAdaptiveArmor(payload) {
     : "—";
   $("armorCalculatedAreaNote").textContent = areaEstimate.valid
     ? Number.isFinite(areaEstimate.areaMm2)
-      ? `${(areaEstimate.areaRatio * 100).toFixed(2)}% 板面 · S=${areaEstimate.plateArea.toFixed(0)} mm²`
+      ? `${(areaEstimate.areaRatio * 100).toFixed(2)}% 板面 · S=${areaEstimate.plateArea.toFixed(0)} mm²${areaEstimate.plateAreaSource === "检测面宽×高" ? "（按实测尺寸）" : ""}`
       : "面积比例已计算；待提供板面面积 S 换算 mm²"
     : "等待有效双方 η、σ";
   $("armorCalculatedRadius").textContent = areaEstimate.valid
@@ -1852,6 +1892,29 @@ $("spectrumTap").addEventListener("change", () => {
   }
   spectrumDirty = true;
   startSpectrumStream();
+});
+
+if (armorGeometryCalibration) {
+  $("armorPlateWidthMm").value = String(armorGeometryCalibration.widthMm);
+  $("armorPlateHeightMm").value = String(armorGeometryCalibration.heightMm);
+}
+$("armorApplyGeometry").addEventListener("click", () => {
+  const widthMm = armorNumber($("armorPlateWidthMm").value);
+  const heightMm = armorNumber($("armorPlateHeightMm").value);
+  const status = $("armorGeometryStatus");
+  if (!(widthMm >= 1 && widthMm <= 5000 && heightMm >= 1 && heightMm <= 5000)) {
+    status.textContent = "宽、高需分别填写 1～5000 mm 的实测值。";
+    return;
+  }
+  armorGeometryCalibration = { widthMm, heightMm };
+  let storageAvailable = true;
+  try {
+    localStorage.setItem(ARMOR_GEOMETRY_STORAGE_KEY, JSON.stringify({ width_mm: widthMm, height_mm: heightMm }));
+  } catch {
+    storageAvailable = false;
+  }
+  renderAdaptiveArmor(latestAdaptiveArmorPayload || state.latest || {});
+  if (!storageAvailable) status.textContent = "已应用到当前页面；浏览器禁止本地存储，刷新后需重新标定。";
 });
 
 refresh();
