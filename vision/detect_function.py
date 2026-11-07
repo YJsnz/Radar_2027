@@ -37,24 +37,20 @@ class YOLOv5Detector:
     def __init__(self, weights_path, img_size=(640, 640), conf_thres=0.70, iou_thres=0.2, max_det=10,
                  device='', classes=None, agnostic_nms=False, augment=False, visualize=False, half=True, dnn=False,
                  data='data/coco128.yaml', ui=False):
-        # 设置设备：默认遵从上层传入，必要时安全回退到CPU
+        # 设置设备：TensorRT 与比赛主程序显式请求 GPU 时不得静默切到 CPU。
         self.ui = ui
         requested_device = str(device).strip().lower() if device is not None else ''
+        engine_model = str(weights_path).lower().endswith('.engine')
         if requested_device in ('', 'none'):
-            # select_device('cpu') 会设置 CUDA_VISIBLE_DEVICES=-1，导致后续 TensorRT
-            # 无法再初始化 CUDA（.engine 会段错误），故 TensorRT 权重默认走 GPU
-            wlow = str(weights_path).lower()
-            if wlow.endswith('.engine'):
-                if not torch.cuda.is_available():
-                    raise RuntimeError(
-                        'TensorRT 模型 (*.engine) 需要 CUDA。当前无可用 GPU，请在 config.yaml 中改用 '
-                        'models/car.onnx 与 models/armor.onnx（或 .pt），或安装/修复 CUDA 驱动。'
-                    )
+            if engine_model:
+                requested_device = '0'
+            elif torch.cuda.is_available():
                 requested_device = '0'
             else:
-                requested_device = '0' if torch.cuda.is_available() else 'cpu'
+                # 非 TensorRT 模型仍可在未指定设备时使用 CPU。
+                requested_device = 'cpu'
 
-        # YOLOv5 的 select_device 常用 '0' 指代第一张GPU
+        # YOLOv5 的 select_device 使用 CUDA_VISIBLE_DEVICES 编号。
         if requested_device.startswith('cuda'):
             if ':' in requested_device:
                 requested_device = requested_device.split(':', 1)[1] or '0'
@@ -63,23 +59,32 @@ class YOLOv5Detector:
         elif requested_device == 'gpu':
             requested_device = '0'
 
-        # CUDA不可用时回退CPU，避免初始化报错
-        if requested_device != 'cpu' and not torch.cuda.is_available():
-            requested_device = 'cpu'
+        if requested_device != 'cpu':
+            # 上层明确选 GPU 时，清除桌面/conda 启动环境里可能遗留的 -1 或
+            # 其他设备掩码；必须在第一次 CUDA 可用性检查前设置。
+            os.environ['CUDA_VISIBLE_DEVICES'] = requested_device
+            if not torch.cuda.is_available():
+                cuda_runtime = getattr(torch.version, 'cuda', None) or '未启用 CUDA 的 PyTorch'
+                visible_devices = os.environ.get('CUDA_VISIBLE_DEVICES', '<unset>')
+                raise RuntimeError(
+                    f'已请求使用 GPU {requested_device}，但当前 Python 进程无法访问 CUDA '
+                    f'(PyTorch={torch.__version__}, CUDA runtime={cuda_runtime}, '
+                    f'CUDA_VISIBLE_DEVICES={visible_devices})。请检查 NVIDIA 驱动、GPU 设备权限，'
+                    '并确保启动器使用 CUDA 版 PyTorch。'
+                )
 
         self.device = select_device(requested_device)
         print(f"使用设备: {self.device} (requested={device})")
 
-        # 加载模型 - 禁用半精度(CPU不支持FP16)
+        # 加载模型 - 比赛显式使用 GPU；CPU模式仅供未指定设备的非 engine 模型回退。
         self.model = DetectMultiBackend(weights_path, device=self.device, dnn=dnn, fp16=False, data=data)
 
         stride, self.names, pt, jit, onnx, engine = self.model.stride, self.model.names, self.model.pt, self.model.jit, self.model.onnx, self.model.engine
         self.img_size = check_img_size(img_size, s=stride)
         self.colors = [[random.randint(0, 255) for _ in range(3)] for _ in self.names]
-        # CPU模式下禁用半精度
-        self.half = False  # CPU不支持半精度
+        self.half = False  # 当前模型配置使用全精度
         if pt or jit:
-            self.model.model.float()  # 使用全精度Float32
+            self.model.model.float()
         self.save_time = 0
         self.conf_thres = conf_thres
         self.iou_thres = iou_thres
@@ -88,9 +93,8 @@ class YOLOv5Detector:
         self.agnostic_nms = agnostic_nms
         self.augment = augment
         self.visualize = visualize
-        bs = 1  # batch_size
-        # 开始预测
-        self.model.warmup(imgsz=(1 if pt or self.model.triton else bs, 3, *self.img_size))  # warmup
+        bs = 1
+        self.model.warmup(imgsz=(1 if pt or self.model.triton else bs, 3, *self.img_size))
 
     @property
     def supports_dynamic_batch(self):

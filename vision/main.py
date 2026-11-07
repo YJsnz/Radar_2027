@@ -6,6 +6,11 @@
 import atexit
 import json
 import os
+
+# 比赛检测使用第一张 CUDA GPU；在导入 PyTorch/TensorRT 前覆盖可能遗留的 CPU 掩码。
+MODEL_DEVICE = '0'
+os.environ['CUDA_VISIBLE_DEVICES'] = MODEL_DEVICE
+
 import re
 import signal
 import sys
@@ -1829,7 +1834,7 @@ weights_path = config['paths']['models']['car']
 weights_path_next = config['paths']['models']['armor']
 detector = YOLOv5Detector(weights_path, img_size=car_img_size, data='yaml/car.yaml',
                           conf_thres=vehicle_low_confidence,
-                          iou_thres=0.5, max_det=14, ui=True)
+                          iou_thres=0.5, max_det=14, ui=True, device=MODEL_DEVICE)
 detector_next = None
 armor_batch_active = False
 armor_batch_path = config.get('paths', {}).get('models', {}).get('armor_batch')
@@ -1843,6 +1848,7 @@ if algorithm_mode == 'hkust_tracker' and armor_batch_path and os.path.isfile(arm
             img_size=(320, 320),
             max_det=8,
             ui=False,
+            device=MODEL_DEVICE,
         )
         if not detector_next.supports_dynamic_batch:
             raise RuntimeError('engine 没有动态 batch profile')
@@ -1856,7 +1862,7 @@ if detector_next is None:
                                    conf_thres=armor_conf_threshold, iou_thres=0.2,
                                    img_size=armor_img_size,
                                    max_det=16 if algorithm_mode == 'hkust_tracker' else 10,
-                                   ui=algorithm_mode == 'legacy')
+                                   ui=algorithm_mode == 'legacy', device=MODEL_DEVICE)
 print(f"推理尺寸: 车辆={car_img_size[1]}x{car_img_size[0]}, "
       f"装甲板={'320x320 dynamic batch' if armor_batch_active else f'{armor_img_size[1]}x{armor_img_size[0]} static tile'}")
 print(
