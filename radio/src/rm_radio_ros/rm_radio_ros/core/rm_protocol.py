@@ -12,12 +12,12 @@ RADAR_DATA_LENGTHS = {
     0x0105: 3,
     0x0201: 17,
     0x020C: 2,
-    0x020E: 1,
+    0x020E: 8,
     0x0A01: 24,
     0x0A02: 12,
     0x0A03: 10,
     0x0A04: 8,
-    0x0A05: 41,
+    0x0A05: 47,
     0x0A06: 6,
 }
 
@@ -62,20 +62,18 @@ RADAR_LEGACY_ROBOT_NAMES = ['hero', 'engineer', 'standard_3', 'standard_4', 'aer
 
 
 RADAR_BUFF_ROBOT_SPECS = [
-    ('opponent_hero', 0),
-    ('opponent_engineer', 7),
+    ('opponent_heavy', 0),
     ('opponent_infantry_3', 14),
     ('opponent_infantry_4', 21),
     ('opponent_sentry', 28),
 ]
 
 
-RADAR_MAIN_STATUS_ROBOT_NAMES = [
-    'opponent_hero',
-    'opponent_engineer',
-    'opponent_infantry_3',
-    'opponent_infantry_4',
-    'opponent_sentry',
+RADAR_MAIN_STATUS_ROBOT_SPECS = [
+    ('opponent_heavy', 36),
+    ('opponent_infantry_3', 38),
+    ('opponent_infantry_4', 39),
+    ('opponent_sentry', 40),
 ]
 
 
@@ -191,6 +189,13 @@ def _strict_u8(name: str, value: int) -> int:
     clean = int(value)
     if not 0 <= clean <= 0xFF:
         raise ValueError(f'{name} must be in uint8 range 0..255, got {value!r}')
+    return clean
+
+
+def _strict_u16(name: str, value: int) -> int:
+    clean = int(value)
+    if not 0 <= clean <= 0xFFFF:
+        raise ValueError(f'{name} must be in uint16 range 0..65535, got {value!r}')
     return clean
 
 
@@ -525,49 +530,72 @@ def parse_robot_interaction_data(data: Iterable[int]) -> dict:
     }
 
 
-def build_radar_cmd_payload(radar_cmd: int = 0, password_cmd: int = 0, password: str | bytes | None = None) -> bytes:
+def build_radar_cmd_payload(
+    radar_cmd: int = 0,
+    password_cmd: int = 0,
+    password: str | bytes | None = None,
+    armor_fortify_cmd: int = 0,
+    fortify_center_x_mm: int = 0,
+    fortify_center_y_mm: int = 0,
+) -> bytes:
     radar_cmd_u8 = _strict_u8('radar_cmd', radar_cmd)
     password_cmd_u8 = _strict_u8('password_cmd', password_cmd)
+    armor_fortify_cmd_u8 = _strict_u8('armor_fortify_cmd', armor_fortify_cmd)
+    center_x_u16 = _strict_u16('fortify_center_x_mm', fortify_center_x_mm)
+    center_y_u16 = _strict_u16('fortify_center_y_mm', fortify_center_y_mm)
     if password is None and password_cmd_u8 == 0:
-        return bytes([radar_cmd_u8, 0]) + bytes(6)
-    if password_cmd_u8 not in (1, 2):
-        raise ValueError('password_cmd must be 1 (update own password) or 2 (verify opponent password)')
-    if password is None:
-        raise ValueError('password is required when password_cmd is nonzero')
-    if isinstance(password, str):
-        password_bytes = password.encode('ascii', errors='strict')
+        password_bytes = bytes(6)
     else:
-        password_bytes = bytes(password)
-    if len(password_bytes) != 6:
-        raise ValueError('radar password must be exactly 6 ASCII bytes')
-    if any(not (48 <= byte <= 57 or 65 <= byte <= 90 or 97 <= byte <= 122) for byte in password_bytes):
-        raise ValueError('radar password bytes must be ASCII letters or digits')
-    return bytes([radar_cmd_u8, password_cmd_u8]) + password_bytes
+        if password_cmd_u8 not in (1, 2):
+            raise ValueError('password_cmd must be 1 (update own password) or 2 (verify opponent password)')
+        if password is None:
+            raise ValueError('password is required when password_cmd is nonzero')
+        if isinstance(password, str):
+            password_bytes = password.encode('ascii', errors='strict')
+        else:
+            password_bytes = bytes(password)
+        if len(password_bytes) != 6:
+            raise ValueError('radar password must be exactly 6 ASCII bytes')
+        if any(not (48 <= byte <= 57 or 65 <= byte <= 90 or 97 <= byte <= 122) for byte in password_bytes):
+            raise ValueError('radar password bytes must be ASCII letters or digits')
+    return (
+        bytes([radar_cmd_u8, password_cmd_u8])
+        + password_bytes
+        + bytes([armor_fortify_cmd_u8])
+        + center_x_u16.to_bytes(2, 'little')
+        + center_y_u16.to_bytes(2, 'little')
+    )
 
 
 def parse_radar_cmd_payload(data: Iterable[int]) -> dict:
     values = u8_list(data)
-    result = {'valid_radar_cmd_length': len(values) == 8}
+    result = {'valid_radar_cmd_length': len(values) == 13}
     if not values:
         return result
     result['radar_cmd'] = values[0]
-    if len(values) != 8:
+    if len(values) != 13:
         return result
     result['password_cmd'] = values[1]
-    if values[1] == 0:
-        return result
     password_bytes = bytes(values[2:8])
+    if values[1] != 0:
+        result.update({
+            'password': password_bytes.decode('ascii', errors='replace'),
+            'password_is_alnum_ascii': all(
+                (48 <= byte <= 57 or 65 <= byte <= 90 or 97 <= byte <= 122)
+                for byte in password_bytes
+            ),
+        })
     result.update({
-        'password': password_bytes.decode('ascii', errors='replace') if len(password_bytes) == 6 else '',
-        'password_is_alnum_ascii': len(password_bytes) == 6
-        and all((48 <= byte <= 57 or 65 <= byte <= 90 or 97 <= byte <= 122) for byte in password_bytes),
+        'armor_fortify_cmd': values[8],
+        'fortify_center_x_mm': le_u16(values, 9),
+        'fortify_center_y_mm': le_u16(values, 11),
     })
     return result
 
 
 def parse_radar_decision_sync(data: Iterable[int]) -> dict:
     values = u8_list(data)
-    result = {'valid_radar_info_length': len(values) == 1}
+    result = {'valid_radar_info_length': len(values) == 8}
     if not values:
         return result
     radar_info = values[0]
@@ -580,6 +608,17 @@ def parse_radar_decision_sync(data: Iterable[int]) -> dict:
         'can_change_password': bool(_bits(radar_info, 5)),
         'reserved': _bits(radar_info, 6, 2),
     })
+    if len(values) == 8:
+        fortify_info = values[1]
+        result.update({
+            'radar_info_2': fortify_info,
+            'armor_fortify_active': bool(_bits(fortify_info, 0)),
+            'remaining_fortify_opportunities': _bits(fortify_info, 1, 3),
+            'fortify_reserved': _bits(fortify_info, 4, 4),
+            'fortify_center_x_mm': le_u16(values, 2),
+            'fortify_center_y_mm': le_u16(values, 4),
+            'fortify_radius_mm': le_u16(values, 6),
+        })
     return result
 
 
@@ -801,7 +840,7 @@ def parse_radar_frame(frame: RefereeFrame) -> dict:
             'opponent_terrain_crossing_flyover_rfid': bool(_bits(occupation_bits, 14)),
             'opponent_terrain_crossing_road_rfid': bool(_bits(occupation_bits, 15)),
         }
-    elif frame.cmd_id == 0x0A05 and len(data) == 41:
+    elif frame.cmd_id == 0x0A05 and len(data) == 47:
         result['raw_buff_bytes'] = data
         result['buff_status'] = {
             name: {
@@ -813,18 +852,29 @@ def parse_radar_frame(frame: RefereeFrame) -> dict:
             }
             for name, offset in RADAR_BUFF_ROBOT_SPECS
         }
+        result['reserved_engineer_buff_bytes'] = data[7:14]
         result['sentry_mode'] = data[35]
         result['sentry_mode_name'] = RADAR_SENTRY_MODE_NAMES.get(
             data[35],
             f'unknown_{data[35]}',
         )
         result['robot_main_status'] = {
-            name: data[36 + index]
-            for index, name in enumerate(RADAR_MAIN_STATUS_ROBOT_NAMES)
+            name: data[offset]
+            for name, offset in RADAR_MAIN_STATUS_ROBOT_SPECS
         }
+        result['reserved_engineer_main_status'] = data[37]
         result['robot_main_status_names'] = {
             name: RADAR_MAIN_STATUS_NAMES.get(value, f'unknown_{value}')
             for name, value in result['robot_main_status'].items()
+        }
+        fortify_center_x_mm = le_u16(data, 41)
+        fortify_center_y_mm = le_u16(data, 43)
+        fortify_radius_mm = le_u16(data, 45)
+        result['enemy_armor_fortification'] = {
+            'active': fortify_radius_mm > 0,
+            'center_x_mm': fortify_center_x_mm,
+            'center_y_mm': fortify_center_y_mm,
+            'radius_mm': fortify_radius_mm,
         }
     elif frame.cmd_id == 0x0A06 and len(data) == 6:
         try:

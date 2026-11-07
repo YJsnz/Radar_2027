@@ -1186,6 +1186,7 @@ function renderRadarData(payload) {
   const strategy = fusion.strategy || {};
   const marks = strategyPayload(strategy, "RadarMarkProgress").enemy || {};
   const decision = strategyPayload(strategy, "RadarDecisionSync");
+  const enemyArmor = strategyPayload(strategy, "RadarEnemyBuffStatus").enemy_armor_fortification || {};
   const dart = strategyPayload(strategy, "DartStatus");
   const game = strategyPayload(strategy, "GameStatus");
   const passwordMessage = strategyPayload(strategy, "RadarCommand0121");
@@ -1209,6 +1210,8 @@ function renderRadarData(payload) {
     }).join("")}</div></div>
     <div class="strategy-cell"><span>0x0001 · 比赛阶段</span><strong>${enumLabel(gameProgressLabels, game.game_progress)} · 剩余 ${game.stage_remain_time ?? "—"}s</strong></div>
     <div class="strategy-cell"><span>0x020E · 双倍易伤</span><strong>剩余 ${decision.double_vulnerability_count ?? "—"} 次 · ${decision.is_double_vulnerability == null ? "状态未知" : decision.is_double_vulnerability ? "正在生效" : "未生效"}</strong></div>
+    <div class="strategy-cell"><span>0x020E · 己方装甲加固</span><strong>${decision.valid_radar_info_length === true ? `${decision.armor_fortify_active ? "已生效" : "未生效"} · 剩余机会 ${decision.remaining_fortify_opportunities} 次 · 圆心 (${decision.fortify_center_x_mm}, ${decision.fortify_center_y_mm}) mm · 半径 ${decision.fortify_radius_mm} mm` : "等待有效状态"}</strong></div>
+    <div class="strategy-cell"><span>0x0A05 · 对方装甲加固</span><strong>${enemyArmor.active ? `圆心 (${enemyArmor.center_x_mm}, ${enemyArmor.center_y_mm}) mm · 半径 ${enemyArmor.radius_mm} mm` : enemyArmor.radius_mm === 0 ? "当前未报告生效加固区" : "等待有效状态"}</strong></div>
     <div class="strategy-cell"><span>0x0105 · 飞镖选定目标</span><strong>${enumLabel(dartSelectedTargetLabels, dart.selected_target)} · 发射剩余 ${dart.dart_remaining_time ?? "—"}s</strong></div>
     <div class="strategy-cell"><span>0x0105 · 最近命中</span><strong>${enumLabel(dartHitTargetLabels, dart.recent_hit_target)} · 累计 ${dart.accumulated_hit_count ?? "—"} 次</strong></div>
     <div class="strategy-cell"><span>0x020E · 己方加密状态</span><strong>${decision.own_encryption_level == null ? "等级未知" : `L${decision.own_encryption_level}`} · ${decision.can_change_password == null ? "改密状态未知" : decision.can_change_password ? "允许更新密钥" : "暂不允许更新"}</strong></div>
@@ -1231,6 +1234,7 @@ function renderRadarData(payload) {
   $("radarSerialDiagnostics").innerHTML = `
     <span>收 / 发 / dry-run</span><strong>${serial.rx_count ?? 0} / ${serial.tx_count ?? 0} / ${serial.dry_run_count ?? 0}</strong>
     <span>radar_cmd</span><strong>${serial.last_radar_cmd_value ?? 0}</strong>
+    <span>armor_fortify_cmd</span><strong>${serial.last_armor_fortify_cmd_value ?? 0} · (${serial.last_armor_fortify_center_x_mm ?? 0}, ${serial.last_armor_fortify_center_y_mm ?? 0}) mm</strong>
     <span>0x0305 限频拦截</span><strong>${serial.blocked_0305_rate_count ?? 0}</strong>
     <span>密码冷却拦截</span><strong>${serial.password_verify_suppressed_count ?? 0}</strong>
     <span>干扰等级 / 自动跟随</span><strong>L${serial.rx_interference_level ?? "—"} / ${serial.auto_rx_interference_level ? "开启" : "关闭"}</strong>

@@ -4,7 +4,12 @@ import time
 from dataclasses import dataclass
 from typing import Iterable, List, Optional
 
-from .rm_protocol import RADAR_WIRE_ROBOT_NAMES, RefereeFrame, parse_radar_frame
+from .rm_protocol import (
+    RADAR_WIRE_ROBOT_NAMES,
+    RefereeFrame,
+    build_radar_cmd_payload,
+    parse_radar_frame,
+)
 
 
 RADAR_INFO_TO_CLIENT_ORDER = [
@@ -58,12 +63,19 @@ class RadarCommand0121:
     radar_cmd: int
     password_cmd: int
     password: str
+    armor_fortify_cmd: int = 0
+    fortify_center_x_mm: int = 0
+    fortify_center_y_mm: int = 0
 
     def to_bytes(self) -> bytes:
-        password_bytes = self.password.encode('ascii', errors='strict')
-        if len(password_bytes) != 6:
-            raise ValueError('radar password must be exactly 6 ASCII bytes')
-        return bytes([self.radar_cmd & 0xFF, self.password_cmd & 0xFF]) + password_bytes
+        return build_radar_cmd_payload(
+            radar_cmd=self.radar_cmd,
+            password_cmd=self.password_cmd,
+            password=self.password,
+            armor_fortify_cmd=self.armor_fortify_cmd,
+            fortify_center_x_mm=self.fortify_center_x_mm,
+            fortify_center_y_mm=self.fortify_center_y_mm,
+        )
 
     def to_dict(self) -> dict:
         return {
@@ -72,6 +84,9 @@ class RadarCommand0121:
             'radar_cmd': self.radar_cmd,
             'password_cmd': self.password_cmd,
             'password': self.password,
+            'armor_fortify_cmd': self.armor_fortify_cmd,
+            'fortify_center_x_mm': self.fortify_center_x_mm,
+            'fortify_center_y_mm': self.fortify_center_y_mm,
             'payload_hex': self.to_bytes().hex(),
         }
 
@@ -167,6 +182,9 @@ class RefereeBridge:
                             'sentry_mode_name': parsed.get('sentry_mode_name'),
                             'robot_main_status': parsed.get('robot_main_status'),
                             'robot_main_status_names': parsed.get('robot_main_status_names'),
+                            'reserved_engineer_buff_bytes': parsed.get('reserved_engineer_buff_bytes'),
+                            'reserved_engineer_main_status': parsed.get('reserved_engineer_main_status'),
+                            'enemy_armor_fortification': parsed.get('enemy_armor_fortification'),
                         }
                     self.last_broadcast_status[output_type] = status
                     status['timestamp'] = timestamp

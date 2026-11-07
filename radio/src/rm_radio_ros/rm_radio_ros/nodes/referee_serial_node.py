@@ -277,6 +277,9 @@ class RefereeSerialNode(Node):
         self.rx_count = 0
         self.dry_run_count = 0
         self.last_radar_cmd_value = 0
+        self.last_armor_fortify_cmd_value = 0
+        self.last_armor_fortify_center_x_mm = 0
+        self.last_armor_fortify_center_y_mm = 0
         self.algorithm_request_ids = deque(maxlen=256)
         self.algorithm_request_acks: dict[str, dict] = {}
         self.last_algorithm_request: Optional[dict] = None
@@ -460,9 +463,19 @@ class RefereeSerialNode(Node):
         try:
             radar_cmd = int(result.get('radar_cmd', self.last_radar_cmd_value))
         except (TypeError, ValueError):
-            return
+            radar_cmd = int(getattr(self, 'last_radar_cmd_value', 0))
         if radar_cmd > int(getattr(self, 'last_radar_cmd_value', 0)):
             self.last_radar_cmd_value = radar_cmd
+        try:
+            armor_fortify_cmd = int(
+                result.get('armor_fortify_cmd', self.last_armor_fortify_cmd_value)
+            )
+        except (TypeError, ValueError):
+            return
+        if armor_fortify_cmd > int(getattr(self, 'last_armor_fortify_cmd_value', 0)):
+            self.last_armor_fortify_cmd_value = armor_fortify_cmd
+            self.last_armor_fortify_center_x_mm = int(result.get('fortify_center_x_mm', 0))
+            self.last_armor_fortify_center_y_mm = int(result.get('fortify_center_y_mm', 0))
 
     def _handle_send_frame(self, msg: String) -> None:
         try:
@@ -541,6 +554,7 @@ class RefereeSerialNode(Node):
                     'request_id': request_id,
                     'timestamp': time.time(),
                     'radar_cmd': int(getattr(self, 'last_radar_cmd_value', 0)),
+                    'armor_fortify_cmd': int(getattr(self, 'last_armor_fortify_cmd_value', 0)),
                     'written': False,
                     'dry_run': bool(_node_bool_parameter(self, 'dry_run', True)),
                     'duplicate': False,
@@ -557,6 +571,9 @@ class RefereeSerialNode(Node):
         result = self._send_bytes(frame, meta)
         self._commit_radar_cmd_after_send(result)
         result['radar_cmd'] = int(getattr(self, 'last_radar_cmd_value', result.get('radar_cmd', 0)))
+        result['armor_fortify_cmd'] = int(
+            getattr(self, 'last_armor_fortify_cmd_value', result.get('armor_fortify_cmd', 0))
+        )
         result['duplicate'] = False
         self.last_algorithm_ack = dict(result)
         if request_id:
@@ -861,10 +878,8 @@ class RefereeSerialNode(Node):
         has_explicit_radar_cmd = 'radar_cmd' in payload or 'request_count' in payload
         password_present = 'password' in payload or 'password_cmd' in payload
         payload_radar_cmd = int(payload.get('radar_cmd', payload.get('request_count', 0)))
-        if (
-            password_present
-            and (not has_explicit_radar_cmd or payload_radar_cmd == 0)
-            and int(getattr(self, 'last_radar_cmd_value', 0)) > 0
+        if not has_explicit_radar_cmd or (
+            password_present and payload_radar_cmd == 0
         ):
             radar_cmd = int(getattr(self, 'last_radar_cmd_value', 0))
         elif preserve_last_radar_cmd and (
@@ -877,10 +892,40 @@ class RefereeSerialNode(Node):
         password = payload.get('password') if password_present else None
         self._validate_radar_cmd_transition(radar_cmd, password_present=password_present)
         self._validate_password_update_allowed(password_cmd)
+
+        has_explicit_fortify_cmd = 'armor_fortify_cmd' in payload
+        payload_fortify_cmd = int(payload.get('armor_fortify_cmd', 0))
+        last_fortify_cmd = int(getattr(self, 'last_armor_fortify_cmd_value', 0))
+        if not has_explicit_fortify_cmd or (password_present and payload_fortify_cmd == 0):
+            armor_fortify_cmd = last_fortify_cmd
+        else:
+            armor_fortify_cmd = payload_fortify_cmd
+        self._validate_armor_fortify_transition(armor_fortify_cmd)
+
+        has_fortify_center = (
+            'fortify_center_x_mm' in payload and 'fortify_center_y_mm' in payload
+        )
+        if armor_fortify_cmd > last_fortify_cmd:
+            if not has_fortify_center:
+                raise ValueError('fortify_center_x_mm and fortify_center_y_mm are required for an armor fortification request')
+            self._validate_armor_fortification_eligibility(payload)
+        if has_fortify_center:
+            fortify_center_x_mm = int(payload['fortify_center_x_mm'])
+            fortify_center_y_mm = int(payload['fortify_center_y_mm'])
+        else:
+            fortify_center_x_mm = int(getattr(self, 'last_armor_fortify_center_x_mm', 0))
+            fortify_center_y_mm = int(getattr(self, 'last_armor_fortify_center_y_mm', 0))
         sender_id = int(payload.get('sender_id', self._effective_sender_id()))
         receiver_id = int(payload.get('receiver_id', _node_int_parameter(self, 'receiver_id', 0x8080)))
         seq = int(payload['seq']) if 'seq' in payload else self._next_seq()
-        user_data = build_radar_cmd_payload(radar_cmd, password_cmd, password)
+        user_data = build_radar_cmd_payload(
+            radar_cmd,
+            password_cmd,
+            password,
+            armor_fortify_cmd,
+            fortify_center_x_mm,
+            fortify_center_y_mm,
+        )
         frame = build_robot_interaction_frame(0x0121, sender_id, receiver_id, user_data, seq=seq)
         meta = {
             'kind': 'radar_cmd_0121',
@@ -891,6 +936,9 @@ class RefereeSerialNode(Node):
             'sender_id': sender_id,
             'receiver_id': receiver_id,
             'radar_cmd': radar_cmd,
+            'armor_fortify_cmd': armor_fortify_cmd,
+            'fortify_center_x_mm': fortify_center_x_mm,
+            'fortify_center_y_mm': fortify_center_y_mm,
             'user_data_hex': user_data.hex(),
             'user_data_length': len(user_data),
             'seq': seq,
@@ -934,6 +982,52 @@ class RefereeSerialNode(Node):
         if int(radar_cmd) > last + 1:
             raise ValueError(f'radar_cmd must increase by exactly 1: last={last}, requested={radar_cmd}')
 
+    def _validate_armor_fortify_transition(self, armor_fortify_cmd: int) -> None:
+        if not 0 <= int(armor_fortify_cmd) <= 0xFF:
+            raise ValueError(
+                f'armor_fortify_cmd must be in uint8 range 0..255, got {armor_fortify_cmd!r}'
+            )
+        last = int(getattr(self, 'last_armor_fortify_cmd_value', 0))
+        if int(armor_fortify_cmd) < last:
+            raise ValueError(
+                f'armor_fortify_cmd must not decrease: last={last}, requested={armor_fortify_cmd}'
+            )
+        if int(armor_fortify_cmd) > last + 1:
+            raise ValueError(
+                'armor_fortify_cmd must increase by exactly 1: '
+                f'last={last}, requested={armor_fortify_cmd}'
+            )
+
+    def _validate_armor_fortification_eligibility(self, payload: dict) -> None:
+        try:
+            cumulative_hit_count = int(payload['cumulative_hit_count'])
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ValueError(
+                'cumulative_hit_count from the official hit-event source is required for armor fortification'
+            ) from exc
+        if cumulative_hit_count < 10:
+            raise ValueError(
+                'armor fortification requires at least 10 cumulative hit projectiles: '
+                f'got {cumulative_hit_count}'
+            )
+
+        sync = getattr(self, 'last_radar_decision_sync', None)
+        if not isinstance(sync, dict) or sync.get('valid_radar_info_length') is not True:
+            raise ValueError('armor fortification requires a valid 0x020E referee status')
+        try:
+            received_at = float(sync['timestamp'])
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ValueError('armor fortification requires a timestamped 0x020E referee status') from exc
+        freshness_sec = max(
+            3.0,
+            3.0 * float(self.get_parameter('status_period_sec').value),
+        )
+        if time.time() - received_at > freshness_sec:
+            raise ValueError('armor fortification blocked because 0x020E referee status is stale')
+        opportunities = int(sync.get('remaining_fortify_opportunities', 0))
+        if opportunities <= 0:
+            raise ValueError('armor fortification blocked because no referee opportunity is available')
+
     def _validate_password_update_allowed(self, password_cmd: int) -> None:
         if int(password_cmd) != 1:
             return
@@ -958,12 +1052,18 @@ class RefereeSerialNode(Node):
         if 'action' in payload:
             if payload.get('schema') != 'shark.radar.command.v1':
                 raise ValueError('unsupported radar command schema')
-            if payload.get('action') != 'trigger_double_vulnerability':
+            action = payload.get('action')
+            if action not in ('trigger_double_vulnerability', 'fortify_armor'):
                 raise ValueError(f"unsupported radar command action: {payload.get('action')!r}")
             request_id = str(payload.get('request_id', '')).strip()
             if not request_id or len(request_id) > 128:
                 raise ValueError('semantic radar command requires a request_id up to 128 characters')
-            payload['radar_cmd'] = int(getattr(self, 'last_radar_cmd_value', 0)) + 1
+            if action == 'trigger_double_vulnerability':
+                payload['radar_cmd'] = int(getattr(self, 'last_radar_cmd_value', 0)) + 1
+            else:
+                payload['armor_fortify_cmd'] = int(
+                    getattr(self, 'last_armor_fortify_cmd_value', 0)
+                ) + 1
         if 'request_count' in payload and 'radar_cmd' not in payload:
             payload['radar_cmd'] = payload['request_count']
         return payload
@@ -1539,6 +1639,15 @@ class RefereeSerialNode(Node):
             'rx_count': self.rx_count,
             'dry_run_count': self.dry_run_count,
             'last_radar_cmd_value': int(getattr(self, 'last_radar_cmd_value', 0)),
+            'last_armor_fortify_cmd_value': int(
+                getattr(self, 'last_armor_fortify_cmd_value', 0)
+            ),
+            'last_armor_fortify_center_x_mm': int(
+                getattr(self, 'last_armor_fortify_center_x_mm', 0)
+            ),
+            'last_armor_fortify_center_y_mm': int(
+                getattr(self, 'last_armor_fortify_center_y_mm', 0)
+            ),
             'algorithm_request_cache_size': len(getattr(self, 'algorithm_request_acks', {})),
             'serial_open': self.serial_port.is_open,
             'require_serial_open_on_start': bool(

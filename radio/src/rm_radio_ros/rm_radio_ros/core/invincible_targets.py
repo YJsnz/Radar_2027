@@ -12,14 +12,14 @@ INVINCIBLE_MAIN_STATUSES = frozenset((2, 3))
 VALID_MAIN_STATUSES = frozenset((0, 1, 2, 3))
 
 WIRE_STATUS_ROBOT_NUMBERS = (
-    ("opponent_hero", 1),
-    ("opponent_engineer", 2),
+    ("opponent_heavy", 1),
     ("opponent_infantry_3", 3),
     ("opponent_infantry_4", 4),
     ("opponent_sentry", 7),
 )
-# Hero, all infantry, aerial and sentry receive the same five target states.
-RECIPIENT_ROBOT_NUMBERS = (1, 3, 4, 5, 6, 7)
+# The 2027 roster has one heavy robot, infantry 3/4 and sentry. Reserved
+# engineer/aerial slots must not become interaction recipients.
+RECIPIENT_ROBOT_NUMBERS = (1, 3, 4, 7)
 
 
 def _clean_side(side: object) -> str:
@@ -42,7 +42,7 @@ def invincible_target_receivers(own_side: object) -> tuple[int, ...]:
 
 
 def fallback_invincible_target_statuses(own_side: object) -> tuple[tuple[int, bool], ...]:
-    """Return all five opponent targets as not invincible."""
+    """Return all four active 2027 opponent targets as not invincible."""
 
     opponent_side = "blue" if _clean_side(own_side) == "red" else "red"
     return tuple(
@@ -55,7 +55,7 @@ def invincible_target_statuses(
     robot_main_status: Mapping[str, object],
     own_side: object,
 ) -> tuple[tuple[int, bool], ...]:
-    """Map a complete 0x0A05 snapshot to five ``(robot_id, bool)`` pairs."""
+    """Map a complete 2027 0x0A05 snapshot to active opponent targets."""
 
     opponent_side = "blue" if _clean_side(own_side) == "red" else "red"
     result = []
@@ -87,14 +87,14 @@ def invincible_target_ids(
 
 @dataclass(frozen=True)
 class InvincibleTargetsMessage:
-    """One-byte payload: five fixed-order invincibility bits."""
+    """One-byte payload: four fixed-order 2027 invincibility bits."""
 
     invincible_mask: int
 
     def to_bytes(self) -> bytes:
         mask = int(self.invincible_mask)
-        if not 0 <= mask <= 0x1F:
-            raise ValueError(f"invincible mask must use only bits 0..4, got 0x{mask:02X}")
+        if not 0 <= mask <= 0x0F:
+            raise ValueError(f"invincible mask must use only bits 0..3, got 0x{mask:02X}")
         return bytes((mask,))
 
     @classmethod
