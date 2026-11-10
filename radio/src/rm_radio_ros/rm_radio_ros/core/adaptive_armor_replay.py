@@ -12,7 +12,8 @@ from .adaptive_armor import (
 )
 
 
-def replay(rows, config=None):
+def replay_steps(rows, config=None):
+    """Yield the current mutable decision with each processed arrival; consume immediately."""
     decision = AdaptiveArmorDecision(config)
     referee = {}
     previous_time = -1
@@ -41,6 +42,11 @@ def replay(rows, config=None):
             continue
         # Side belongs to the adapter session in offline playback, never a guessed red default.
         decision.evaluate(now, referee, decision.statistics.side)
+        yield now, decision, row
+
+
+def replay(rows, config=None):
+    for _, decision, _ in replay_steps(rows, config):
         yield dict(decision.status)
 
 

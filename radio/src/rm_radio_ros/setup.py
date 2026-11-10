@@ -99,6 +99,7 @@ setup(
             'rm_iq_replay_tx_node = rm_radio_ros.nodes.iq_replay_tx_node:main',
             'rm_match_recorder = rm_radio_ros.nodes.match_recorder_node:main',
             'rm_adaptive_armor_replay = rm_radio_ros.core.adaptive_armor_replay:main',
+            'rm_adaptive_armor_benchmark = rm_radio_ros.core.adaptive_armor_benchmark:main',
         ],
     },
 )

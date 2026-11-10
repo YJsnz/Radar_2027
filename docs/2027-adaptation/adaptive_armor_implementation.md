@@ -135,6 +135,8 @@ PYTHONPATH=radio/src/rm_radio_ros python3 -m rm_radio_ros.core.adaptive_armor_re
 
 recorder 的默认话题与比赛配置已加入事件、配置和状态；开录时另存 `adaptive_armor_config_snapshot.json`，回放文件同目录存在该快照时会自动读取。自动录像启动前的会话/命中不会被凭空补齐：用于完整统计复算的日志必须从 session 和第一发开始收集；若缺失 session，回放明确报错。实战录制早于事件会话的验收仍需真实适配器接入后完成。
 
+五种候选方法的独立未来窗口对比使用 `rm_adaptive_armor_benchmark`，输入格式相同，输出逐会话 JSON 报告。方法、评分规则、合成样例及限制见 [离线对比说明](adaptive_armor_benchmark.md)。它比较候选覆盖，不模拟实际机会消耗或替代线上首次/改点门控。
+
 ## 7. 验证与待完成项
 
 - 核心/回放测试覆盖方向计数、去重、非法坐标/时间、全局公式、零散布、偏心分布、块置信界、首次/改点收益、资格/阵营/过期门控、请求锁、裁判确认与比赛重置。
