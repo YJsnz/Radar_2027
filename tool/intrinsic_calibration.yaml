@@ -1,0 +1,34 @@
+# 所有参数在此填写；修改后点击工具中的“重新加载 YAML / 新建数据集”。
+schema: shark.radar.intrinsic_tool.v1
+camera:
+  expected_model: MV-SUA133GC-T  # 记录目标型号；SDK 实际产品名另行保存，不猜测同名/别名
+  serial: ""                   # 单台可留空；多台必须填写 SDK 序列号
+  exposure_us: 11000            # 使用项目现有手动曝光接口，单位 μs
+  frame_timeout_ms: 500
+  preview_fps: 8
+  expected_width: null          # 可填写比赛使用的实际输出宽度；不填则读取首帧
+  expected_height: null         # 不自动修改/缩放相机分辨率或 ROI
+  lens: ""                     # 填写实际镜头型号/焦距，不能从相机型号推定
+  focus: ""                    # 记录对焦位置/锁定方式；标定后不要改焦距或对焦
+board:
+  columns: null                # 内角点列数 = 方格列数 - 1
+  rows: null                   # 内角点行数 = 方格行数 - 1
+  square_size_mm: null         # 实测一个方格的边长，单位 mm
+capture:
+  min_samples: 15               # 工程采样门槛，不代表达到此数就一定准确
+  max_samples: 80
+  min_sharpness: 40             # 全分辨率棋盘区域 Laplacian 方差；按实际曝光/镜头调整
+  min_board_area_ratio: 0.015
+  min_pose_distance: 0.025      # 归一化角点 RMS 距离；拦截近似重复的画面
+  auto_interval_sec: 1.0
+  max_frame_age_sec: 1.0
+coverage:                      # X/Y/Size/Skew 的启发式提示，不是精度保证
+  x_span: 0.5
+  y_span: 0.5
+  size_span: 0.2
+  skew_span: 0.2
+calibration:
+  distortion_model: plumb_bob  # 当前实现为普通针孔 + k1,k2,p1,p2,k3，不适用于鱼眼模型
+  max_rms_px: 0.5              # 拟合误差审阅阈值，不是官方或物理验收阈值
+output:
+  directory: data/intrinsics   # 相对于本 YAML；每次新建唯一目录，保留原始 PNG 和配置快照

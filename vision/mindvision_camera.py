@@ -20,7 +20,7 @@ class MindVisionNoCamera(MindVisionCameraError):
 class MindVisionCamera:
     """将 mvsdk 相机帧转换为 OpenCV 使用的 BGR ndarray。"""
 
-    def __init__(self, exposure_time_us=11000):
+    def __init__(self, exposure_time_us=11000, device_serial=None, require_single=False):
         try:
             self.sdk = importlib.import_module("mvsdk")
         except (ImportError, OSError) as error:
@@ -45,6 +45,9 @@ class MindVisionCamera:
         self.handle = None
         self.frame_buffer = None
         self.is_mono = False
+        self.device_serial = device_serial
+        self.require_single = require_single
+        self.device_info = {}
         self.exposure_time_us = int(round(float(exposure_time_us)))
         if not 4 <= self.exposure_time_us <= 32400:
             raise ValueError("MV-SUA133GC 曝光时间应在 4～32400 μs 范围内")
@@ -66,11 +69,23 @@ class MindVisionCamera:
         if not devices:
             raise MindVisionNoCamera("未发现迈德威视相机，等待设备连接")
 
+        if self.device_serial:
+            devices = [d for d in devices if d.GetSn() == self.device_serial]
+            if len(devices) != 1:
+                raise MindVisionNoCamera(f"未唯一匹配相机序列号：{self.device_serial}")
+        elif self.require_single and len(devices) != 1:
+            raise MindVisionCameraError("检测到多台相机，请在内参工具 YAML 中指定 camera.serial")
+
         device = devices[0]
         get_name = getattr(device, "GetFriendlyName", None)
         get_serial = getattr(device, "GetSn", None)
         name = get_name() if callable(get_name) else "MindVision"
         serial = get_serial() if callable(get_serial) else "未知"
+        self.device_info = {"friendly_name": name, "serial": serial}
+        for field, method in (("product_name", "GetProductName"), ("driver_version", "GetDriverVersion"),
+                              ("sensor_type", "GetSensorType"), ("port_type", "GetPortType")):
+            getter = getattr(device, method, None)
+            self.device_info[field] = getter() if callable(getter) else None
         self.handle = self.sdk.CameraInit(device, -1, -1)
 
         capability = self.sdk.CameraGetCapability(self.handle)
@@ -103,6 +118,26 @@ class MindVisionCamera:
 
         self._check_status(self.sdk.CameraPlay(self.handle), "启动相机采集")
         print(f"迈德威视相机已连接：{name}，序列号={serial}，曝光={self.exposure_time_us} μs")
+
+    def capture_metadata(self):
+        """Read the current SDK profile without changing ROI, zoom or binning."""
+        if self.handle is None:
+            raise MindVisionCameraError("相机尚未初始化")
+        metadata = {"camera_mode": "mindvision", "device": dict(self.device_info),
+                    "output_format": "BGR8", "mono_sensor": self.is_mono}
+        for field, method, args in (
+            ("exposure_us", "CameraGetExposureTime", (self.handle,)),
+            ("analog_gain", "CameraGetAnalogGain", (self.handle,)),
+            ("sdk_version", "CameraSdkGetVersionString", ()),
+        ):
+            getter = getattr(self.sdk, method, None)
+            metadata[field] = getter(*args) if callable(getter) else None
+        getter = getattr(self.sdk, "CameraGetImageResolution", None)
+        resolution = getter(self.handle) if callable(getter) else None
+        metadata["resolution"] = ({name: int(getattr(resolution, name))
+                                    for name, _ in resolution._fields_ if name != "acDescription"}
+                                   if resolution is not None else None)
+        return metadata
 
     def get_frame(self, timeout_ms=1000):
         if self.handle is None or self.frame_buffer is None:

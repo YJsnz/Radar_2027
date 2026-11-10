@@ -1,5 +1,9 @@
 # 开发工具
 
+## 迈德威视内参标定
+
+运行 `./tool/start_intrinsic_calibration.sh`。所有参数在 [intrinsic_calibration.yaml](intrinsic_calibration.yaml) 填写，棋盘格行列数和实测方格边长默认留空；操作、输出格式与接入边界见 [内参标定说明](INTRINSIC_CALIBRATION.md)。
+
 ## Qt 装甲命中模拟器
 
 在 Qt 页面构造命中信息，经现有 ROS 事件话题发送给雷达融合节点，由雷达站计算统计、建议圆心与半径。Qt 和比赛接收台只展示回传结果。

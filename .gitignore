@@ -3,6 +3,9 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 
+# Local intrinsic-calibration captures and solutions
+tool/data/
+
 # Runtime and hardware SDK logs
 *.log
 MvSdkLog/
