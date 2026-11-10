@@ -103,8 +103,8 @@ def test_parse_0001_game_status_match_running_from_protocol_table():
     }
 
 
-def test_parse_0003_game_robot_hp_from_v2_protocol_table():
-    values = [600, 300, 250, 240, -321, 400, 500, 1500, 450, 1400]
+def test_parse_0003_game_robot_hp_from_2027_protocol_table():
+    values = [600, 0, 250, 240, -321, 400, 500, 1500, 450, 1400, 17, 23]
     payload = b''.join(
         value.to_bytes(2, 'little', signed=index == 4)
         for index, value in enumerate(values)
@@ -115,16 +115,20 @@ def test_parse_0003_game_robot_hp_from_v2_protocol_table():
     assert parsed['valid_radar_length'] is True
     assert parsed['game_robot_hp'] == {
         'valid_game_robot_hp_length': True,
+        'ally_heavy_hp': 600,
+        'reserved_robot_2_hp': 0,
+        'ally_infantry_3_hp': 250,
+        'ally_infantry_4_hp': 240,
+        'ally_sentry_hp': 400,
+        'red_outpost_hp': 500,
+        'ally_base_hp': 1500,
+        'blue_outpost_hp': 450,
+        'enemy_base_hp': 1400,
+        'ally_control_degree': 17,
+        'enemy_control_degree': 23,
+        # ID-1 compatibility alias, pending downstream role-name migration.
         'ally_hero': 600,
-        'ally_engineer': 300,
-        'ally_infantry_3': 250,
-        'ally_infantry_4': 240,
         'damage_difference': -321,
-        'ally_sentry': 400,
-        'ally_outpost': 500,
-        'ally_base': 1500,
-        'opponent_outpost': 450,
-        'opponent_base': 1400,
     }
     assert parse_game_robot_hp(payload[:-1]) == {
         'valid_game_robot_hp_length': False

@@ -12,9 +12,25 @@ from __future__ import annotations
 
 PROTOCOL_VERSION = "RoboMaster 2027 Communication Protocol V1.0.0 (2026-10-29)"
 
+GAME_ROBOT_HP_LENGTH = 24
+GAME_ROBOT_HP_FIELD_OFFSETS = {
+    "ally_heavy_hp": 0,
+    "reserved_robot_2_hp": 2,
+    "ally_infantry_3_hp": 4,
+    "ally_infantry_4_hp": 6,
+    "damage_difference": 8,
+    "ally_sentry_hp": 10,
+    "red_outpost_hp": 12,
+    "ally_base_hp": 14,
+    "blue_outpost_hp": 16,
+    "enemy_base_hp": 18,
+    "ally_control_degree": 20,
+    "enemy_control_degree": 22,
+}
+
 RADAR_DATA_LENGTHS = {
     0x0001: 11,
-    0x0003: 24,
+    0x0003: GAME_ROBOT_HP_LENGTH,
     0x0105: 3,
     0x0201: 17,
     0x020C: 2,

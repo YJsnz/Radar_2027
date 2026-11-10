@@ -6,6 +6,8 @@ from dataclasses import dataclass
 from typing import Deque, Iterable, Iterator, List, Optional
 
 from .protocol2027 import (
+    GAME_ROBOT_HP_FIELD_OFFSETS,
+    GAME_ROBOT_HP_LENGTH,
     RADAR_AIR_DATA_LENGTHS,
     RADAR_BUFF_ROBOT_SPECS,
     RADAR_COMMAND_NAMES,
@@ -587,21 +589,17 @@ def parse_game_status(data: Iterable[int]) -> dict:
 
 def parse_game_robot_hp(data: Iterable[int]) -> dict:
     values = u8_list(data)
-    result = {'valid_game_robot_hp_length': len(values) == 20}
-    if len(values) < 20:
+    result = {'valid_game_robot_hp_length': len(values) == GAME_ROBOT_HP_LENGTH}
+    if len(values) != GAME_ROBOT_HP_LENGTH:
         return result
-    result.update({
-        'ally_hero': le_u16(values, 0),
-        'ally_engineer': le_u16(values, 2),
-        'ally_infantry_3': le_u16(values, 4),
-        'ally_infantry_4': le_u16(values, 6),
-        'damage_difference': struct.unpack_from('<h', bytes(values), 8)[0],
-        'ally_sentry': le_u16(values, 10),
-        'ally_outpost': le_u16(values, 12),
-        'ally_base': le_u16(values, 14),
-        'opponent_outpost': le_u16(values, 16),
-        'opponent_base': le_u16(values, 18),
-    })
+    for name, offset in GAME_ROBOT_HP_FIELD_OFFSETS.items():
+        if name == 'damage_difference':
+            result[name] = struct.unpack_from('<h', bytes(values), offset)[0]
+        else:
+            result[name] = le_u16(values, offset)
+    # Temporary compatibility alias for the existing ID-1 vulnerability
+    # decision consumer. ID 1 is the 2027 heavy robot; slot 2 stays reserved.
+    result['ally_hero'] = result['ally_heavy_hp']
     return result
 
 

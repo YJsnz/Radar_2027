@@ -93,8 +93,8 @@ def test_bridge_emits_referee_status_payloads():
     assert outputs[1]['payload']['ally']['ally_sentry'] is True
 
 
-def test_bridge_emits_v2_game_robot_hp_payload():
-    values = [600, 300, 250, 240, -10, 400, 500, 1500, 450, 1400]
+def test_bridge_emits_2027_game_robot_hp_payload():
+    values = [600, 0, 250, 240, -10, 400, 500, 1500, 450, 1400, 17, 23]
     payload = b''.join(
         value.to_bytes(2, 'little', signed=index == 4)
         for index, value in enumerate(values)
@@ -103,7 +103,12 @@ def test_bridge_emits_v2_game_robot_hp_payload():
 
     assert len(outputs) == 1
     assert outputs[0]['type'] == 'GameRobotHP'
-    assert outputs[0]['payload']['ally_hero'] == 600
+    assert outputs[0]['payload']['ally_heavy_hp'] == 600
+    assert outputs[0]['payload']['reserved_robot_2_hp'] == 0
+    assert outputs[0]['payload']['red_outpost_hp'] == 500
+    assert outputs[0]['payload']['blue_outpost_hp'] == 450
+    assert outputs[0]['payload']['ally_control_degree'] == 17
+    assert outputs[0]['payload']['enemy_control_degree'] == 23
     assert outputs[0]['payload']['damage_difference'] == -10
 
 
