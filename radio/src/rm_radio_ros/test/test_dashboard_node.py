@@ -1,6 +1,9 @@
 from pathlib import Path
 import os
 import threading
+import json
+import pytest
+from rm_radio_ros.core.adaptive_armor import ArmorConfig
 
 from rm_radio_ros.app_support.match_dashboard_node import (
     DashboardState,
@@ -768,3 +771,49 @@ def test_dashboard_reports_and_protects_start_sh_supervised_processes():
             assert "一键启动器托管" in str(exc)
         else:
             raise AssertionError("Dashboard changed a start.sh-supervised referee process")
+
+
+def test_armor_strategy_configuration_is_persisted_and_published_without_command(tmp_path, monkeypatch):
+    from rm_radio_ros.core.adaptive_armor_config import load_config
+
+    path = tmp_path / 'armor.json'
+    monkeypatch.setenv('RM_RADIO_ARMOR_CONFIG', str(path))
+    node = _node_without_init()
+    node.armor_config = ArmorConfig(trusted_sources=('real-adapter',))
+    published = []
+
+    class Publisher:
+        def publish(self, msg):
+            published.append(json.loads(msg.data))
+
+    node.armor_config_pub = Publisher()
+    result = node._update_armor_config({'mode': 'adaptive_coverage'})
+    assert result['ok']
+    assert load_config(path).mode == 'adaptive_coverage'
+    assert load_config(path).trusted_sources == ('real-adapter',)
+    assert published[0]['schema'] == 'shark.radar.armor_config.v1'
+    assert 'action' not in published[0]  # no semantic referee request on mode switch
+    assert node._snapshot()['adaptive_armor_config']['mode'] == 'adaptive_coverage'
+    assert node._radar_stream_snapshot()['adaptive_armor_config']['mode'] == 'adaptive_coverage'
+    for invalid in ({'trusted_sources': ['browser']}, {'mode': 'bad'}, {'automatic_requests': 'false'}):
+        with pytest.raises(ValueError):
+            node._update_armor_config(invalid)
+    assert len(published) == 1
+
+
+def test_armor_configuration_write_failure_does_not_publish_or_apply(tmp_path, monkeypatch):
+    import rm_radio_ros.app_support.match_dashboard_node as module
+
+    node = _node_without_init()
+    node.armor_config = ArmorConfig()
+    published = []
+    node._publish_armor_config = lambda: published.append(True)
+
+    def fail(*args):
+        raise OSError('disk full')
+
+    monkeypatch.setattr(module, 'save_armor_config', fail)
+    with pytest.raises(OSError):
+        node._update_armor_config({'mode': 'adaptive_coverage'})
+    assert node.armor_config.mode == 'fixed_center'
+    assert published == []

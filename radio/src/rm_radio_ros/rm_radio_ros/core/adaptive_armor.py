@@ -117,6 +117,7 @@ class ArmorStatistics:
         self.last_received_at = 0.0
         self.last_source_time = 0.0
         self.complete = False
+        self.weight_basis = 'count'
         self.shots = None
         self.hits = {'outgoing': [], 'incoming': []}
         self.seen = set()
@@ -138,12 +139,15 @@ class ArmorStatistics:
                 raise ValueError('事件来源类型或己方阵营无效')
             if type(event.get('complete_from_start')) is not bool:
                 raise ValueError('必须声明是否具备当局完整统计')
+            if event.get('weight_basis', 'count') not in ('count', 'baseline_damage'):
+                raise ValueError('会话受击权重类型无效')
             if self.match_id:
                 raise ValueError('当前比赛已绑定；等待裁判确认比赛结束后再开始新会话')
             self.match_id, self.source = match_id, source
             self.origin, self.side = event['origin'], event['side']
             self.started_at = timestamp
             self.complete = event['complete_from_start']
+            self.weight_basis = event.get('weight_basis', 'count')
         else:
             if not self.match_id or any(event.get(k) != getattr(self, k) for k in ('match_id', 'source')):
                 raise ValueError('事件与当前比赛/来源不匹配')
@@ -176,7 +180,11 @@ class ArmorStatistics:
                     x > config.plate_width_mm or y > config.plate_height_mm
                 ):
                     raise ValueError('来袭命中超出已确认检测面；请核对模块坐标映射')
+                if self.weight_basis == 'baseline_damage' and 'baseline_damage' not in event:
+                    raise ValueError('伤害加权会话要求每发均提供倍率施加前的伤害')
                 damage = number(event.get('baseline_damage', 1.0), 'baseline_damage', 0.001, 1_000_000)
+                if self.weight_basis == 'count':
+                    damage = 1.0
                 self.hits[direction].append(Hit(timestamp, x, y, damage))
                 self.seen.add(key)
             else:
@@ -194,6 +202,7 @@ class ArmorStatistics:
             'own_sample_count': len(own), 'opponent_sample_count': len(enemy),
             'estimate_valid': False, 'duplicate_count': self.duplicates,
             'data_complete': self.complete,
+            'weight_basis': self.weight_basis,
         }
         if not self.complete or not self.shots or not all(self.shots):
             return result
@@ -377,8 +386,13 @@ class AdaptiveArmorDecision:
             except ValueError:
                 sync_valid = False
         summary = stats.summary(config)
+        statistics_fresh = (
+            0 <= now-stats.last_received_at <= config.freshness_sec
+            and 0 <= now-stats.last_source_time <= config.freshness_sec
+        )
+        summary['estimate_valid'] = summary['estimate_valid'] and statistics_fresh
         if radius is None and not active:
-            radius = summary.get('calculated_radius_mm')
+            radius = summary.get('calculated_radius_mm') if summary['estimate_valid'] else None
         opportunities = sync.get('remaining_fortify_opportunities')
         opportunities_valid = type(opportunities) is int and 0 <= opportunities <= 7
         if self.pending:
@@ -463,6 +477,7 @@ class AdaptiveArmorDecision:
             'plate_height_mm': config.plate_height_mm or None,
             'plate_area_mm2': config.plate_area_mm2 or None,
             'window_sec': config.window_sec, 'phase': phase, 'reason': reason,
+            'statistics_fresh': statistics_fresh,
             'proposal': {
                 'center_x_mm': center[0] if center and geometry_known else None,
                 'center_y_mm': center[1] if center and geometry_known else None,
@@ -475,6 +490,9 @@ class AdaptiveArmorDecision:
                 'confidence_assumption': '验证时间块近似独立；不保证未来分布不变',
             },
             'pending': dict(self.pending) if self.pending else None,
+            'hit_points': [dict(x_mm=h.x, y_mm=h.y, timestamp=h.timestamp)
+                           for h in sorted(incoming, key=lambda h: h.timestamp)[-160:]
+                           if now-config.window_sec <= h.timestamp <= now],
             'last_result': self.last_result, 'last_error': self.last_error,
         }
         return command

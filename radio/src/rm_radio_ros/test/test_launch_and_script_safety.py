@@ -1,4 +1,5 @@
 import subprocess
+import re
 from pathlib import Path
 
 
@@ -288,15 +289,16 @@ def test_match_app_wires_continuous_broadcast_demod_profile():
     assert "DeclareLaunchArgument('interference_iq_decoder_autotune_mode'" in rx2
     assert 'parsed.robot_main_status || {}' in web
     assert 'enhanced_offensive: "强化进攻姿态"' in web
-    assert 'app.js?v=rx-20260730-link-recovery-v12' in html
+    cache_versions = re.findall(r'(?:app\.js|styles\.css)\?v=([\w-]+)', html)
+    assert len(cache_versions) == 2 and len(set(cache_versions)) == 1
     assert 'vision.camera_fps' in web
     assert 'vision.processing_fps ?? vision.fps' in web
     assert 'function nodeRuntimeLabel' in web
     assert 'externallyManaged' in web
     assert 'persist: true' in web
     assert '保存到 config.yaml' in html
-    assert 'styles.css?v=rx-20260717-rx-windows-v10' in html
-    assert 'let activePage = location.hash === "#radio" ? "radio" : "radar"' in web
+    assert 'location.hash === "#radio"' in web
+    assert 'location.hash === "#armor"' in web
     assert 'id="radarPage" class="app-page radar-page active"' in html
     assert 'id="radioPage" class="app-page" hidden' in html
     assert 'mark-switch-row' in web

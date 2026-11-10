@@ -24,6 +24,7 @@ from ..core.match_recording import (
     recording_session_dir,
     safe_session_id,
 )
+from ..core.adaptive_armor_config import load_config as load_armor_config
 
 
 DEFAULT_EVENT_TOPICS = ",".join(
@@ -44,6 +45,9 @@ DEFAULT_EVENT_TOPICS = ",".join(
         "/rm_radar_integration/status",
         "/rm_radar_algorithm/telemetry",
         "/rm_radar_algorithm/radar_cmd",
+        "/rm_radar_algorithm/armor_events",
+        "/rm_radar_algorithm/adaptive_armor_config",
+        "/rm_radar_algorithm/adaptive_armor",
     )
 )
 
@@ -338,6 +342,10 @@ class MatchRecorderNode(Node):
                     "game_status": dict(game_status or {}),
                 },
             )
+            try:
+                atomic_write_json(session_dir / 'adaptive_armor_config_snapshot.json', load_armor_config().to_dict())
+            except (OSError, ValueError) as error:
+                self.get_logger().warning(f'装甲策略配置快照未保存：{error}')
             self._publish_control_unlocked("start", reason)
             self.get_logger().warning(f"match recording started: {session_dir}")
             return True

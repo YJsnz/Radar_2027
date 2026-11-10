@@ -35,6 +35,10 @@ from ..core.radio_config import (
     interference_rx_setters_for_side_level,
     interference_setters_for_side_level,
 )
+from ..core.adaptive_armor import ArmorConfig, CONFIG_SCHEMA, CONFIG_TOPIC
+from ..core.adaptive_armor_config import (
+    config_path as armor_config_path, load_config as load_armor_config, save_config as save_armor_config,
+)
 
 
 RECEPTION_FRAME_RATE_WARN_THRESHOLD_HZ = 2.0
@@ -211,12 +215,19 @@ class RadioDashboardNode(Node):
         self._radar_generation = 0
         self._sdr_check_lock = threading.Lock()
         self._load_env_defaults()
+        try:
+            self.armor_config = load_armor_config()
+        except (OSError, ValueError) as error:
+            self.armor_config = ArmorConfig()
+            self._event('error', f'装甲配置未加载：{error}')
 
         qos = QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL)
         # 手动模式下由面板直接热下发两路 RX 接收参数（与 referee 自动下发共用同一 topic）。
         rx_ctrl_qos = QoSProfile(depth=10, durability=DurabilityPolicy.TRANSIENT_LOCAL)
         self.broadcast_rx_setters_pub = self.create_publisher(String, "/rm_gfsk_node/setters_json", rx_ctrl_qos)
         self.interference_rx_setters_pub = self.create_publisher(String, "/rm_gfsk_interference_node/setters_json", rx_ctrl_qos)
+        self.armor_config_pub = self.create_publisher(String, CONFIG_TOPIC, qos)
+        self._publish_armor_config()
 
         spectrum_qos = QoSProfile(depth=1)
         for node_name, role in [
@@ -482,6 +493,32 @@ class RadioDashboardNode(Node):
             self.state.adaptive_armor = {"timestamp": _now(), "data": data}
             self._radar_generation = int(getattr(self, "_radar_generation", 0)) + 1
             self._stream_condition.notify_all()
+
+    def _publish_armor_config(self) -> None:
+        msg = String()
+        msg.data = json.dumps({'schema': CONFIG_SCHEMA, 'config': self.armor_config.to_dict()}, ensure_ascii=False)
+        self.armor_config_pub.publish(msg)
+
+    def _update_armor_config(self, data: dict) -> dict:
+        allowed = {
+            'mode', 'plate_width_mm', 'plate_height_mm', 'plate_area_mm2',
+            'geometry_confirmed', 'boundary_policy', 'automatic_requests',
+        }
+        if set(data) - allowed:
+            raise ValueError('网页只能修改选点模式、检测面和自动请求设置')
+        with self._stream_condition:
+            stored = load_armor_config() if armor_config_path().is_file() else getattr(self, 'armor_config', ArmorConfig())
+            values = stored.to_dict()
+            values.update(data)
+            config = ArmorConfig.from_dict(values)
+            # Persist before publishing; a failed write must not partially apply a mode change.
+            save_armor_config(config)
+            self.armor_config = config
+            self._publish_armor_config()
+            self._radar_generation += 1
+            self._stream_condition.notify_all()
+        self._event('adaptive_armor_config', '装甲选点策略已保存；切换模式本身不会发送加固指令')
+        return {'ok': True, 'config': config.to_dict()}
 
     def _spectrum_callback(self, role: str, tap: str = "raw") -> Callable[[String], None]:
         def callback(msg: String) -> None:
@@ -816,6 +853,7 @@ class RadioDashboardNode(Node):
                 "radar": self.state.radar,
                 "vision_radar": self.state.vision_radar,
                 "adaptive_armor": self.state.adaptive_armor,
+                "adaptive_armor_config": getattr(self, 'armor_config', ArmorConfig()).to_dict(),
                 # Streaming data has a dedicated incremental endpoint. Keep a
                 # short compatibility tail here so a 2-second state refresh
                 # never serializes hundreds of large information-wave frames.
@@ -1641,6 +1679,7 @@ class RadioDashboardNode(Node):
                 "radar": self.state.radar,
                 "vision_radar": self.state.vision_radar,
                 "adaptive_armor": self.state.adaptive_armor,
+                "adaptive_armor_config": getattr(self, 'armor_config', ArmorConfig()).to_dict(),
                 "reception_rates": self._reception_rates_unlocked(now=now),
                 "health": self._health_unlocked(now=now),
             }
@@ -1775,6 +1814,9 @@ class RadioDashboardNode(Node):
                 return
             if parsed.path == "/api/config":
                 self._send_json(handler, self._update_config(data))
+                return
+            if parsed.path == '/api/adaptive-armor/config':
+                self._send_json(handler, self._update_armor_config(data))
                 return
             if parsed.path == "/api/start":
                 self._update_config(data)

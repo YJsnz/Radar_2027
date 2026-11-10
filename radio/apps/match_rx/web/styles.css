@@ -277,6 +277,18 @@ button.danger { color: #fff; background: var(--bad); border-color: var(--bad); }
 .armor-candidate-ellipse { fill: rgba(232, 137, 61, .19); stroke: #e87932; stroke-width: 4; stroke-dasharray: 9 6; vector-effect: non-scaling-stroke; }
 .armor-candidate-center { fill: #fff8e9; stroke: #bd5b1e; stroke-width: 4; vector-effect: non-scaling-stroke; }
 .armor-candidate-cross { fill: none; stroke: #fff8e9; stroke-width: 4; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.armor-strategy-controls { display: grid; grid-template-columns: 1fr auto; gap: 8px; margin: 4px 0 12px; }
+.armor-strategy-controls > label:first-child, .armor-strategy-controls > select, .armor-strategy-controls > p { grid-column: 1 / -1; }
+.armor-strategy-controls > label:first-child { color: var(--muted); font-size: 11px; }
+.armor-strategy-controls select, .armor-geometry-controls select { min-height: 34px; max-width: 100%; border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; background: var(--panel-soft); color: var(--text); }
+.armor-strategy-controls > p { margin: 0; font-size: 11px; line-height: 1.5; color: var(--muted); }
+.armor-auto-request { display: flex !important; align-items: center; gap: 6px; font-size: 11px; }
+.armor-auto-request input { width: auto; min-height: 0; }
+.armor-algorithm-ellipse { fill: rgba(37, 133, 210, .13); stroke: #197cc6; stroke-width: 3; stroke-dasharray: 4 5; vector-effect: non-scaling-stroke; }
+.armor-algorithm-center { fill: #fff; stroke: #197cc6; stroke-width: 4; vector-effect: non-scaling-stroke; }
+.armor-hit-point { fill: #d75b45; stroke: #fff; stroke-width: 1; opacity: .65; }
+.armor-damage-legend i.algorithm { background: #197cc6; }
+.armor-damage-legend i.hit { background: #d75b45; }
 .armor-current-center { display: grid; grid-template-columns: max-content minmax(0, 1fr) max-content minmax(0, 1fr); align-items: center; gap: 8px 12px; padding: 10px 2px 6px; }
 .armor-current-center span { color: var(--muted); font-size: 10px; }
 .armor-current-center strong { min-width: 0; overflow-wrap: anywhere; font-size: 12px; font-variant-numeric: tabular-nums; }
@@ -286,6 +298,7 @@ button.danger { color: #fff; background: var(--bad); border-color: var(--bad); }
 .armor-geometry-controls label span { color: var(--muted); }
 .armor-geometry-controls input { grid-column: 1 / -1; width: 100%; min-height: 34px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; color: var(--text); background: var(--panel-soft); font: inherit; font-variant-numeric: tabular-nums; }
 .armor-geometry-controls button { min-height: 34px; padding: 6px 11px; }
+.armor-geometry-controls .armor-auto-request input { width: auto; min-height: 0; grid-column: auto; }
 .armor-geometry-status { align-self: center; color: var(--muted); font-size: 11px; line-height: 1.4; }
 .armor-geometry-details { margin-top: 9px; border-top: 1px solid var(--line-soft); padding-top: 8px; }
 .armor-geometry-details summary { color: var(--muted); cursor: pointer; font-size: 11px; }

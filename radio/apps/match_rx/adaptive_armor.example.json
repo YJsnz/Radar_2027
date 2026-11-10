@@ -1,0 +1,22 @@
+{
+  "mode": "fixed_center",
+  "plate_width_mm": 0,
+  "plate_height_mm": 0,
+  "plate_area_mm2": 0,
+  "geometry_confirmed": false,
+  "boundary_policy": "unconfirmed",
+  "automatic_requests": false,
+  "trusted_sources": [],
+  "window_sec": 120,
+  "validation_sec": 30,
+  "decay_sec": 60,
+  "block_sec": 3,
+  "min_train_samples": 20,
+  "min_validation_samples": 12,
+  "confidence": 0.95,
+  "first_margin": 0.05,
+  "change_margin": 0.10,
+  "stable_sec": 5,
+  "freshness_sec": 3,
+  "confirm_timeout_sec": 5
+}

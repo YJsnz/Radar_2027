@@ -47,6 +47,8 @@ def test_match_recorder_auto_starts_and_finalizes_from_game_status(tmp_path):
         session_dir = node._session_dir
         assert session_dir is not None
         assert (session_dir / "config_snapshot.yaml").exists() is False
+        armor_config = json.loads((session_dir / 'adaptive_armor_config_snapshot.json').read_text())
+        assert armor_config['mode'] in ('fixed_center', 'adaptive_coverage')
 
         ended = String(
             data=json.dumps(

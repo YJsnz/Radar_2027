@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>SharkRadio 比赛接收台</title>
-    <link rel="stylesheet" href="/styles.css?v=rx-20261107-adaptive-armor-v16" />
+    <link rel="stylesheet" href="/styles.css?v=rx-20261110-armor-strategy-v17" />
   </head>
   <body>
     <header class="app-header">
@@ -248,9 +248,19 @@
             </div>
             <span id="armorOwnBadge" class="badge unknown">等待裁判</span>
           </div>
+          <div class="armor-strategy-controls">
+            <label for="armorStrategyMode">圆心策略</label>
+            <select id="armorStrategyMode">
+              <option value="fixed_center">固定居中（默认）</option>
+              <option value="adaptive_coverage">算法选点 · 最大覆盖</option>
+            </select>
+            <label class="armor-auto-request"><input id="armorAutoRequests" type="checkbox" />满足条件时自动加固</label>
+            <button id="armorSaveStrategy" type="button">保存策略</button>
+            <p id="armorStrategyNote" role="status">固定居中使用检测面中心；保存策略本身不会消耗加固机会。</p>
+          </div>
           <div class="armor-summary-primary">
             <article class="armor-metric"><span>可用加固机会</span><strong id="armorOwnOpportunities">—</strong><small>裁判 0x020E 回报 · 可累积</small></article>
-            <article class="armor-metric"><span>本局累计命中</span><strong id="armorOwnHitCount">— / 10</strong><small>≥10 发为命中门槛，还需有剩余机会</small></article>
+            <article class="armor-metric"><span>己方打中对方</span><strong id="armorOwnHitCount">— / 10</strong><small>累计 ≥10 发为请求门槛</small></article>
           </div>
           <div class="armor-hit-threshold">
             <div class="armor-hit-track" role="progressbar" aria-label="本局加固命中门槛进度" aria-valuemin="0" aria-valuemax="10" aria-valuenow="0"><i id="armorHitThresholdProgress"></i></div>
@@ -298,6 +308,8 @@
                     </defs>
                     <rect class="armor-detection-face-outline" x="103.6" y="103.6" width="990" height="988.9" />
                     <g id="armorReinforcementOverlay" clip-path="url(#armorDetectionFaceClip)"></g>
+                    <g id="armorHitPointsOverlay" clip-path="url(#armorDetectionFaceClip)"></g>
+                    <g id="armorAlgorithmOverlay" clip-path="url(#armorDetectionFaceClip)"></g>
                     <g id="armorCandidateOverlay" clip-path="url(#armorDetectionFaceClip)"></g>
                   </svg>
                 </div>
@@ -309,6 +321,8 @@
               <span>加固半径</span><strong id="armorOwnRadius">—</strong>
               <span>候选圆心（本机）</span><strong id="armorCandidateCenter">—</strong>
               <span>候选半径</span><strong id="armorCandidateRadius">—</strong>
+              <span>策略建议圆心</span><strong id="armorSuggestedCenter">待尺寸确认</strong>
+              <span id="armorCoverageLabel">预计命中覆盖</span><strong id="armorCoverage">—</strong>
             </div>
             <figcaption>坐标原点为检测面左下角，x 向右、y 向上。点击或拖动可选择本机候选点；只有裁判 0x020E 回报才代表实际生效。</figcaption>
           </figure>
@@ -320,6 +334,8 @@
           <div class="armor-damage-legend" aria-label="装甲区域伤害倍率">
             <span><i class="reinforced"></i>已加固 ×0.5</span>
             <span><i class="candidate"></i>候选预览（本机）</span>
+            <span><i class="algorithm"></i>策略建议</span>
+            <span><i class="hit"></i>来袭受击点</span>
             <span><i class="unreinforced"></i>未加固 ×1.5</span>
             <span><i class="default"></i>默认 ×1.0</span>
           </div>
@@ -329,7 +345,10 @@
             <div class="armor-geometry-controls">
               <label>检测面宽 <span>mm</span><input id="armorPlateWidthMm" type="number" min="1" max="5000" step="1" inputmode="numeric" placeholder="实际宽度" /></label>
               <label>检测面高 <span>mm</span><input id="armorPlateHeightMm" type="number" min="1" max="5000" step="1" inputmode="numeric" placeholder="实际高度" /></label>
-              <button id="armorApplyGeometry" type="button">应用尺寸</button>
+              <label>板面面积（选填）<span>mm²</span><input id="armorPlateAreaMm2" type="number" min="0" max="25000000" placeholder="留空按矩形宽×高" /></label>
+              <label>圆与检测面边缘<select id="armorBoundaryPolicy"><option value="unconfirmed">规则边界尚未核实</option><option value="clip">已确认允许圆跨边缘</option><option value="contained">已确认要求整圆内接</option></select></label>
+              <label class="armor-auto-request"><input id="armorGeometryConfirmed" type="checkbox" />已核对实体尺寸与统一坐标</label>
+              <button id="armorApplyGeometry" type="button">保存尺寸</button>
               <span id="armorGeometryStatus" class="armor-geometry-status" role="status">请按装甲模块检测面的实测宽高标定。</span>
             </div>
           </details>
@@ -344,6 +363,10 @@
             <span id="armorReadinessBadge" class="badge warn">等待命中数据</span>
           </div>
           <div class="armor-mechanism-list">
+            <div class="armor-mechanism-row"><span>策略运行</span><strong id="armorStrategyPhase">等待策略节点</strong></div>
+            <div class="armor-mechanism-row"><span>覆盖估计下界</span><strong id="armorCoverageLower">—</strong></div>
+            <div class="armor-mechanism-row"><span>预计伤害倍率</span><strong id="armorExpectedDamage">—</strong></div>
+            <div class="armor-mechanism-row"><span>来袭命中样本</span><strong id="armorReceivedCount">—</strong></div>
             <div class="armor-mechanism-row"><span>加固机会</span><strong id="armorRightOpportunities">等待数据</strong></div>
             <div class="armor-mechanism-row"><span>命中条件</span><strong id="armorRightHitGate">等待命中样本</strong></div>
             <div class="armor-mechanism-row"><span>己方生效状态</span><strong id="armorOwnActive">—</strong></div>
@@ -422,6 +445,6 @@
       </div>
     </div>
 
-    <script src="/app.js?v=rx-20261107-adaptive-armor-v16"></script>
+    <script src="/app.js?v=rx-20261110-armor-strategy-v17"></script>
   </body>
 </html>

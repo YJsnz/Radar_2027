@@ -8,7 +8,7 @@ from pathlib import Path
 import sys
 
 from .adaptive_armor import (
-    AdaptiveArmorDecision, ArmorConfig, CONFIG_TOPIC, EVENT_TOPIC, number,
+    AdaptiveArmorDecision, ArmorConfig, CONFIG_TOPIC, EVENT_TOPIC, STATUS_TOPIC, number,
 )
 
 
@@ -30,6 +30,9 @@ def replay(rows, config=None):
             decision.ingest(event, now)
         elif kind == 'config' or topic == CONFIG_TOPIC:
             decision.configure(ArmorConfig.from_dict(data.get('config', data)))
+        elif topic == STATUS_TOPIC and isinstance(data.get('config'), dict):
+            # Config is replayable; the truncated display hit_points are NOT raw evidence.
+            decision.configure(ArmorConfig.from_dict(data['config']))
         elif kind == 'referee' or topic == '/rm_referee_serial_node/status':
             referee = data
         elif topic == '/rm_radar_integration/status':
@@ -47,7 +50,11 @@ def main():
     parser.add_argument('--config', type=Path, help='策略 JSON 配置；缺省为固定居中、等待几何')
     parser.add_argument('--output', type=Path, help='逐次建议与状态 JSONL；缺省为 stdout')
     args = parser.parse_args()
-    config = ArmorConfig.from_dict(json.loads(args.config.read_text())) if args.config else None
+    config_file = args.config
+    if config_file is None and args.input != '-':
+        candidate = Path(args.input).parent / 'adaptive_armor_config_snapshot.json'
+        config_file = candidate if candidate.is_file() else None
+    config = ArmorConfig.from_dict(json.loads(config_file.read_text())) if config_file else None
     if args.input == '-':
         stream = sys.stdin
     elif args.input.endswith('.gz'):

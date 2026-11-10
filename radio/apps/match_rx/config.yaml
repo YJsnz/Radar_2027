@@ -122,7 +122,7 @@ recording:
     compression: zstd
     compression_level: 1
     queue_size: 4096
-    topics: "/rm_gfsk_node/status,/rm_gfsk_node/frames,/rm_gfsk_node/referee_bridge,/rm_gfsk_node/setters_json,/rm_gfsk_interference_node/status,/rm_gfsk_interference_node/frames,/rm_gfsk_interference_node/referee_bridge,/rm_gfsk_interference_node/setters_json,/rm_referee_serial_node/status,/rm_referee_serial_node/rx_frames,/rm_referee_serial_node/tx_frames,/rm_referee_serial_node/raw_rx,/rm_referee_serial_node/referee_bridge,/rm_radar_integration/status,/rm_radar_algorithm/telemetry,/rm_radar_algorithm/radar_cmd"
+    topics: "/rm_gfsk_node/status,/rm_gfsk_node/frames,/rm_gfsk_node/referee_bridge,/rm_gfsk_node/setters_json,/rm_gfsk_interference_node/status,/rm_gfsk_interference_node/frames,/rm_gfsk_interference_node/referee_bridge,/rm_gfsk_interference_node/setters_json,/rm_referee_serial_node/status,/rm_referee_serial_node/rx_frames,/rm_referee_serial_node/tx_frames,/rm_referee_serial_node/raw_rx,/rm_referee_serial_node/referee_bridge,/rm_radar_integration/status,/rm_radar_algorithm/telemetry,/rm_radar_algorithm/radar_cmd,/rm_radar_algorithm/armor_events,/rm_radar_algorithm/adaptive_armor_config,/rm_radar_algorithm/adaptive_armor"
 
 radar_integration:
   enabled: true

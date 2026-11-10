@@ -14,6 +14,8 @@ let armorCandidateDragging = false;
 let latestArmorGeometry = null;
 let latestArmorAreaEstimate = null;
 let latestAdaptiveArmorPayload = null;
+let armorStrategyDirty = false;
+let armorGeometryDirty = false;
 let radarEventSource = null;
 let radarReconnectTimer = 0;
 let radarStreamState = "closed";
@@ -1302,10 +1304,11 @@ function resolveArmorGeometry(stats) {
   const statusWidth = armorNumber(stats.plate_width_mm ?? stats.detection_surface_width_mm);
   const statusHeight = armorNumber(stats.plate_height_mm ?? stats.detection_surface_height_mm);
   if (statusWidth > 0 && statusHeight > 0) {
-    return { widthMm: statusWidth, heightMm: statusHeight, source: "算法状态" };
+    const confirmed = stats.config?.geometry_confirmed === true;
+    return { widthMm: statusWidth, heightMm: statusHeight, confirmed, source: confirmed ? "已确认策略尺寸" : "预览尺寸（未确认）" };
   }
   if (armorGeometryCalibration?.widthMm > 0 && armorGeometryCalibration?.heightMm > 0) {
-    return { ...armorGeometryCalibration, source: "本机标定" };
+    return { ...armorGeometryCalibration, confirmed: false, source: "本机预览尺寸" };
   }
   return null;
 }
@@ -1393,6 +1396,65 @@ function renderArmorPlateOverlay(own, ownValid, ownActive, geometry) {
   note.textContent = `${geometry.source}尺寸 ${geometry.widthMm} × ${geometry.heightMm} mm · 圆心 (${centerX}, ${centerY}) mm · 半径 ${radius} mm${clipped ? " · 超出检测面部分已裁切显示" : ""}`;
 }
 
+function renderArmorStrategy(stats, geometry, payload) {
+  const config = payload?.adaptive_armor_config || get(state.latest, ["adaptive_armor_config"], null) || stats.config || {};
+  if (!armorStrategyDirty) {
+    $("armorStrategyMode").value = config.mode || "fixed_center";
+    $("armorAutoRequests").checked = config.automatic_requests === true;
+  }
+  if (!armorGeometryDirty && document.activeElement?.closest(".armor-geometry-controls") == null) {
+    if (config.plate_width_mm > 0) $("armorPlateWidthMm").value = String(config.plate_width_mm);
+    if (config.plate_height_mm > 0) $("armorPlateHeightMm").value = String(config.plate_height_mm);
+    $("armorPlateAreaMm2").value = config.plate_area_mm2 > 0 ? String(config.plate_area_mm2) : "";
+    $("armorGeometryConfirmed").checked = config.geometry_confirmed === true;
+    $("armorBoundaryPolicy").value = config.boundary_policy || "unconfirmed";
+  }
+  const age = Date.now() / 1000 - armorNumber(stats.timestamp);
+  const fresh = stats.schema === "shark.radar.adaptive_armor.v1" && age >= -0.5 && age <= 4;
+  const proposal = fresh && stats.mode === config.mode ? stats.proposal || {} : {};
+  const phases = { waiting: "等待条件", preview: "建议就绪 · 仅预览", ready: "建议就绪", pending: "等待裁判确认", timeout: "超时 · 已停止重试", failed: "请求失败", dry_run: "串口演练", confirmed: "裁判已确认" };
+  $("armorStrategyPhase").textContent = fresh ? phases[stats.phase] || "等待条件" : "等待策略节点 / 状态过期";
+  const sourceLabel = { synthetic: "合成数据 · 仅预览", replay: "离线回放 · 仅预览", live: "实时适配器输入" }[stats.origin] || "等待真实命中事件";
+  if (!armorStrategyDirty) $("armorStrategyNote").textContent = `${config.mode === "adaptive_coverage" ? "按近期受击分布选择覆盖最多的位置" : "固定使用检测面几何中心"}；${sourceLabel}。切换和保存策略本身不会消耗机会。`;
+  $("armorCoverage").textContent = Number.isFinite(armorNumber(proposal.coverage)) ? `${(proposal.coverage * 100).toFixed(1)}%` : "等待独立验证样本";
+  $("armorCoverageLabel").textContent = stats.weight_basis === "baseline_damage" ? "预计伤害覆盖" : "预计命中覆盖";
+  $("armorCoverageLower").textContent = Number.isFinite(armorNumber(proposal.coverage_lower)) ? `${(proposal.coverage_lower * 100).toFixed(1)}% · ${proposal.validation_blocks} 个时间块` : "—";
+  $("armorExpectedDamage").textContent = Number.isFinite(armorNumber(proposal.expected_damage_multiplier)) ? `${Number(proposal.expected_damage_multiplier).toFixed(2)} × ${stats.weight_basis === "baseline_damage" ? "默认伤害" : "每发等权估计"}` : "—";
+  $("armorReceivedCount").textContent = fresh && stats.own_received_hit_count != null ? String(stats.own_received_hit_count) : "—";
+  const relativeFallback = (config.mode || "fixed_center") === "fixed_center";
+  const x = Number.isFinite(armorNumber(proposal.x_ratio)) ? Number(proposal.x_ratio) : relativeFallback ? 0.5 : NaN;
+  const y = Number.isFinite(armorNumber(proposal.y_ratio)) ? Number(proposal.y_ratio) : relativeFallback ? 0.5 : NaN;
+  $("armorSuggestedCenter").textContent = Number.isFinite(armorNumber(proposal.center_x_mm)) && Number.isFinite(armorNumber(proposal.center_y_mm))
+    ? `${armorCenterText(proposal.center_x_mm, proposal.center_y_mm)}${proposal.fallback ? " · 居中回退" : ""}`
+    : relativeFallback ? "检测面中心（50%, 50%） · 待毫米尺寸" : "等待有效算法建议";
+  const { face } = ARMOR_PLATE_ART;
+  let drawing = "";
+  if (Number.isFinite(x) && Number.isFinite(y) && x >= 0 && x <= 1 && y >= 0 && y <= 1) {
+    const cx = face.x + x * face.width;
+    const cy = face.y + (1-y) * face.height;
+    if (geometry && stats.plate_width_mm === geometry.widthMm && stats.plate_height_mm === geometry.heightMm && proposal.radius_mm > 0) {
+      drawing += `<ellipse cx="${cx}" cy="${cy}" rx="${proposal.radius_mm / geometry.widthMm * face.width}" ry="${proposal.radius_mm / geometry.heightMm * face.height}" class="armor-algorithm-ellipse" />`;
+    }
+    drawing += `<circle cx="${cx}" cy="${cy}" r="11" class="armor-algorithm-center" />`;
+  }
+  $("armorAlgorithmOverlay").innerHTML = drawing;
+  $("armorHitPointsOverlay").innerHTML = fresh && geometry && Array.isArray(stats.hit_points)
+    ? stats.hit_points.slice(-160).map((p) => {
+      const px = armorNumber(p.x_mm), py = armorNumber(p.y_mm);
+      if (!(px >= 0 && py >= 0 && px <= geometry.widthMm && py <= geometry.heightMm)) return "";
+      return `<circle cx="${face.x + px / geometry.widthMm * face.width}" cy="${face.y + (1-py / geometry.heightMm) * face.height}" r="4" class="armor-hit-point" />`;
+    }).join("") : "";
+  if (fresh) {
+    $("armorHitSourceTitle").textContent = sourceLabel;
+    $("armorHitSourceNote").textContent = stats.last_error ? `${stats.reason || "等待策略评估"} · ${stats.last_error}` : stats.reason || "等待策略评估";
+    $("armorHitSourceDetail").textContent = "己方攻击命中数用于 ≥10 发门槛；来袭受击位置用于防护选点。首次加固需预计覆盖超过一半的来袭伤害，并留有安全余量。选点与验证使用不同时间段；覆盖下界依赖验证时间块近似独立的假设。";
+    $("armorReadinessBadge").textContent = phases[stats.phase] || "等待条件";
+    $("armorReadinessBadge").className = `badge ${["failed", "timeout"].includes(stats.phase) ? "bad" : stats.phase === "preview" || stats.phase === "ready" ? "ok" : "warn"}`;
+    if (stats.pending) $("armorCommandConfirmation").textContent = stats.reason;
+    else if (stats.last_result?.phase === "confirmed") $("armorCommandConfirmation").textContent = "裁判生效圆心与机会消耗已确认";
+  }
+}
+
 function renderAdaptiveArmor(payload) {
   latestAdaptiveArmorPayload = payload || {};
   const integrationEntry = payload?.radar || get(state.latest, ["radar"], {});
@@ -1452,7 +1514,7 @@ function renderAdaptiveArmor(payload) {
     : "—";
   $("armorCalculatedAreaNote").textContent = areaEstimate.valid
     ? Number.isFinite(areaEstimate.areaMm2)
-      ? `${(areaEstimate.areaRatio * 100).toFixed(2)}% 板面 · S=${areaEstimate.plateArea.toFixed(0)} mm²${areaEstimate.plateAreaSource === "检测面宽×高" ? "（按实测尺寸）" : ""}`
+      ? `${(areaEstimate.areaRatio * 100).toFixed(2)}% 板面 · S=${areaEstimate.plateArea.toFixed(0)} mm²${areaEstimate.plateAreaSource === "检测面宽×高" ? plateGeometry?.confirmed ? "（已确认尺寸）" : "（预览尺寸未确认）" : ""}`
       : "面积比例已计算；待提供板面面积 S 换算 mm²"
     : "等待有效双方 η、σ";
   $("armorCalculatedRadius").textContent = areaEstimate.valid
@@ -1529,6 +1591,7 @@ function renderAdaptiveArmor(payload) {
       : lastFortifyCommand > 0 && ownValid
         ? "0x020E 尚未报告生效区"
         : "等待 0x020E 裁判回报";
+  renderArmorStrategy(armorStats, plateGeometry, payload);
 }
 
 function renderRadarData(payload) {
@@ -2044,7 +2107,34 @@ if (armorGeometryCalibration) {
   $("armorPlateWidthMm").value = String(armorGeometryCalibration.widthMm);
   $("armorPlateHeightMm").value = String(armorGeometryCalibration.heightMm);
 }
-$("armorApplyGeometry").addEventListener("click", () => {
+async function saveArmorConfiguration(updates) {
+  const result = await apiPost("/api/adaptive-armor/config", updates);
+  if (state.latest) state.latest.adaptive_armor_config = result.config;
+  latestAdaptiveArmorPayload = { ...(latestAdaptiveArmorPayload || {}), adaptive_armor_config: result.config };
+  return result.config;
+}
+for (const id of ["armorStrategyMode", "armorAutoRequests"]) {
+  $(id).addEventListener("change", () => {
+    armorStrategyDirty = true;
+    $("armorStrategyNote").textContent = "策略已修改，点击保存后应用；保存本身不会消耗机会。";
+  });
+}
+$("armorSaveStrategy").addEventListener("click", async () => {
+  const button = $("armorSaveStrategy");
+  button.disabled = true;
+  try {
+    await saveArmorConfiguration({ mode: $("armorStrategyMode").value, automatic_requests: $("armorAutoRequests").checked });
+    armorStrategyDirty = false;
+    renderAdaptiveArmor(latestAdaptiveArmorPayload);
+    $("armorStrategyNote").textContent = "策略已保存；自动请求仍需满足数据、收益及裁判条件。";
+  } catch (error) {
+    $("armorStrategyNote").textContent = `保存失败：${error.message}`;
+  } finally { button.disabled = false; }
+});
+for (const id of ["armorPlateWidthMm", "armorPlateHeightMm", "armorPlateAreaMm2", "armorBoundaryPolicy", "armorGeometryConfirmed"]) {
+  $(id).addEventListener("input", () => { armorGeometryDirty = true; });
+}
+$("armorApplyGeometry").addEventListener("click", async () => {
   const widthMm = armorNumber($("armorPlateWidthMm").value);
   const heightMm = armorNumber($("armorPlateHeightMm").value);
   const status = $("armorGeometryStatus");
@@ -2052,6 +2142,21 @@ $("armorApplyGeometry").addEventListener("click", () => {
     status.textContent = "宽、高需分别填写 1～5000 mm 的实测值。";
     return;
   }
+  const button = $("armorApplyGeometry");
+  button.disabled = true;
+  try {
+    const area = $("armorPlateAreaMm2").value.trim();
+    await saveArmorConfiguration({
+      plate_width_mm: widthMm, plate_height_mm: heightMm, plate_area_mm2: area ? Number(area) : 0,
+      geometry_confirmed: $("armorGeometryConfirmed").checked, boundary_policy: $("armorBoundaryPolicy").value,
+    });
+  } catch (error) {
+    status.textContent = `尺寸保存失败：${error.message}`;
+    button.disabled = false;
+    return;
+  }
+  button.disabled = false;
+  armorGeometryDirty = false;
   armorGeometryCalibration = { widthMm, heightMm };
   let storageAvailable = true;
   try {

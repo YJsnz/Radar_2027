@@ -8,7 +8,12 @@ from pathlib import Path
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import String
+from rclpy.qos import DurabilityPolicy, QoSProfile
 
+from ..core.adaptive_armor import (
+    AdaptiveArmorDecision, ArmorConfig, CONFIG_SCHEMA, CONFIG_TOPIC, EVENT_TOPIC, STATUS_TOPIC,
+)
+from ..core.adaptive_armor_config import load_config
 from ..core.double_vulnerability import (
     AutoDoubleVulnerabilityDecision,
     DoubleVulnerabilityConfig,
@@ -68,6 +73,11 @@ class RadarIntegrationNode(Node):
             radio_ghost_sec=float(self.get_parameter('radio_ghost_sec').value),
         )
         self.last_error = ''
+        self.armor = AdaptiveArmorDecision()
+        try:
+            self.armor.configure(load_config())
+        except (OSError, ValueError) as error:
+            self.armor.last_error = f'装甲策略配置未加载：{error}'
         self.last_referee_status: dict = {}
         self.last_0305_ack: dict = {}
         self.last_auto_double_ack: dict = {}
@@ -130,6 +140,13 @@ class RadarIntegrationNode(Node):
             String, str(self.get_parameter('radar_cmd_topic').value), 10
         )
         self.status_pub = self.create_publisher(String, '~/status', 10)
+        self.armor_status_pub = self.create_publisher(String, STATUS_TOPIC, 10)
+        self.create_subscription(String, EVENT_TOPIC, self._handle_armor_event, 100)
+        self.create_subscription(
+            String, CONFIG_TOPIC, self._handle_armor_config,
+            QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL),
+        )
+        self.create_timer(0.5, self._armor_tick)
         self.create_subscription(
             String,
             str(self.get_parameter('telemetry_topic').value),
@@ -215,6 +232,8 @@ class RadarIntegrationNode(Node):
         except (TypeError, ValueError):
             return
         request_id = str(payload.get('request_id', ''))
+        if getattr(self, 'armor', None) is not None:
+            self.armor.acknowledge(payload)
         if (
             payload.get('kind') == 'radar_cmd_0121'
             and request_id.startswith('auto-double-vulnerability-')
@@ -230,6 +249,42 @@ class RadarIntegrationNode(Node):
             self._successful_send_times.append(now)
         elif payload.get('dry_run') is True:
             self.send_dry_run_count += 1
+
+    def _handle_armor_event(self, message: String) -> None:
+        try:
+            self.armor.ingest(self._decode(message), time.time())
+            self.armor.last_error = ''
+        except (ValueError, TypeError) as error:
+            self.armor.last_error = f'装甲事件未接纳：{error}'
+            self.get_logger().warning(self.armor.last_error)
+
+    def _handle_armor_config(self, message: String) -> None:
+        try:
+            data = self._decode(message)
+            if data.get('schema') != CONFIG_SCHEMA:
+                raise ValueError('不支持的策略配置 schema')
+            self.armor.configure(ArmorConfig.from_dict(data['config']))
+            self.armor.last_error = ''
+        except (ValueError, TypeError, KeyError) as error:
+            self.armor.last_error = f'装甲配置未应用：{error}'
+
+    def _armor_tick(self) -> None:
+        try:
+            snapshot = self.fusion.snapshot(time.monotonic())
+            command = self.armor.evaluate(
+                time.time(), self._decision_referee_status(snapshot),
+                self.fusion.own_side, snapshot['side_mismatch'],
+            )
+            if command is not None:
+                message = String()
+                message.data = json.dumps(command, ensure_ascii=False, allow_nan=False)
+                self.radar_cmd_pub.publish(message)
+            message = String()
+            message.data = json.dumps(self.armor.status, ensure_ascii=False, allow_nan=False)
+            self.armor_status_pub.publish(message)
+        except Exception as error:  # keep position fusion alive if an external event is malformed
+            self.armor.last_error = f'装甲决策暂停：{error}'
+            self.get_logger().error(self.armor.last_error)
 
     def _actual_send_rate(self, now: float) -> float:
         while self._successful_send_times and now - self._successful_send_times[0] > 2.0:

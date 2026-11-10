@@ -252,6 +252,51 @@ def test_match_end_resets_cumulative_stats_and_pending():
     assert d.status['own_hit_count'] is None
 
 
+def test_existing_armor_uses_actual_referee_radius_and_compares_current_center():
+    d = populated()
+    d.evaluate(300, referee(300, active=True, radius=20), 'red')
+    heartbeat(d, 303)
+    command = d.evaluate(303, referee(303, active=True, radius=20), 'red')
+    assert command is not None
+    assert d.status['proposal']['radius_mm'] == 20
+    assert d.status['proposal']['radius_source'] == 'referee'
+    assert d.status['proposal']['current_coverage'] == 0
+    assert d.status['proposal']['improvement_lower'] > d.config.change_margin
+
+
+def test_stale_input_does_not_publish_current_area_estimate():
+    d = populated()
+    d.evaluate(310, referee(310), 'red')
+    assert d.status['statistics_fresh'] is False
+    assert d.status['estimate_valid'] is False
+    assert d.status['proposal']['radius_mm'] is None
+
+
+def test_recorded_status_config_does_not_reconstruct_hits_from_display_points():
+    rows = [{'kind': 'topic', 'topic': '/rm_radar_algorithm/adaptive_armor', 'timestamp': 100,
+             'data': {'config': config(mode='adaptive_coverage').to_dict(),
+                      'hit_points': [{'x_mm': 50, 'y_mm': 50}]}}]
+    status = list(replay(rows))[0]
+    assert status['mode'] == 'adaptive_coverage'
+    assert status['own_received_hit_count'] is None
+
+
+def test_damage_weights_cannot_silently_mix_unknown_and_known_damage():
+    cfg, stats = config(), ArmorStatistics()
+    stats.ingest(event('session', origin='live', side='red', complete_from_start=True,
+                       weight_basis='baseline_damage'), 100, cfg)
+    hit = event('hit', 110, direction='incoming', event_id='R1:0:1',
+                confirmed=True, x_mm=20, y_mm=20)
+    with pytest.raises(ValueError, match='每发均提供'):
+        stats.ingest(hit, 110, cfg)
+    stats.ingest(dict(hit, baseline_damage=100), 110, cfg)
+    assert stats.hits['incoming'][0].damage == 100
+    other = ArmorStatistics()
+    session(other, cfg)
+    other.ingest(dict(hit, baseline_damage=100), 110, cfg)
+    assert other.hits['incoming'][0].damage == 1  # count mode always stays comparable
+
+
 @pytest.mark.parametrize('change', [
     {'mode': 'cluster'}, {'automatic_requests': 'false'}, {'plate_width_mm': float('nan')},
     {'confidence': 1}, {'unknown': 1}, {'validation_sec': 120},
