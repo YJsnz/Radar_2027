@@ -410,7 +410,7 @@
 
 判定：对方 P ≥ 100 → 对应位 1；己方 P ≥ 50 → 对应位 1（特殊标识，无增益）。
 规则 §5.7.4：P∈[0,150]，初始 0；准确<0.8m、半准确 0.8-1.6m、错误≥1.6m；准确 +1.0（连续准确再 +1.0）、半准确 +0.5、错误 −0.8；每 0.5s 无数据记一次错误；对方 [100,120) 特殊标识+15% 易伤、[120,150] 特殊标识+20% 易伤；己方 [50,150] 仅标识。5Hz 全准确约 3s 到 120。
-⚠️ 2026 位义：bit0 英雄、bit1 工程、bit2 3 步、bit3 4 步、bit4 空中、bit5 哨兵、bit6 己英雄、bit7 己工程、bit8 己 3 步、bit9 己 4 步、bit10 己空中、bit11 己哨兵、bit12-15 空中被瞄准/反制。现码 `rm_protocol.py:682-713` 输出 `opponent_engineer`/`opponent_aerial`/`ally_engineer`/`ally_aerial`/`aerial_countermeasure` → 2027 全部恒 False 或取保留位。
+⚠️ 2026 位义曾把 bit1/4/7/10 当作工程/空中，并把 bit12-15 当作空中反制。2027 解析已改为 bit0/2/3/5 与 bit6/8/9/11 对应 1/3/4/7 号，bit1/4/7/10/12-15 统一暴露为保留位；旧 `aerial_countermeasure` 字段已移除。视觉策略与比赛台改读 2027 机器人字段，完整红蓝实机链路仍待验证。
 
 ### 6.2 0x020E 雷达自主决策同步（8B）
 | offset | 长度 | 字段 | 类型 | 单位 | 说明 |
@@ -480,7 +480,7 @@
 | P0 | `vision/RM_serial_py/ser_api.py:141-167` | 组 0x0121：8B（radar_cmd+2B cmd + 6B 密码） | 13B（+armor_fortify_cmd+圆心） | 子内容长度非法；加固不可用 | 扩到 13B，偏移按 §3.19 |
 | P1 | `rm_protocol.py:528-545`、`:548-565` | build/parse 0x0121 固定 8B、断言 `len==8` | 13B、`len==13` | 接收侧 len!=8 提前 return；发送侧构造失败 | 同步扩 13B，password 仍在 2..8 |
 | P1 | `core/protocol2027.py`、`rm_protocol.py:588-608` | 原解析器仅支持 20B，缺少控制度，前哨按己/对方命名 | 24B；0=重装、2=保留、12=R 前哨、16=B 前哨、20-23 控制度 | **部分已接入 2026-11-10：**新增共享字段偏移及 24B 解析；保留 `ally_hero` 兼容键，红蓝消费验证和兼容键迁移未完成 | 红蓝两侧检查前哨、基地及消费者；后续统一重装字段名 |
-| P1 | `rm_protocol.py:682-713` | 0x020C 取 bit0-11 + bit12-15 反制 | bit0/2/3/5、6/8/9/11；12-15 保留 | 工程/空中恒 False、反制位假值 | 重写位表；删除 aerial_countermeasure |
+| P1 | `core/protocol2027.py`、`rm_protocol.py`、`vision/main.py`、`radio/apps/match_rx/web/app.js` | 原解码把保留位当工程/空中，并输出已废止反制字段 | bit0/2/3/5、6/8/9/11；其余为保留位 | **部分已接入 2026-11-10：**解析、ROS 转发、视觉策略和网页标签已切换为 1/3/4/7；保留位显式输出 | 完成红蓝链路验证及下游使用核对；勿恢复旧槽位名称 |
 | P1 | `rm_protocol.py:568-583` | 0x020E 断言 `len==1` | 8B；radar_info_2 + 圆心/半径 | 加固信息全丢 | 改 8B，补 4 字段 |
 | P1 | `vision/main.py:538`、`:548`、`:1679-1718` | 加密等级取 0x020E bit3-4、0x020C 旧位义 | 位义变化 | 等级/改密窗口误判 | 按 §6.1/§6.2 更新；0x020E 需整体 8B |
 | P1 | `rm_protocol.py:733`、`:744`、`:766` | 0x0A01/02/03 names 含 hero/engineer/aerial | 槽 0 重装、槽 1/4 保留 | 字段名误导、下游取假值 | names 改 `[heavy, reserved, inf3, inf4, reserved, sentry]` |

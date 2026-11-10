@@ -119,6 +119,22 @@ RADAR_MACRO_STATE_2_FIELDS = (
     ("blue_base_control_status", 28, 2, "enum", 2),
 )
 
+RADAR_MARK_PROGRESS_FIELDS = {
+    "enemy": (
+        ("opponent_heavy", 0),
+        ("opponent_infantry_3", 2),
+        ("opponent_infantry_4", 3),
+        ("opponent_sentry", 5),
+    ),
+    "ally": (
+        ("ally_heavy", 6),
+        ("ally_infantry_3", 8),
+        ("ally_infantry_4", 9),
+        ("ally_sentry", 11),
+    ),
+}
+RADAR_MARK_PROGRESS_RESERVED_BITS = (1, 4, 7, 10, 12, 13, 14, 15)
+
 RADAR_BUFF_ROBOT_SPECS = (
     ("opponent_heavy", 0),
     ("opponent_infantry_3", 14),

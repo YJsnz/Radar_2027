@@ -667,19 +667,27 @@ guess_list = {
 # 上次盲区预测时的标记进度
 guess_value = {
     "B1": 0,
-    "B2": 0,
+    "B2": 0,  # 2027 该槽保留，固定无标记进度
+    "B3": 0,
+    "B4": 0,
     "B7": 0,
     "R1": 0,
-    "R2": 0,
+    "R2": 0,  # 2027 该槽保留，固定无标记进度
+    "R3": 0,
+    "R4": 0,
     "R7": 0
 }
 # 当前标记进度（用于判断是否预测正确正确）
 guess_value_now = {
     "B1": 0,
     "B2": 0,
+    "B3": 0,
+    "B4": 0,
     "B7": 0,
     "R1": 0,
     "R2": 0,
+    "R3": 0,
+    "R4": 0,
     "R7": 0
 }
 
@@ -1635,11 +1643,13 @@ def ser_send():
                 update_time = time.time()
                 if state == 'R':
                     guess_value['B1'] = guess_value_now.get('B1')
-                    guess_value['B2'] = guess_value_now.get('B2')
+                    guess_value['B3'] = guess_value_now.get('B3')
+                    guess_value['B4'] = guess_value_now.get('B4')
                     guess_value['B7'] = guess_value_now.get('B7')
                 else:
                     guess_value['R1'] = guess_value_now.get('R1')
-                    guess_value['R2'] = guess_value_now.get('R2')
+                    guess_value['R3'] = guess_value_now.get('R3')
+                    guess_value['R4'] = guess_value_now.get('R4')
                     guess_value['R7'] = guess_value_now.get('R7')
 
             # 双倍易伤判断：飞镖目标切换触发 
@@ -1803,17 +1813,22 @@ def ser_receive():
                     received_commands.append("0x020C")
                     received_cmd_id1, received_data1, received_seq1 = progress_result
                     mark_progress = struct.unpack('H', received_data1[:2])[0]
-                    vulnerability = [((mark_progress >> i) & 0x01) * 120 for i in range(6)]
+                    vulnerability = [
+                        ((mark_progress >> bit) & 0x01) * 120 if bit is not None else 0
+                        for bit in (0, None, 2, 3, None, 5)
+                    ]
                     for bit_idx in range(6):
                         mark_progress_bit_cache[bit_idx] = vulnerability[bit_idx]
 
                     if state == 'R':
                         guess_value_now['B1'] = vulnerability[0]
-                        guess_value_now['B2'] = vulnerability[1]
+                        guess_value_now['B3'] = vulnerability[2]
+                        guess_value_now['B4'] = vulnerability[3]
                         guess_value_now['B7'] = vulnerability[5]
                     else:
                         guess_value_now['R1'] = vulnerability[0]
-                        guess_value_now['R2'] = vulnerability[1]
+                        guess_value_now['R3'] = vulnerability[2]
+                        guess_value_now['R4'] = vulnerability[3]
                         guess_value_now['R7'] = vulnerability[5]
                 if vulnerability_result is not None:
                     received_commands.append("0x020E")
@@ -1853,15 +1868,19 @@ def handle_radio_referee_message(message_type, payload):
     if message_type == 'RadarMarkProgress':
         enemy = payload.get('enemy') or {}
         names = (
-            'opponent_hero', 'opponent_engineer', 'opponent_infantry_3',
-            'opponent_infantry_4', 'opponent_aerial', 'opponent_sentry',
+            'opponent_heavy', None, 'opponent_infantry_3',
+            'opponent_infantry_4', None, 'opponent_sentry',
         )
-        vulnerability = [120 if bool(enemy.get(name)) else 0 for name in names]
+        vulnerability = [
+            120 if name is not None and bool(enemy.get(name)) else 0
+            for name in names
+        ]
         for bit_idx, value in enumerate(vulnerability):
             mark_progress_bit_cache[bit_idx] = value
         opponent_prefix = 'B' if state == 'R' else 'R'
         guess_value_now[f'{opponent_prefix}1'] = vulnerability[0]
-        guess_value_now[f'{opponent_prefix}2'] = vulnerability[1]
+        guess_value_now[f'{opponent_prefix}3'] = vulnerability[2]
+        guess_value_now[f'{opponent_prefix}4'] = vulnerability[3]
         guess_value_now[f'{opponent_prefix}7'] = vulnerability[5]
     elif message_type == 'RadarDecisionSync':
         double_vulnerability_chance = int(payload.get('double_vulnerability_count', -1))

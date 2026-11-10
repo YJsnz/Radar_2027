@@ -88,7 +88,7 @@ def test_bridge_emits_referee_status_payloads():
 
     assert [output['type'] for output in outputs] == ['DartStatus', 'RadarMarkProgress']
     assert outputs[0]['payload']['selected_target'] == 4
-    assert outputs[1]['payload']['enemy']['opponent_hero'] is True
+    assert outputs[1]['payload']['enemy']['opponent_heavy'] is True
     assert outputs[1]['payload']['enemy']['opponent_sentry'] is True
     assert outputs[1]['payload']['ally']['ally_sentry'] is True
 

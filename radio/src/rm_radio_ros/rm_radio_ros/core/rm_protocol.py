@@ -16,6 +16,8 @@ from .protocol2027 import (
     RADAR_MACRO_DATA_OFFSETS,
     RADAR_MACRO_STATE_1_FIELDS,
     RADAR_MACRO_STATE_2_FIELDS,
+    RADAR_MARK_PROGRESS_FIELDS,
+    RADAR_MARK_PROGRESS_RESERVED_BITS,
     RADAR_MAIN_STATUS_NAMES,
     RADAR_MAIN_STATUS_ROBOT_SPECS,
     RADAR_RESERVED_BUFF_OFFSET,
@@ -663,32 +665,21 @@ def parse_robot_status(data: Iterable[int]) -> dict:
 def parse_radar_mark_progress(data: Iterable[int]) -> dict:
     values = u8_list(data)
     result = {'valid_radar_mark_progress_length': len(values) == 2}
-    if len(values) < 2:
+    if len(values) != 2:
         return result
     progress_bits = le_u16(values, 0)
     result.update({
         'progress_bits': progress_bits,
-        'enemy': {
-            'opponent_hero': bool(_bits(progress_bits, 0)),
-            'opponent_engineer': bool(_bits(progress_bits, 1)),
-            'opponent_infantry_3': bool(_bits(progress_bits, 2)),
-            'opponent_infantry_4': bool(_bits(progress_bits, 3)),
-            'opponent_aerial': bool(_bits(progress_bits, 4)),
-            'opponent_sentry': bool(_bits(progress_bits, 5)),
+        **{
+            side: {
+                name: bool(_bits(progress_bits, bit))
+                for name, bit in fields
+            }
+            for side, fields in RADAR_MARK_PROGRESS_FIELDS.items()
         },
-        'ally': {
-            'ally_hero': bool(_bits(progress_bits, 6)),
-            'ally_engineer': bool(_bits(progress_bits, 7)),
-            'ally_infantry_3': bool(_bits(progress_bits, 8)),
-            'ally_infantry_4': bool(_bits(progress_bits, 9)),
-            'ally_aerial': bool(_bits(progress_bits, 10)),
-            'ally_sentry': bool(_bits(progress_bits, 11)),
-        },
-        'aerial_countermeasure': {
-            'opponent_aerial_aimed_by_ally_radar': bool(_bits(progress_bits, 12)),
-            'opponent_aerial_countered': bool(_bits(progress_bits, 13)),
-            'ally_aerial_aimed_by_opponent_radar': bool(_bits(progress_bits, 14)),
-            'ally_aerial_countered': bool(_bits(progress_bits, 15)),
+        'reserved_bits': {
+            bit: bool(_bits(progress_bits, bit))
+            for bit in RADAR_MARK_PROGRESS_RESERVED_BITS
         },
     })
     return result

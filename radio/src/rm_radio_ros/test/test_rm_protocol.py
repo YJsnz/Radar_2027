@@ -200,27 +200,31 @@ def test_parse_0201_rejects_pre_v2_length():
 def test_parse_020c_radar_mark_progress_bits_from_protocol_table():
     progress_bits = (
         (1 << 0)
+        | (1 << 2)
+        | (1 << 3)
         | (1 << 5)
+        | (1 << 6)
+        | (1 << 8)
+        | (1 << 9)
         | (1 << 7)
         | (1 << 11)
-        | (1 << 12)
         | (1 << 15)
     )
     frame = build_referee_frame(0x020C, progress_bits.to_bytes(2, 'little'))
     parsed = RefereeFrameAssembler().push_bytes(frame)[0].to_dict()['parsed']['radar_mark_progress']
 
     assert parsed['valid_radar_mark_progress_length'] is True
-    assert parsed['enemy']['opponent_hero'] is True
+    assert parsed['enemy']['opponent_heavy'] is True
+    assert parsed['enemy']['opponent_infantry_3'] is True
+    assert parsed['enemy']['opponent_infantry_4'] is True
     assert parsed['enemy']['opponent_sentry'] is True
-    assert parsed['ally']['ally_engineer'] is True
+    assert parsed['ally']['ally_heavy'] is True
+    assert parsed['ally']['ally_infantry_3'] is True
+    assert parsed['ally']['ally_infantry_4'] is True
     assert parsed['ally']['ally_sentry'] is True
-    assert parsed['ally']['ally_hero'] is False
-    assert parsed['aerial_countermeasure'] == {
-        'opponent_aerial_aimed_by_ally_radar': True,
-        'opponent_aerial_countered': False,
-        'ally_aerial_aimed_by_opponent_radar': False,
-        'ally_aerial_countered': True,
-    }
+    assert parsed['reserved_bits'][7] is True
+    assert parsed['reserved_bits'][15] is True
+    assert 'aerial_countermeasure' not in parsed
 
 
 def test_parse_020e_rejects_wrong_length():

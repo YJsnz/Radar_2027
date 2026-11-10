@@ -1534,9 +1534,9 @@ function renderRadarData(payload) {
   const verifyRemaining = Math.max(0, Number(serial.password_verify_cooldown_remaining_sec || 0));
   const verifyReady = serial.password_verify_ready !== false && verifyRemaining <= 0;
   const markNames = [
-    ["英雄", "opponent_hero"], ["工程", "opponent_engineer"],
+    ["重装", "opponent_heavy"],
     ["步兵3", "opponent_infantry_3"], ["步兵4", "opponent_infantry_4"],
-    ["空中", "opponent_aerial"], ["哨兵", "opponent_sentry"],
+    ["哨兵", "opponent_sentry"],
   ];
   const hasStrategy = [marks, decision, dart, game].some((item) => Object.keys(item).length);
   $("strategyBadge").className = `badge ${hasStrategy ? "ok" : "unknown"}`;
