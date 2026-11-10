@@ -504,8 +504,8 @@ Web 界面分两页，加一个高级抽屉。
 | `0x0A01` | `enemy_position` | 24 |
 | `0x0A02` | `enemy_hp` | 12 |
 | `0x0A03` | `enemy_bullet_allowance` | 10 |
-| `0x0A04` | `enemy_macro_status` | 8 |
-| `0x0A05` | `enemy_buff_status` | 41 |
+| `0x0A04` | `enemy_macro_status` | 12 |
+| `0x0A05` | `enemy_buff_status` | 47 |
 | `0x0A06` | `interference_password` | 6 |
 
 实现在 `src/rm_radio_ros/rm_radio_ros/core/rm_protocol.py`，字段范围约束在 `core/radar_wireless_constraints.py`。

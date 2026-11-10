@@ -5,44 +5,22 @@ from collections import deque
 from dataclasses import dataclass
 from typing import Deque, Iterable, Iterator, List, Optional
 
-
-RADAR_DATA_LENGTHS = {
-    0x0001: 11,
-    0x0003: 20,
-    0x0105: 3,
-    0x0201: 17,
-    0x020C: 2,
-    0x020E: 8,
-    0x0A01: 24,
-    0x0A02: 12,
-    0x0A03: 10,
-    0x0A04: 8,
-    0x0A05: 47,
-    0x0A06: 6,
-}
-
-
-RADAR_AIR_DATA_LENGTHS = {
-    cmd_id: length
-    for cmd_id, length in RADAR_DATA_LENGTHS.items()
-    if 0x0A01 <= cmd_id <= 0x0A06
-}
-
-
-RADAR_COMMAND_NAMES = {
-    0x0001: 'game_status',
-    0x0003: 'game_robot_hp',
-    0x0105: 'dart_status',
-    0x0201: 'robot_status',
-    0x020C: 'radar_mark_progress',
-    0x020E: 'radar_decision_sync',
-    0x0A01: 'enemy_position',
-    0x0A02: 'enemy_hp',
-    0x0A03: 'enemy_bullet_allowance',
-    0x0A04: 'enemy_macro_status',
-    0x0A05: 'enemy_buff_status',
-    0x0A06: 'interference_password',
-}
+from .protocol2027 import (
+    RADAR_AIR_DATA_LENGTHS,
+    RADAR_BUFF_ROBOT_SPECS,
+    RADAR_COMMAND_NAMES,
+    RADAR_DATA_LENGTHS,
+    RADAR_FORTIFICATION_OFFSETS,
+    RADAR_MACRO_DATA_OFFSETS,
+    RADAR_MACRO_STATE_1_FIELDS,
+    RADAR_MACRO_STATE_2_FIELDS,
+    RADAR_MAIN_STATUS_NAMES,
+    RADAR_MAIN_STATUS_ROBOT_SPECS,
+    RADAR_RESERVED_BUFF_OFFSET,
+    RADAR_RESERVED_MAIN_STATUS_OFFSET,
+    RADAR_SENTRY_MODE_NAMES,
+    RADAR_SENTRY_MODE_OFFSET,
+)
 
 
 AIR_LENGTH_FIELD = b'\x00\x0F\x00\x0F'
@@ -59,40 +37,6 @@ RADAR_WIRE_ROBOT_NAMES = [
 
 
 RADAR_LEGACY_ROBOT_NAMES = ['hero', 'engineer', 'standard_3', 'standard_4', 'aerial', 'sentry']
-
-
-RADAR_BUFF_ROBOT_SPECS = [
-    ('opponent_heavy', 0),
-    ('opponent_infantry_3', 14),
-    ('opponent_infantry_4', 21),
-    ('opponent_sentry', 28),
-]
-
-
-RADAR_MAIN_STATUS_ROBOT_SPECS = [
-    ('opponent_heavy', 36),
-    ('opponent_infantry_3', 38),
-    ('opponent_infantry_4', 39),
-    ('opponent_sentry', 40),
-]
-
-
-RADAR_MAIN_STATUS_NAMES = {
-    0: 'alive',
-    1: 'destroyed',
-    2: 'invincible_not_weakened',
-    3: 'invincible_weakened',
-}
-
-
-RADAR_SENTRY_MODE_NAMES = {
-    1: 'offensive',
-    2: 'defensive',
-    3: 'mobile',
-    4: 'enhanced_offensive',
-    5: 'enhanced_defensive',
-    6: 'enhanced_mobile',
-}
 
 
 ACCESS_CODES = {
@@ -820,27 +764,27 @@ def parse_radar_frame(frame: RefereeFrame) -> dict:
         }
         result['bullet_allowance'] = legacy_bullet_allowance
         result['official_bullet_allowance'] = bullet_allowance
-    elif frame.cmd_id == 0x0A04 and len(data) == 8:
-        occupation_bits = le_u32(data, 4)
-        result['remaining_coins'] = le_u16(data, 0)
-        result['total_coins'] = le_u16(data, 2)
-        result['occupation_bits'] = occupation_bits
+    elif frame.cmd_id == 0x0A04 and len(data) == RADAR_DATA_LENGTHS[0x0A04]:
+        state_1 = le_u32(data, RADAR_MACRO_DATA_OFFSETS['occupation_state_1'])
+        state_2 = le_u32(data, RADAR_MACRO_DATA_OFFSETS['occupation_state_2'])
+        result['remaining_coins'] = le_u16(data, RADAR_MACRO_DATA_OFFSETS['remaining_coins'])
+        result['total_coins'] = le_u16(data, RADAR_MACRO_DATA_OFFSETS['total_coins'])
+        result['occupation_state_1'] = state_1
+        result['occupation_state_2'] = state_2
+        # Compatibility alias for consumers that previously read the first
+        # 2026 occupation word. It now carries the raw 2027 state-1 word.
+        result['occupation_bits'] = state_1
         result['occupation'] = {
-            'opponent_supply_zone_occupied': bool(_bits(occupation_bits, 0)),
-            'opponent_central_highland_status': _bits(occupation_bits, 1, 2),
-            'opponent_trapezoid_highland_occupied': bool(_bits(occupation_bits, 3)),
-            'opponent_fortress_buff_zone_status': _bits(occupation_bits, 4, 2),
-            'opponent_outpost_buff_zone_status': _bits(occupation_bits, 6, 2),
-            'opponent_base_buff_zone_occupied': bool(_bits(occupation_bits, 8)),
-            'opponent_near_flyover_before_tunnel_rfid': bool(_bits(occupation_bits, 9)),
-            'opponent_near_flyover_after_tunnel_rfid': bool(_bits(occupation_bits, 10)),
-            'ally_near_flyover_before_tunnel_rfid': bool(_bits(occupation_bits, 11)),
-            'ally_near_flyover_after_tunnel_rfid': bool(_bits(occupation_bits, 12)),
-            'opponent_terrain_crossing_highland_rfid': bool(_bits(occupation_bits, 13)),
-            'opponent_terrain_crossing_flyover_rfid': bool(_bits(occupation_bits, 14)),
-            'opponent_terrain_crossing_road_rfid': bool(_bits(occupation_bits, 15)),
+            name: bool(_bits(state_1, offset, width)) if kind == 'bool'
+            else _bits(state_1, offset, width)
+            for name, offset, width, kind, _max_value in RADAR_MACRO_STATE_1_FIELDS
         }
-    elif frame.cmd_id == 0x0A05 and len(data) == 47:
+        result['occupation'].update({
+            name: bool(_bits(state_2, offset, width)) if kind == 'bool'
+            else _bits(state_2, offset, width)
+            for name, offset, width, kind, _max_value in RADAR_MACRO_STATE_2_FIELDS
+        })
+    elif frame.cmd_id == 0x0A05 and len(data) == RADAR_DATA_LENGTHS[0x0A05]:
         result['raw_buff_bytes'] = data
         result['buff_status'] = {
             name: {
@@ -852,24 +796,27 @@ def parse_radar_frame(frame: RefereeFrame) -> dict:
             }
             for name, offset in RADAR_BUFF_ROBOT_SPECS
         }
-        result['reserved_engineer_buff_bytes'] = data[7:14]
-        result['sentry_mode'] = data[35]
+        result['reserved_engineer_buff_bytes'] = data[
+            RADAR_RESERVED_BUFF_OFFSET:RADAR_RESERVED_BUFF_OFFSET + 7
+        ]
+        sentry_mode = data[RADAR_SENTRY_MODE_OFFSET]
+        result['sentry_mode'] = sentry_mode
         result['sentry_mode_name'] = RADAR_SENTRY_MODE_NAMES.get(
-            data[35],
-            f'unknown_{data[35]}',
+            sentry_mode,
+            f'unknown_{sentry_mode}',
         )
         result['robot_main_status'] = {
             name: data[offset]
             for name, offset in RADAR_MAIN_STATUS_ROBOT_SPECS
         }
-        result['reserved_engineer_main_status'] = data[37]
+        result['reserved_engineer_main_status'] = data[RADAR_RESERVED_MAIN_STATUS_OFFSET]
         result['robot_main_status_names'] = {
             name: RADAR_MAIN_STATUS_NAMES.get(value, f'unknown_{value}')
             for name, value in result['robot_main_status'].items()
         }
-        fortify_center_x_mm = le_u16(data, 41)
-        fortify_center_y_mm = le_u16(data, 43)
-        fortify_radius_mm = le_u16(data, 45)
+        fortify_center_x_mm = le_u16(data, RADAR_FORTIFICATION_OFFSETS['center_x_mm'])
+        fortify_center_y_mm = le_u16(data, RADAR_FORTIFICATION_OFFSETS['center_y_mm'])
+        fortify_radius_mm = le_u16(data, RADAR_FORTIFICATION_OFFSETS['radius_mm'])
         result['enemy_armor_fortification'] = {
             'active': fortify_radius_mm > 0,
             'center_x_mm': fortify_center_x_mm,

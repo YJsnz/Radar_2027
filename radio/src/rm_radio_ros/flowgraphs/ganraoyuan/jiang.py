@@ -224,8 +224,8 @@ class jiang(gr.sync_block):
     @staticmethod
     def _random_payload_data_for_command(cmd_id: Sequence[int], size: int) -> List[int]:
         # Lab TX automatic mode must randomize fields, not raw bytes.  This
-        # preserves every 0x0A01~0x0A05 range, enum and reserved bit defined by
-        # the RMUC 2026 protocol/rulebook while still changing every period.
+        # preserves every 0x0A01~0x0A05 field and reserved bit defined by the
+        # shared 2027 protocol table while still changing every period.
         return random_payload_for_command(cmd_id, size, random)
 
     @staticmethod
@@ -292,9 +292,9 @@ class jiang(gr.sync_block):
         )
 
     def _next_broadcast_payload(self) -> List[int]:
-        # V2.0.0 carries 140 bytes every 100 ms. Because 140 is not divisible
-        # by the 15-byte air payload, retain the remaining 5/10 bytes and let
-        # subsequent referee-frame cycles cross air-packet boundaries.
+        # The current lab profile still paces at the legacy 1400 bytes/s; the
+        # 2027 RF data-rate limit remains to be confirmed from official specs.
+        # Keep referee frames independent from 15-byte air-payload boundaries.
         while len(self._broadcast_byte_queue) < _AIR_PAYLOAD_SIZE:
             self._append_broadcast_period()
         return [

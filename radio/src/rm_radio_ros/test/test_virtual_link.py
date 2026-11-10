@@ -1,15 +1,15 @@
 from rm_radio_ros.core.virtual_link_test import _buff_payload, _default_broadcast_config, run_virtual_link
 
 
-def test_v2_buff_payload_is_41_bytes_and_upgrades_old_raw_config():
+def test_2027_buff_payload_is_47_bytes_and_upgrades_old_raw_config():
     payload = _buff_payload(_default_broadcast_config())
     upgraded = _buff_payload({'buff_raw': list(range(36))})
 
-    assert len(payload) == 41
-    assert len(upgraded) == 41
+    assert len(payload) == 47
+    assert len(upgraded) == 47
     assert upgraded[1:3] == bytes([200, 0])  # Hero cooling is capped at +200/s.
     assert upgraded[35] == 6
-    assert upgraded[36:] == bytes(5)
+    assert upgraded[36:] == bytes(11)
 
 
 def test_red_tx_blue_rx_virtual_link_decodes_broadcast_and_all_interference_levels():
@@ -69,10 +69,10 @@ def test_virtual_link_uses_custom_broadcast_and_password_with_optional_noise():
     assert [frame['cmd_hex'] for frame in result['broadcast']['frames']] == ['0x0A01', '0x0A02', '0x0A05']
     assert result['broadcast']['frames'][0]['parsed']['official_positions_cm']['opponent_hero'] == {'x': 2222, 'y': 1333}
     assert result['broadcast']['frames'][1]['parsed']['official_hp']['opponent_hero'] == 321
-    assert result['broadcast']['frames'][2]['parsed']['buff_status']['opponent_hero']['attack_percent'] == 88
+    assert result['broadcast']['frames'][2]['parsed']['buff_status']['opponent_heavy']['attack_percent'] == 88
     assert result['broadcast']['frames'][2]['parsed']['sentry_mode'] == 4
     assert result['broadcast']['frames'][2]['parsed']['sentry_mode_name'] == 'enhanced_offensive'
-    assert result['broadcast']['frames'][2]['parsed']['robot_main_status']['opponent_hero'] == 2
+    assert result['broadcast']['frames'][2]['parsed']['robot_main_status']['opponent_heavy'] == 2
     assert result['broadcast']['frames'][2]['parsed']['robot_main_status']['opponent_sentry'] == 1
     assert list(result['interference']) == [3]
     assert result['interference'][3]['frames'][0]['parsed']['password'] == 'ZXCV12'

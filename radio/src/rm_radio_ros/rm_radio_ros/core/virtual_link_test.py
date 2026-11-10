@@ -8,6 +8,11 @@ from pathlib import Path
 from typing import Any, Iterable, Sequence
 
 from .radio_config import BROADCAST_FREQUENCIES, interference_setters_for_side_level
+from .protocol2027 import (
+    RADAR_FORTIFICATION_OFFSETS,
+    RADAR_MAIN_STATUS_BASE_OFFSET,
+    RADAR_SENTRY_MODE_OFFSET,
+)
 from .radar_wireless_constraints import (
     BUFF_FIELD_MAX,
     BULLET_MAX,
@@ -16,6 +21,7 @@ from .radar_wireless_constraints import (
     POSITION_Y_MAX_CM,
     clamp_int,
     normalize_occupation_bits,
+    normalize_occupation_state_2,
 )
 from .referee_bridge import RefereeBridge
 from .rm_protocol import (
@@ -176,12 +182,18 @@ def _default_broadcast_config() -> dict[str, Any]:
             "remaining_coins": 123,
             "total_coins": 456,
             "occupation_bits": (1 << 0) | (2 << 1) | (1 << 3) | (2 << 4) | (1 << 6) | (1 << 13),
+            "occupation_state_2": 0,
         },
         "buffs": {},
         "sentry_mode": 2,
         "robot_main_status": {
             name: 0
             for name in BUFF_ROBOT_KEYS
+        },
+        "armor_fortification": {
+            "center_x_mm": 0,
+            "center_y_mm": 0,
+            "radius_mm": 0,
         },
     }
 
@@ -222,16 +234,15 @@ def _macro_payload(config: dict[str, Any]) -> bytes:
         put_le_u16(remaining)
         + put_le_u16(total)
         + put_le_u32(normalize_occupation_bits(macro.get("occupation_bits")))
+        + put_le_u32(normalize_occupation_state_2(macro.get("occupation_state_2")))
     )
 
 
 def _buff_payload(config: dict[str, Any]) -> bytes:
     raw = config.get("buff_raw")
-    if isinstance(raw, list) and len(raw) in (36, 41):
+    if isinstance(raw, list) and len(raw) in (36, 41, 47):
         payload = bytes(_u8(item) for item in raw)
-        # Parse legacy raw configurations and pass them through the same
-        # rulebook constraints instead of allowing arbitrary bytes to bypass
-        # the structured editor. V1.3.1 omitted the five main-status bytes.
+        # Normalize imported raw payloads through the structured 2027 layout.
         parsed_buffs: dict[str, dict[str, int]] = {}
         for index, name in enumerate(BUFF_ROBOT_KEYS):
             offset = index * 7
@@ -244,12 +255,21 @@ def _buff_payload(config: dict[str, Any]) -> bytes:
             }
         parsed = {
             "buffs": parsed_buffs,
-            "sentry_mode": payload[35],
+            "sentry_mode": payload[RADAR_SENTRY_MODE_OFFSET],
             "robot_main_status": {
-                name: payload[36 + index] if len(payload) == 41 else 0
+                name: payload[RADAR_MAIN_STATUS_BASE_OFFSET + index]
+                if len(payload) in (41, 47)
+                else 0
                 for index, name in enumerate(BUFF_ROBOT_KEYS)
             },
         }
+        if len(payload) == 47:
+            parsed["armor_fortification"] = {
+                key: int.from_bytes(
+                    payload[offset:offset + 2], "little"
+                )
+                for key, offset in RADAR_FORTIFICATION_OFFSETS.items()
+            }
         return _buff_payload(parsed)
     buffs = config.get("buffs") if isinstance(config.get("buffs"), dict) else {}
     main_status = (
@@ -266,7 +286,19 @@ def _buff_payload(config: dict[str, Any]) -> bytes:
         out.append(clamp_int(item.get("negative_defense_percent"), 0, BUFF_FIELD_MAX["negative_defense_percent"][name]))
         out.extend(put_le_u16(clamp_int(item.get("attack_percent"), 0, BUFF_FIELD_MAX["attack_percent"][name])))
     out.append(clamp_int(config.get("sentry_mode"), 1, 6, 2))
-    out.extend(clamp_int(main_status.get(name), 0, 3) for name in BUFF_ROBOT_KEYS)
+    out.extend(
+        0 if name == "opponent_engineer" else clamp_int(main_status.get(name), 0, 3)
+        for name in BUFF_ROBOT_KEYS
+    )
+    fortification = (
+        config.get("armor_fortification")
+        if isinstance(config.get("armor_fortification"), dict)
+        else {}
+    )
+    out.extend(
+        put_le_u16(clamp_int(fortification.get(key), 0, 0xFFFF))
+        for key in ("center_x_mm", "center_y_mm", "radius_mm")
+    )
     return bytes(out)
 
 
@@ -470,7 +502,7 @@ def _markdown_report(result: dict) -> str:
         elif frame["cmd_hex"] == "0x0A05":
             detail = (
                 f"sentry_mode={parsed['sentry_mode']}, "
-                f"hero_status={parsed['robot_main_status']['opponent_hero']}"
+            f"heavy_status={parsed['robot_main_status']['opponent_heavy']}"
             )
         else:
             detail = "-"
@@ -502,7 +534,7 @@ def _markdown_report(result: dict) -> str:
         "",
         "## 判定",
         "",
-        "- 红方信息波单轮 140 字节裁判帧数据被蓝方解析链路提取，并还原 `0x0A01~0x0A05`。",
+        "- 红方信息波单轮 150 字节裁判帧数据被蓝方解析链路提取，并还原 `0x0A01~0x0A05`。",
         "- 红方 1/2/3 级干扰波均按 9 个空口包/100ms 的虚拟结构输入，每级均解析出 `0x0A06` 并生成 `RadarCommand0121`。",
         "- 因本测试不经过 SDR/RF，不能证明实际场强、天线距离、AGC 或现场抗干扰裕量，只证明当前软件空口结构与协议解析链路可行。",
         "",

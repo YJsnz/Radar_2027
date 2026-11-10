@@ -14,6 +14,7 @@ from rm_radio_ros.core.radar_wireless_constraints import (
     POSITION_X_MAX_CM,
     POSITION_Y_MAX_CM,
     normalize_occupation_bits,
+    normalize_occupation_state_2,
 )
 
 
@@ -74,7 +75,7 @@ def test_frame_uses_little_endian_length_cmd_and_whole_frame_crc16():
     assert frame[-2:] == [expected_crc & 0xFF, expected_crc >> 8]
 
 
-def test_broadcast_stream_is_1400_bytes_per_second_without_period_padding():
+def test_broadcast_stream_uses_2027_information_wave_lengths():
     generator = jiang_mod.jiang(
         Access_Code=[0x2F, 0x6F, 0x4C, 0x74, 0xB9, 0x14, 0x49, 0x2E],
         Period=100,
@@ -82,13 +83,13 @@ def test_broadcast_stream_is_1400_bytes_per_second_without_period_padding():
             {'cmd_id': [0x0A, 0x01], 'payload_size': 24},
             {'cmd_id': [0x0A, 0x02], 'payload_size': 12},
             {'cmd_id': [0x0A, 0x03], 'payload_size': 10},
-            {'cmd_id': [0x0A, 0x04], 'payload_size': 8},
-            {'cmd_id': [0x0A, 0x05], 'payload_size': 41},
+            {'cmd_id': [0x0A, 0x04], 'payload_size': 12},
+            {'cmd_id': [0x0A, 0x05], 'payload_size': 47},
         ],
     )
 
-    # Three 140-byte/100-ms cycles align to exactly 28 15-byte air payloads.
-    payloads = _collect_payloads(generator, 28)
+    # Each five-frame 2027 cycle is 150 bytes including referee headers/CRC.
+    payloads = _collect_payloads(generator, 30)
     assert all(len(payload) == 15 for payload in payloads)
     assert generator._publish_interval_seconds() == 15 / 1400
     assert generator._publish_interval_seconds() > 216 * 47 / 1_000_000
@@ -102,16 +103,16 @@ def test_broadcast_stream_is_1400_bytes_per_second_without_period_padding():
     assert [frame.cmd_id for frame in frames] == [
         0x0A01, 0x0A02, 0x0A03, 0x0A04, 0x0A05,
     ] * 3
-    assert all(len(frame.data) == 41 for frame in frames if frame.cmd_id == 0x0A05)
+    assert all(len(frame.data) == 47 for frame in frames if frame.cmd_id == 0x0A05)
 
 
-def test_short_broadcast_stream_fills_period_to_1400_bytes_per_second(monkeypatch):
+def test_short_broadcast_stream_uses_2027_0a04_length(monkeypatch):
     monkeypatch.setattr(jiang_mod.random, 'getrandbits', lambda _bits: 0xCC)
     generator = jiang_mod.jiang(
         Access_Code=[0x2F, 0x6F, 0x4C, 0x74, 0xB9, 0x14, 0x49, 0x2E],
         Period=100,
         command_cycle=[
-            {'cmd_id': [0x0A, 0x04], 'payload_size': 8},
+            {'cmd_id': [0x0A, 0x04], 'payload_size': 12},
         ],
     )
 
@@ -119,8 +120,8 @@ def test_short_broadcast_stream_fills_period_to_1400_bytes_per_second(monkeypatc
 
     assert len(payloads) == 28
     assert generator._publish_interval_seconds() == 15 / 1400
-    assert payloads[0][:7] == [0xA5, 0x08, 0x00, 0x01, jiang_mod._crc8_rm(payloads[0][:4]), 0x04, 0x0A]
-    assert payloads[1][2:] == [0xCC] * 13
+    assert payloads[0][:7] == [0xA5, 0x0C, 0x00, 0x01, jiang_mod._crc8_rm(payloads[0][:4]), 0x04, 0x0A]
+    assert payloads[1][6:] == [0xCC] * 9
     assert payloads[-1] == [0xCC] * 15
 
     assembler = RefereeFrameAssembler()
@@ -136,7 +137,7 @@ def test_broadcast_auto_change_rebuilds_legal_command_payload_and_crc_each_perio
         command_cycle=[
             {
                 'cmd_id': [0x0A, 0x04],
-                'payload_size': 8,
+                'payload_size': 12,
                 'randomize_payload': True,
             },
         ],
@@ -147,21 +148,22 @@ def test_broadcast_auto_change_rebuilds_legal_command_payload_and_crc_each_perio
 
     assert first[7:-2] != second[7:-2]
     for frame in (first, second):
-        remaining, total, occupation = struct.unpack('<HHI', bytes(frame[7:-2]))
+        remaining, total, occupation, terrain = struct.unpack('<HHII', bytes(frame[7:-2]))
         assert 0 <= remaining <= total <= 0xFFFF
         assert occupation == normalize_occupation_bits(occupation)
+        assert terrain == normalize_occupation_state_2(terrain)
         crc = jiang_mod._crc16_rm(frame[:-2])
         assert frame[-2:] == [crc & 0xFF, crc >> 8]
 
 
-def test_broadcast_auto_change_obeys_every_2026_field_range():
+def test_broadcast_auto_change_obeys_2027_occupation_and_buff_ranges():
     generator = jiang_mod.jiang()
     specs = [
         ([0x0A, 0x01], 24),
         ([0x0A, 0x02], 12),
         ([0x0A, 0x03], 10),
-        ([0x0A, 0x04], 8),
-        ([0x0A, 0x05], 41),
+        ([0x0A, 0x04], 12),
+        ([0x0A, 0x05], 47),
     ]
 
     for _ in range(200):
@@ -177,11 +179,12 @@ def test_broadcast_auto_change_obeys_every_2026_field_range():
         bullets = struct.unpack('<5H', bytes(generator._random_payload_data_for_command(*specs[2])))
         assert all(value <= maximum for value, maximum in zip(bullets, BULLET_MAX.values()))
 
-        remaining, total, occupation = struct.unpack(
-            '<HHI', bytes(generator._random_payload_data_for_command(*specs[3]))
+        remaining, total, occupation, terrain = struct.unpack(
+            '<HHII', bytes(generator._random_payload_data_for_command(*specs[3]))
         )
         assert remaining <= total
         assert occupation == normalize_occupation_bits(occupation)
+        assert terrain == normalize_occupation_state_2(terrain)
 
         buffs = generator._random_payload_data_for_command(*specs[4])
         for index, key in enumerate(BUFF_FIELD_MAX['attack_percent']):
@@ -198,6 +201,9 @@ def test_broadcast_auto_change_obeys_every_2026_field_range():
             assert attack <= BUFF_FIELD_MAX['attack_percent'][key]
         assert 1 <= buffs[35] <= 6
         assert all(0 <= value <= 3 for value in buffs[36:41])
+        assert buffs[7:14] == [0] * 7
+        assert buffs[37] == 0
+        assert buffs[41:47] == [0] * 6
 
 
 def test_single_frame_messages_path_keeps_exact_15_byte_chunking():

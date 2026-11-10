@@ -287,8 +287,8 @@ def test_assemble_broadcast_cycle_across_air_packets():
         build_referee_frame(0x0A01, bytes(range(24))),
         build_referee_frame(0x0A02, bytes(range(12))),
         build_referee_frame(0x0A03, bytes(range(10))),
-        build_referee_frame(0x0A04, bytes(range(8))),
-        build_referee_frame(0x0A05, bytes(range(41))),
+        build_referee_frame(0x0A04, bytes(range(12))),
+        build_referee_frame(0x0A05, bytes(range(47))),
     ])
     assembler = RefereeFrameAssembler()
     frames = []
@@ -362,43 +362,40 @@ def test_assembler_clear_resets_diagnostic_counters_and_events():
 
 
 def test_parse_radar_macro_status_bits_from_protocol_table():
-    # bits: supply zone, central highland=2, trapezoid, fortress=3, outpost=1,
-    # base, and all terrain-crossing RFID flags set.
-    occupation_bits = (
+    occupation_state_1 = (
         (1 << 0)
-        | (2 << 1)
-        | (1 << 3)
-        | (3 << 4)
-        | (1 << 6)
-        | (1 << 8)
-        | (1 << 9)
-        | (1 << 10)
-        | (1 << 11)
-        | (1 << 12)
-        | (1 << 13)
-        | (1 << 14)
-        | (1 << 15)
+        | (4 << 1)
+        | (2 << 14)
+        | (1 << 18)
     )
-    payload = bytes([0x34, 0x12, 0x78, 0x56]) + occupation_bits.to_bytes(4, 'little')
+    occupation_state_2 = (1 << 4) | (2 << 22) | (1 << 24) | (2 << 26) | (1 << 28)
+    payload = (
+        bytes([0x34, 0x12, 0x78, 0x56])
+        + occupation_state_1.to_bytes(4, 'little')
+        + occupation_state_2.to_bytes(4, 'little')
+    )
     frame = build_referee_frame(0x0A04, payload)
     parsed = RefereeFrameAssembler().push_bytes(frame)[0].to_dict()['parsed']
 
     assert parsed['remaining_coins'] == 0x1234
     assert parsed['total_coins'] == 0x5678
-    assert parsed['occupation']['opponent_central_highland_status'] == 2
-    assert parsed['occupation']['opponent_fortress_buff_zone_status'] == 3
-    assert parsed['occupation']['opponent_outpost_buff_zone_status'] == 1
-    assert parsed['occupation']['opponent_terrain_crossing_road_rfid'] is True
+    assert parsed['occupation']['red_fortress_buff_zone_status'] == 4
+    assert parsed['occupation']['red_central_highland_status'] == 2
+    assert parsed['occupation']['red_outpost_buff_zone_status'] == 1
+    assert parsed['occupation']['opponent_tunnel_lower'] is True
+    assert parsed['occupation']['red_outpost_control_status'] == 2
+    assert parsed['occupation']['blue_outpost_control_status'] == 1
+    assert parsed['occupation_state_2'] == occupation_state_2
 
 
 def test_parse_radar_buff_status_from_protocol_table():
-    payload = bytes(range(35)) + bytes([6, 0, 1, 2, 3, 9])
+    payload = bytes(range(35)) + bytes([6, 0, 1, 2, 3, 9]) + bytes(6)
     frame = build_referee_frame(0x0A05, payload)
     parsed = RefereeFrameAssembler().push_bytes(frame)[0].to_dict()['parsed']
 
-    hero = parsed['buff_status']['opponent_hero']
+    heavy = parsed['buff_status']['opponent_heavy']
     sentry = parsed['buff_status']['opponent_sentry']
-    assert hero == {
+    assert heavy == {
         'hp_recovery_percent': 0,
         'shooting_heat_cooling': 0x0201,
         'defense_percent': 3,
@@ -411,29 +408,28 @@ def test_parse_radar_buff_status_from_protocol_table():
     assert parsed['sentry_mode'] == 6
     assert parsed['sentry_mode_name'] == 'enhanced_mobile'
     assert parsed['robot_main_status'] == {
-        'opponent_hero': 0,
-        'opponent_engineer': 1,
+        'opponent_heavy': 0,
         'opponent_infantry_3': 2,
         'opponent_infantry_4': 3,
         'opponent_sentry': 9,
     }
+    assert parsed['reserved_engineer_main_status'] == 1
     assert parsed['robot_main_status_names'] == {
-        'opponent_hero': 'alive',
-        'opponent_engineer': 'destroyed',
+        'opponent_heavy': 'alive',
         'opponent_infantry_3': 'invincible_not_weakened',
         'opponent_infantry_4': 'invincible_weakened',
         'opponent_sentry': 'unknown_9',
     }
 
 
-def test_air_assembler_rejects_obsolete_36_byte_0a05_frame():
+def test_air_assembler_rejects_obsolete_2026_0a05_frame():
     assembler = RefereeFrameAssembler(allowed_cmd_lengths=RADAR_AIR_DATA_LENGTHS)
-    obsolete = build_referee_frame(0x0A05, bytes(36))
-    current = build_referee_frame(0x0A05, bytes(41))
+    obsolete = build_referee_frame(0x0A05, bytes(41))
+    current = build_referee_frame(0x0A05, bytes(47))
 
     frames = assembler.push_bytes(obsolete + current)
 
-    assert [len(frame.data) for frame in frames] == [41]
+    assert [len(frame.data) for frame in frames] == [47]
 
 
 def test_assembler_resynchronizes_after_noise_and_bad_crc():

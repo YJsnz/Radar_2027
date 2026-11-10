@@ -3,6 +3,8 @@
 分析对象：`radio/`（JNU-SHARK/shark-radar-radio，ROS 2 Humble + GNU Radio 3.10.7 + gr-iio）。
 只读分析，未修改仓库任何文件；未运行 ROS/GNU Radio 节点，结论均来自源码与 `radio/README.md`。
 
+> 基线快照说明：本报告记录首次 2027 适配前的实现，不代表当前代码状态。2026-11-10 已新增 `core/protocol2027.py` 并更新 0x0A04/0x0A05 的共享长度、字段解析和虚拟信息波；下表中的旧结构仅作为迁移前基线。当前状态以根目录 `README.md` 的 TODO 和 [逐字节协议分析](protocol2027_analysis.md) 更新记录为准。
+
 ---
 
 ## 1. 架构总览

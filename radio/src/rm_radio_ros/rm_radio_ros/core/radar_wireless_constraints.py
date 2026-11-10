@@ -1,15 +1,21 @@
-"""RMUC 2026 radar wireless payload constraints used by Lab TX.
+"""Radar wireless payload sample constraints used by Lab TX.
 
-The wire protocol defines the integer widths, while the competition rulebook
-defines the smaller ranges that can occur in a match.  Keep the constraints in
-one dependency-free module so the dashboard, virtual-link builder and GNU
-Radio runtime all generate the same legal values.
+Wire lengths and field layouts come from ``protocol2027``. Existing numeric
+range presets are retained for lab compatibility and are not certified as
+2027 match limits until the rulebook values are reviewed.
 """
 
 from __future__ import annotations
 
 import random
 from typing import Any, Iterable, Sequence
+
+from .protocol2027 import (
+    RADAR_BROADCAST_COMMAND_IDS,
+    RADAR_COMMAND_DATA_LENGTHS,
+    RADAR_MACRO_STATE_1_FIELDS,
+    RADAR_MACRO_STATE_2_FIELDS,
+)
 
 
 POSITION_X_MAX_CM = 2800
@@ -46,7 +52,8 @@ BUFF_ROBOT_KEYS = (
     "opponent_sentry",
 )
 
-# Rulebook V2.0.1: maximum in-match HP for the corresponding robot type.
+# Legacy 2026 sample ranges below are retained for existing lab controls and
+# are not certified 2027 limits. This migration updates wire layout only.
 HP_MAX = {
     "opponent_hero": 600,
     "opponent_engineer": 250,
@@ -68,11 +75,12 @@ BULLET_MAX = {
     "opponent_sentry": 1900,
 }
 
-# Current buff fields.  Cooling is the direct increase (not the final cooling
-# rate): the level-10 hero can gain at most +200/s from a 5x energy mechanism;
-# infantry/sentry can gain at most +120/s.  Engineering has no launcher.
+# Field caps are legacy sample values; the reserved former-engineer block is
+# zeroed to preserve the 2027 0x0A05 slot layout.
 BUFF_FIELD_MAX = {
-    "hp_recovery_percent": {key: 25 for key in BUFF_ROBOT_KEYS},
+    "hp_recovery_percent": {
+        key: 0 if key == "opponent_engineer" else 25 for key in BUFF_ROBOT_KEYS
+    },
     "shooting_heat_cooling": {
         "opponent_hero": 200,
         "opponent_engineer": 0,
@@ -80,20 +88,20 @@ BUFF_FIELD_MAX = {
         "opponent_infantry_4": 120,
         "opponent_sentry": 120,
     },
-    "defense_percent": {key: 99 for key in BUFF_ROBOT_KEYS},
-    "negative_defense_percent": {key: 100 for key in BUFF_ROBOT_KEYS},
-    "attack_percent": {key: 300 for key in BUFF_ROBOT_KEYS},
+    "defense_percent": {
+        key: 0 if key == "opponent_engineer" else 99 for key in BUFF_ROBOT_KEYS
+    },
+    "negative_defense_percent": {
+        key: 0 if key == "opponent_engineer" else 100 for key in BUFF_ROBOT_KEYS
+    },
+    "attack_percent": {
+        key: 0 if key == "opponent_engineer" else 300 for key in BUFF_ROBOT_KEYS
+    },
 }
 
-RADAR_COMMAND_DATA_LENGTHS = {
-    0x0A01: 24,
-    0x0A02: 12,
-    0x0A03: 10,
-    0x0A04: 8,
-    0x0A05: 41,
-    0x0A06: 6,
-}
-RADAR_BROADCAST_COMMANDS = ("0x0A01", "0x0A02", "0x0A03", "0x0A04", "0x0A05")
+RADAR_BROADCAST_COMMANDS = tuple(
+    f"0x{cmd_id:04X}" for cmd_id in RADAR_BROADCAST_COMMAND_IDS
+)
 
 
 def clamp_int(value: Any, low: int, high: int, default: int = 0) -> int:
@@ -105,23 +113,38 @@ def clamp_int(value: Any, low: int, high: int, default: int = 0) -> int:
 
 
 def normalize_occupation_bits(value: Any) -> int:
-    """Clear reserved bits and normalize multi-bit occupation enumerations."""
-    bits = clamp_int(value, 0, 0xFFFFFFFF) & 0xFFFF
-    central = min((bits >> 1) & 0x03, 2)  # 0/1/2; value 3 is undefined.
-    fortress = (bits >> 4) & 0x03         # 0/1/2/3 are all defined.
-    outpost = min((bits >> 6) & 0x03, 2)  # 0/1/2; value 3 is undefined.
-    boolean_bits = bits & ((1 << 0) | (1 << 3) | 0xFF00)
-    return boolean_bits | (central << 1) | (fortress << 4) | (outpost << 6)
+    """Normalize the 2027 0x0A04 occupation_state_1 word."""
+    raw = clamp_int(value, 0, 0xFFFFFFFF)
+    normalized = 0
+    for _name, offset, width, kind, maximum in RADAR_MACRO_STATE_1_FIELDS:
+        field_max = 1 if kind == "bool" else maximum
+        field_value = min((raw >> offset) & ((1 << width) - 1), field_max)
+        normalized |= field_value << offset
+    return normalized
+
+
+def normalize_occupation_state_2(value: Any) -> int:
+    """Normalize 2027 terrain-detection and control bits; clear reserved bits."""
+    raw = clamp_int(value, 0, 0xFFFFFFFF)
+    normalized = 0
+    for _name, offset, width, kind, maximum in RADAR_MACRO_STATE_2_FIELDS:
+        field_max = 1 if kind == "bool" else maximum
+        field_value = min((raw >> offset) & ((1 << width) - 1), field_max)
+        normalized |= field_value << offset
+    return normalized
 
 
 def random_occupation_bits(rng: Any = random) -> int:
-    bits = rng.randint(0, 1)
-    bits |= rng.randint(0, 2) << 1
-    bits |= rng.randint(0, 1) << 3
-    bits |= rng.randint(0, 3) << 4
-    bits |= rng.randint(0, 2) << 6
-    for bit in range(8, 16):
-        bits |= rng.randint(0, 1) << bit
+    bits = 0
+    for _name, offset, _width, kind, maximum in RADAR_MACRO_STATE_1_FIELDS:
+        bits |= rng.randint(0, 1 if kind == "bool" else maximum) << offset
+    return bits
+
+
+def random_occupation_state_2(rng: Any = random) -> int:
+    bits = 0
+    for _name, offset, _width, kind, maximum in RADAR_MACRO_STATE_2_FIELDS:
+        bits |= rng.randint(0, 1 if kind == "bool" else maximum) << offset
     return bits
 
 
@@ -148,7 +171,7 @@ def random_payload_for_command(
     size: int,
     rng: Any = random,
 ) -> list[int]:
-    """Generate one semantically valid payload for a radar wireless command."""
+    """Generate a schema-shaped sample using the currently configured limits."""
     command = command_id_value(cmd_id)
     expected_size = RADAR_COMMAND_DATA_LENGTHS.get(command)
     if expected_size is not None and int(size) != expected_size:
@@ -173,6 +196,7 @@ def random_payload_for_command(
         out.extend(_put_u16(remaining))
         out.extend(_put_u16(total))
         out.extend(_put_u32(random_occupation_bits(rng)))
+        out.extend(_put_u32(random_occupation_state_2(rng)))
     elif command == 0x0A05:
         for key in BUFF_ROBOT_KEYS:
             out.append(rng.randint(0, BUFF_FIELD_MAX["hp_recovery_percent"][key]))
@@ -181,7 +205,11 @@ def random_payload_for_command(
             out.append(rng.randint(0, BUFF_FIELD_MAX["negative_defense_percent"][key]))
             out.extend(_put_u16(rng.randint(0, BUFF_FIELD_MAX["attack_percent"][key])))
         out.append(rng.randint(1, 6))
-        out.extend(rng.randint(0, 3) for _key in BUFF_ROBOT_KEYS)
+        out.extend(
+            0 if key == "opponent_engineer" else rng.randint(0, 3)
+            for key in BUFF_ROBOT_KEYS
+        )
+        out.extend(bytes(6))
     else:
         return [rng.getrandbits(8) for _ in range(max(0, int(size)))]
 

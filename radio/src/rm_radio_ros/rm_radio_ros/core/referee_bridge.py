@@ -172,6 +172,8 @@ class RefereeBridge:
                         status['payload'] = {
                             'remaining_coins': parsed.get('remaining_coins'),
                             'total_coins': parsed.get('total_coins'),
+                            'occupation_state_1': parsed.get('occupation_state_1'),
+                            'occupation_state_2': parsed.get('occupation_state_2'),
                             'occupation_bits': parsed.get('occupation_bits'),
                             'occupation': parsed.get('occupation'),
                         }
