@@ -23,7 +23,7 @@ _force_pyqt5_qt_plugin_path()
 from serial.tools import list_ports
 
 from PyQt5.QtCore import QProcess, QProcessEnvironment, QSize, Qt, QTimer
-from PyQt5.QtGui import QFont
+from PyQt5.QtGui import QColor, QFont, QPainter, QPen
 from PyQt5.QtWidgets import (
     QApplication,
     QButtonGroup,
@@ -159,17 +159,65 @@ QLabel#sectionTitle {
     font-size: 14px;
     font-weight: 700;
 }
-QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox {
-    min-height: 34px;
+QLineEdit, QSpinBox, QDoubleSpinBox {
+    min-height: 36px;
     min-width: 0;
     padding: 0 8px;
     background: #ffffff;
     border: 1px solid #c6d1d5;
-    border-radius: 6px;
+    border-radius: 7px;
     selection-background-color: #247f6b;
 }
-QLineEdit:focus, QComboBox:focus, QSpinBox:focus, QDoubleSpinBox:focus {
+QLineEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus {
     border: 2px solid #247f6b;
+}
+QComboBox {
+    min-height: 40px;
+    min-width: 0;
+    padding: 0 38px 0 12px;
+    color: #1d3036;
+    background: #ffffff;
+    border: 1px solid #c6d1d5;
+    border-radius: 8px;
+    selection-background-color: #dcefe9;
+}
+QComboBox:hover {
+    background: #fbfdfd;
+    border-color: #8ba2a5;
+}
+QComboBox:focus {
+    border: 2px solid #247f6b;
+}
+QComboBox:disabled {
+    color: #8c999d;
+    background: #eef2f3;
+    border-color: #d7dfe1;
+}
+QComboBox::drop-down {
+    subcontrol-origin: padding;
+    subcontrol-position: top right;
+    width: 34px;
+    background: #f1f6f5;
+    border-left: 1px solid #d7e1e1;
+    border-top-right-radius: 7px;
+    border-bottom-right-radius: 7px;
+}
+QComboBox::drop-down:hover {
+    background: #e2efec;
+}
+QComboBox QAbstractItemView {
+    color: #1d3036;
+    background: #ffffff;
+    border: 1px solid #c8d4d7;
+    outline: 0;
+    padding: 5px;
+    selection-background-color: #e2f1ed;
+    selection-color: #155f53;
+}
+QComboBox QAbstractItemView::item {
+    min-height: 34px;
+    padding: 7px 10px;
+    border-radius: 5px;
 }
 QCheckBox {
     spacing: 8px;
@@ -180,60 +228,104 @@ QCheckBox::indicator {
     height: 18px;
 }
 QPushButton {
-    min-height: 36px;
-    padding: 0 14px;
-    border: 1px solid #c1cdd1;
-    border-radius: 6px;
+    min-height: 40px;
+    padding: 0 16px;
+    border: 1px solid #c6d2d5;
+    border-radius: 8px;
     background: #ffffff;
     font-weight: 600;
 }
 QPushButton:hover {
-    background: #f0f5f5;
-    border-color: #98aaaf;
+    background: #f1f7f6;
+    border-color: #88a29f;
 }
 QPushButton:pressed {
-    background: #dfe5e7;
+    background: #dce9e6;
+    border-color: #6b8c87;
 }
 QPushButton:disabled {
     color: #9ba5ab;
     background: #eef1f2;
+    border-color: #d7dfe1;
+}
+QPushButton:focus {
+    border: 2px solid #247f6b;
 }
 QPushButton#redSide, QPushButton#blueSide {
-    min-height: 36px;
+    min-height: 42px;
     font-size: 15px;
+}
+QPushButton#redSide {
+    color: #a8333e;
+    background: #fff9f9;
+    border-color: #e9c3c6;
+}
+QPushButton#blueSide {
+    color: #205e92;
+    background: #f7fbff;
+    border-color: #bfd5e8;
 }
 QPushButton#redSide:checked {
     color: #ffffff;
-    background: #c73b47;
-    border-color: #9f2631;
+    background: #bd3d49;
+    border-color: #a42f3b;
 }
 QPushButton#blueSide:checked {
     color: #ffffff;
-    background: #2877bd;
-    border-color: #185b94;
+    background: #286fa9;
+    border-color: #1f5e91;
 }
 QPushButton#saveButton {
     color: #185f51;
-    border-color: #41917f;
+    background: #f7fbfa;
+    border-color: #9bbeb6;
+}
+QPushButton#saveButton:hover {
+    color: #104f44;
+    background: #e8f4f0;
+}
+QPushButton#iconButton {
+    min-width: 42px;
+    min-height: 40px;
+    padding: 0;
+    border-radius: 8px;
+    background: #f7fafb;
 }
 QPushButton#calibrateButton {
-    color: #ffffff;
-    background: #8b641f;
-    border-color: #705019;
-    min-height: 46px;
-    font-size: 16px;
+    color: #24434a;
+    background: #e8f0f1;
+    border-color: #c3d3d6;
+    min-height: 48px;
+    font-size: 15px;
+}
+QPushButton#calibrateButton:hover {
+    background: #dce9eb;
+    border-color: #9db8bd;
 }
 QPushButton#startButton {
     color: #ffffff;
-    background: #247f6b;
-    border-color: #185f51;
-    min-height: 48px;
-    font-size: 16px;
+    background: #1d7969;
+    border-color: #155f53;
+    min-height: 54px;
+    font-size: 17px;
+}
+QPushButton#startButton:hover {
+    background: #176957;
+    border-color: #104e43;
 }
 QPushButton#stopButton {
-    color: #a22530;
-    border-color: #c85c65;
-    min-height: 42px;
+    color: #a62f39;
+    background: #fff7f7;
+    border-color: #e1a6ab;
+    min-height: 44px;
+}
+QPushButton#stopButton:enabled {
+    color: #ffffff;
+    background: #b93b46;
+    border-color: #a32d38;
+}
+QPushButton#stopButton:enabled:hover {
+    background: #a92e3a;
 }
 QPlainTextEdit {
     background: #142127;
@@ -276,6 +368,24 @@ QSplitter::handle:horizontal {
     width: 7px;
 }
 """
+
+
+class StyledComboBox(QComboBox):
+    """Consistent combo box with an explicit disclosure chevron."""
+
+    def paintEvent(self, event):
+        super().paintEvent(event)
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+        color = "#91a0a4" if self.isEnabled() else "#aeb8bb"
+        painter.setPen(
+            QPen(QColor(color), 1.7, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin)
+        )
+        center_x = self.width() - 17
+        center_y = self.height() // 2
+        painter.drawLine(center_x - 3, center_y - 1, center_x, center_y + 2)
+        painter.drawLine(center_x, center_y + 2, center_x + 3, center_y - 1)
+        painter.end()
 
 
 class StatusIndicator(QFrame):
@@ -439,14 +549,14 @@ class MatchLauncher(QMainWindow):
         side_layout.addWidget(self.blue_side)
         match_form.addRow("己方阵营", side_row)
 
-        self.camera_mode = QComboBox()
+        self.camera_mode = StyledComboBox()
         self.camera_mode.addItem("迈德威视 MV-SUA133GC-T", "mindvision")
         self.camera_mode.addItem("海康工业相机", "hik")
         self.camera_mode.addItem("USB 相机", "video")
         self.camera_mode.addItem("测试视频 / 图片", "test")
         match_form.addRow("图像输入", self.camera_mode)
 
-        self.algorithm_mode = QComboBox()
+        self.algorithm_mode = StyledComboBox()
         self.algorithm_mode.addItem("2131aef 视觉识别链路（默认）", "legacy")
         self.algorithm_mode.addItem("车辆跟踪 + 批量装甲板（可选）", "hkust_tracker")
         self.algorithm_mode.setToolTip("默认使用 2131aef 的完整视觉识别链路")
@@ -485,11 +595,11 @@ class MatchLauncher(QMainWindow):
         recording_path_layout.addWidget(self.browse_recording_button)
         match_form.addRow("录像目录", recording_path_row)
 
-        self.filter_type = QComboBox()
+        self.filter_type = StyledComboBox()
         self.filter_type.addItem("滑动窗口", "sliding_window")
         self.filter_type.addItem("混合门控卡尔曼", "hybrid_gated_kalman")
         match_form.addRow("位置滤波", self.filter_type)
-        self.vulnerability_mode = QComboBox()
+        self.vulnerability_mode = StyledComboBox()
         self.vulnerability_mode.addItem("视觉端已关闭（无线电负责）", "disabled")
         self.vulnerability_mode.setEnabled(False)
         self.vulnerability_mode.setToolTip("视觉端双倍易伤决策已关闭，后续由无线电程序负责")
@@ -497,15 +607,16 @@ class MatchLauncher(QMainWindow):
         self._add_settings_page(match_section)
 
         serial_section, serial_form = self._make_section("裁判系统与设备")
-        self.referee_mode = QComboBox()
+        self.referee_mode = StyledComboBox()
         self.referee_mode.addItem("无线电 ROS2（比赛默认）", "radio_ros")
         self.referee_mode.addItem("视觉直连串口（legacy）", "legacy_serial")
         serial_form.addRow("裁判通信模式", self.referee_mode)
 
-        self.serial_port = QComboBox()
+        self.serial_port = StyledComboBox()
         self.serial_port.setEditable(True)
         self.serial_port.setInsertPolicy(QComboBox.NoInsert)
         self.refresh_ports_button = QPushButton()
+        self.refresh_ports_button.setObjectName("iconButton")
         self.refresh_ports_button.setIcon(self.style().standardIcon(QStyle.SP_BrowserReload))
         self.refresh_ports_button.setIconSize(QSize(18, 18))
         self.refresh_ports_button.setFixedWidth(42)
@@ -545,8 +656,9 @@ class MatchLauncher(QMainWindow):
         self._add_settings_page(serial_section)
 
         calibration_section, calibration_form = self._make_section("标定与测试")
-        self.calibration_preset = QComboBox()
+        self.calibration_preset = StyledComboBox()
         self.refresh_presets_button = QPushButton()
+        self.refresh_presets_button.setObjectName("iconButton")
         self.refresh_presets_button.setIcon(
             self.style().standardIcon(QStyle.SP_BrowserReload)
         )
@@ -571,6 +683,7 @@ class MatchLauncher(QMainWindow):
         self.test_video = QLineEdit()
         self.test_video.setPlaceholderText("留空时使用静态测试图片")
         self.browse_video_button = QPushButton()
+        self.browse_video_button.setObjectName("iconButton")
         self.browse_video_button.setIcon(self.style().standardIcon(QStyle.SP_DirOpenIcon))
         self.browse_video_button.setIconSize(QSize(18, 18))
         self.browse_video_button.setFixedWidth(42)
