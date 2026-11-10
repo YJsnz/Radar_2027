@@ -24,6 +24,7 @@ from pathlib import Path
 import serial
 from camera_availability import wait_for_initial_camera_frame
 from camera_calibration import validate_camera_calibration
+from camera_intrinsics import CameraIntrinsicsError, load_runtime_intrinsics
 from information_ui import draw_information_ui
 import cv2
 
@@ -165,6 +166,9 @@ if config['filter']['type'] == 'sliding_window':
     assert 1 <= config['filter']['sliding_window']['window_size'] <= 20, "滑动窗口大小应在1-20之间"
 # 图像测试模式
 camera_mode = config['global']['camera_mode']  # test / hik / mindvision / video
+runtime_camera_intrinsics = load_runtime_intrinsics()
+if runtime_camera_intrinsics is not None and camera_mode != 'mindvision':
+    raise ValueError('已启用的 MV-SUA133GC-T 内参只能用于 mindvision 相机输入')
 serial_error = None
 if referee_mode == 'legacy_serial':
     try:
@@ -1069,6 +1073,7 @@ def video_capture_get():
 
 
 def mindvision_camera_get():
+    global active_camera_intrinsics_id, camera_intrinsics_error, stop_requested
     from mindvision_camera import (
         MindVisionCamera,
         MindVisionNoCamera,
@@ -1078,14 +1083,42 @@ def mindvision_camera_get():
     exposure_time = config.get('camera_params', {}).get('exposure_time', 11000)
     while not stop_requested:
         try:
-            with MindVisionCamera(exposure_time_us=exposure_time) as camera:
+            device_serial = runtime_camera_intrinsics.serial if runtime_camera_intrinsics else None
+            with MindVisionCamera(
+                exposure_time_us=exposure_time,
+                device_serial=device_serial,
+                require_single=runtime_camera_intrinsics is not None,
+            ) as camera:
+                undistorter = None
                 while not stop_requested:
-                    publish_camera_frame(camera.get_frame(timeout_ms=1000))
+                    raw_frame = camera.get_frame(timeout_ms=1000)
+                    if runtime_camera_intrinsics is not None:
+                        if undistorter is None:
+                            undistorter = runtime_camera_intrinsics.bind(
+                                camera.capture_metadata(), raw_frame
+                            )
+                            active_camera_intrinsics_id = undistorter.intrinsics_id
+                            print(
+                                "已启用相机去畸变，"
+                                f"profile={active_camera_intrinsics_id[:16]}，"
+                                f"size={raw_frame.shape[1]}×{raw_frame.shape[0]}"
+                            )
+                        frame = undistorter.apply(raw_frame)
+                    else:
+                        active_camera_intrinsics_id = ''
+                        frame = raw_frame
+                    publish_camera_frame(frame)
         except MindVisionSDKUnavailable:
             raise
         except MindVisionNoCamera as error:
             set_camera_error(str(error))
             time.sleep(1.0)
+        except CameraIntrinsicsError as error:
+            camera_intrinsics_error = str(error)
+            active_camera_intrinsics_id = ''
+            set_camera_error(f"拒绝使用不匹配的相机内参：{error}")
+            stop_requested = True
+            return
         except Exception as error:
             set_camera_error(f"迈德威视相机采集失败，等待重连：{error}")
             time.sleep(1.0)
@@ -1949,7 +1982,9 @@ else:
 
 camera_image = None
 camera_error = None
+camera_intrinsics_error = None
 cap = None
+active_camera_intrinsics_id = ''
 
 
 def run_camera_worker(target, *args):
@@ -2000,6 +2035,16 @@ initial_camera_frame = wait_for_initial_camera_frame(
 )
 
 if initial_camera_frame is None:
+    if camera_intrinsics_error:
+        print(f"相机内参校验失败，停止比赛进程：{camera_intrinsics_error}")
+        report_runtime_status(
+            phase="stopped",
+            stopped_at=time.time(),
+            camera_ready=False,
+            camera_error=camera_intrinsics_error,
+            recording=False,
+        )
+        sys.exit(2)
     report_runtime_status(
         phase="stopped",
         stopped_at=time.time(),
@@ -2011,7 +2056,12 @@ if initial_camera_frame is None:
 if camera_mode == 'mindvision':
     calibration_path = config['paths']['calibration']['red' if state == 'R' else 'blue']
     try:
-        validate_camera_calibration(calibration_path, camera_mode, initial_camera_frame.shape)
+        validate_camera_calibration(
+            calibration_path,
+            camera_mode,
+            initial_camera_frame.shape,
+            intrinsics_id=active_camera_intrinsics_id or None,
+        )
     except ValueError as error:
         detail = f"新相机尚未完成匹配标定：{error}。请先运行 calibration.py 重新标定。"
         print(detail)
@@ -2089,6 +2139,7 @@ if record_video:
         recording_manifest = {
             "schema": "shark.radar.vision_recording.v1",
             "match_run_id": match_run_id,
+            "camera_intrinsics_id": active_camera_intrinsics_id or None,
             "component_session_id": recording_directory.name,
             "started_at": time.time(),
             "recording_directory": str(recording_directory),

@@ -2,7 +2,7 @@
 
 ## 迈德威视内参标定
 
-运行 `./tool/start_intrinsic_calibration.sh`。所有参数在 [intrinsic_calibration.yaml](intrinsic_calibration.yaml) 填写，棋盘格行列数和实测方格边长默认留空；操作、输出格式与接入边界见 [内参标定说明](INTRINSIC_CALIBRATION.md)。
+运行 `./tool/start_intrinsic_calibration.sh`。所有采集/棋盘参数在 [intrinsic_calibration.yaml](intrinsic_calibration.yaml) 填写，棋盘格行列数和实测方格边长默认留空；标定报告导出后，比赛与地图标定的统一去畸变配置见 [内参运行时接入说明](../docs/2027-adaptation/intrinsic_runtime_integration.md)，工具输出与边界见 [内参标定说明](INTRINSIC_CALIBRATION.md)。
 
 ## Qt 装甲命中模拟器
 

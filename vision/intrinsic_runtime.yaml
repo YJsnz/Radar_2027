@@ -1,0 +1,15 @@
+# 比赛图像与外参标定使用同一套去畸变设置。完成真实棋盘格采集和独立核验前保持关闭。
+schema: shark.radar.intrinsic_runtime.v1
+enabled: false
+physical_validation_confirmed: false
+max_rms_px: 0.5
+
+solution:
+  # 填写 tool/intrinsic_calibration.yaml 输出的 solution-*/ 目录；相对本 YAML 解析。
+  directory: ""
+
+camera:
+  model: MV-SUA133GC-T
+  serial: ""  # 与 SDK 及标定报告中的序列号完全一致
+  lens: ""    # 与内参采集 YAML 中的记录完全一致
+  focus: ""   # 与内参采集 YAML 中的记录完全一致

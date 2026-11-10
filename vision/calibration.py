@@ -50,6 +50,7 @@ from calibration_presets import (
     list_presets,
     save_preset,
 )
+from camera_intrinsics import CameraIntrinsicsError, load_runtime_intrinsics
 
 import yaml
 with open("config.yaml", "r", encoding="utf-8") as f:  # 指定 UTF-8 编码
@@ -275,7 +276,7 @@ def video_capture_get():
 
 
 def mindvision_camera_get():
-    global camera_image, camera_error
+    global camera_image, camera_error, active_camera_intrinsics_id, camera_intrinsics_error
     from mindvision_camera import (
         MindVisionCamera,
         MindVisionNoCamera,
@@ -285,16 +286,41 @@ def mindvision_camera_get():
     exposure_time = config.get('camera_params', {}).get('exposure_time', 11000)
     while True:
         try:
-            with MindVisionCamera(exposure_time_us=exposure_time) as camera:
+            device_serial = runtime_camera_intrinsics.serial if runtime_camera_intrinsics else None
+            with MindVisionCamera(
+                exposure_time_us=exposure_time,
+                device_serial=device_serial,
+                require_single=runtime_camera_intrinsics is not None,
+            ) as camera:
                 print("迈德威视相机已连接，开始标定取图")
+                undistorter = None
                 while True:
-                    camera_image = camera.get_frame(timeout_ms=1000)
+                    raw_frame = camera.get_frame(timeout_ms=1000)
+                    if runtime_camera_intrinsics is not None:
+                        if undistorter is None:
+                            undistorter = runtime_camera_intrinsics.bind(
+                                camera.capture_metadata(), raw_frame
+                            )
+                            active_camera_intrinsics_id = undistorter.intrinsics_id
+                            print(
+                                "地图外参标定使用已核验的去畸变图像，"
+                                f"profile={active_camera_intrinsics_id[:16]}"
+                            )
+                        camera_image = undistorter.apply(raw_frame)
+                    else:
+                        active_camera_intrinsics_id = ''
+                        camera_image = raw_frame
         except MindVisionSDKUnavailable as error:
             camera_error = str(error)
             return
         except MindVisionNoCamera as error:
             print(f"{error}，1 秒后重试")
             time.sleep(1.0)
+        except CameraIntrinsicsError as error:
+            camera_intrinsics_error = str(error)
+            camera_error = f"拒绝使用不匹配的相机内参：{error}"
+            print(camera_error)
+            return
         except Exception as error:
             camera_error = f"迈德威视相机采集失败：{error}"
             print(camera_error)
@@ -502,6 +528,8 @@ class MyUI(QWidget):
     def update_camera(self):
         if self.capturing:
             img0 = camera_image
+            if img0 is None:
+                return
             left_image = cv2.cvtColor(img0, cv2.COLOR_BGR2RGB)
             self.left_image = cv2.resize(left_image, (1350, 1000))
             self.left_base_image = self.left_image.copy()
@@ -885,6 +913,9 @@ class MyUI(QWidget):
 
     def button4_clicked(self):
         # 按钮4点击事件
+        if camera_intrinsics_error:
+            self.append_text(f'相机内参校验失败，不能保存地图外参：{camera_intrinsics_error}')
+            return
         print(self.image_points)
         print(self.map_points)
         matrices = []
@@ -934,6 +965,7 @@ class MyUI(QWidget):
             camera_mode=np.array(camera_mode),
             image_width=np.int32(image_width),
             image_height=np.int32(image_height),
+            intrinsics_id=np.array(active_camera_intrinsics_id),
         )
 
         self.append_text('保存计算')
@@ -968,6 +1000,11 @@ class MyUI(QWidget):
 
 if __name__ == '__main__':
     camera_mode = config['global']['camera_mode']  # test / hik / mindvision / video
+    runtime_camera_intrinsics = load_runtime_intrinsics()
+    if runtime_camera_intrinsics is not None and camera_mode != 'mindvision':
+        raise ValueError('已启用的 MV-SUA133GC-T 内参只能用于 mindvision 相机输入')
+    active_camera_intrinsics_id = ''
+    camera_intrinsics_error = None
     camera_image = None
     camera_error = None
     state = config['global']['state']  # R:红方/B:蓝方
