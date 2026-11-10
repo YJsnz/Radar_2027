@@ -295,10 +295,8 @@ def _buff_payload(config: dict[str, Any]) -> bytes:
         if isinstance(config.get("armor_fortification"), dict)
         else {}
     )
-    out.extend(
-        put_le_u16(clamp_int(fortification.get(key), 0, 0xFFFF))
-        for key in ("center_x_mm", "center_y_mm", "radius_mm")
-    )
+    for key in ("center_x_mm", "center_y_mm", "radius_mm"):
+        out.extend(put_le_u16(clamp_int(fortification.get(key), 0, 0xFFFF)))
     return bytes(out)
 
 

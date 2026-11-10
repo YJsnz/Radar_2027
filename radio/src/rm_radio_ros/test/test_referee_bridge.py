@@ -35,8 +35,8 @@ def test_password_frame_to_0121_payload():
     frame = _frame(0x0A06, b'ABC123')
     command = radar_command_from_password_frame(frame)
 
-    assert command.to_bytes() == b'\x00\x02ABC123'
-    assert command.to_dict()['payload_hex'] == '0002414243313233'
+    assert command.to_bytes() == b'\x00\x02ABC123\x00\x00\x00\x00\x00'
+    assert command.to_dict()['payload_hex'] == '00024142433132330000000000'
 
 
 def test_invalid_password_frame_is_not_bridged_to_0121():
@@ -49,7 +49,7 @@ def test_bridge_emits_official_payloads():
     frames = [
         _frame(0x0A01, bytes(range(24))),
         _frame(0x0A02, bytes(range(12))),
-        _frame(0x0A04, bytes([1, 0, 2, 0, 1, 0, 0, 0])),
+        _frame(0x0A04, bytes([1, 0, 2, 0, 1, 0, 0, 0, 0, 0, 0, 0])),
         _frame(0x0A06, b'ABC123'),
     ]
     outputs = RefereeBridge().process_frames(frames)
@@ -67,14 +67,15 @@ def test_bridge_emits_official_payloads():
 
 
 def test_bridge_includes_new_0a05_main_status_fields():
-    payload = bytes(35) + bytes([5, 0, 1, 2, 3, 0])
+    payload = bytes(35) + bytes([5, 0, 1, 2, 3, 0]) + bytes(6)
     outputs = RefereeBridge().process_frames([_frame(0x0A05, payload)])
 
     assert len(outputs) == 1
     assert outputs[0]['type'] == 'RadarEnemyBuffStatus'
     assert outputs[0]['payload']['sentry_mode'] == 5
     assert outputs[0]['payload']['sentry_mode_name'] == 'enhanced_defensive'
-    assert outputs[0]['payload']['robot_main_status']['opponent_engineer'] == 1
+    assert outputs[0]['payload']['robot_main_status']['opponent_heavy'] == 0
+    assert outputs[0]['payload']['reserved_engineer_main_status'] == 1
     assert outputs[0]['payload']['robot_main_status_names']['opponent_infantry_4'] == 'invincible_weakened'
 
 

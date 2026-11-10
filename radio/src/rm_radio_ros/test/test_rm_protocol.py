@@ -68,7 +68,14 @@ def test_parse_0a06_rejects_non_alnum_ascii_password_for_protocol_table():
 
 def test_parse_020e_radar_decision_sync_bits_from_protocol_table():
     radar_info = (2 << 0) | (1 << 2) | (3 << 3) | (1 << 5)
-    frame = build_referee_frame(0x020E, bytes([radar_info]))
+    fortify_info = (1 << 0) | (3 << 1)
+    payload = (
+        bytes([radar_info, fortify_info])
+        + (123).to_bytes(2, 'little')
+        + (456).to_bytes(2, 'little')
+        + (78).to_bytes(2, 'little')
+    )
+    frame = build_referee_frame(0x020E, payload)
     parsed = RefereeFrameAssembler().push_bytes(frame)[0].to_dict()['parsed']
     sync = parsed['radar_decision_sync']
 
@@ -82,6 +89,13 @@ def test_parse_020e_radar_decision_sync_bits_from_protocol_table():
         'opponent_interference_difficulty': 3,
         'can_change_password': True,
         'reserved': 0,
+        'radar_info_2': fortify_info,
+        'armor_fortify_active': True,
+        'remaining_fortify_opportunities': 3,
+        'fortify_reserved': 0,
+        'fortify_center_x_mm': 123,
+        'fortify_center_y_mm': 456,
+        'fortify_radius_mm': 78,
     }
 
 
@@ -547,6 +561,9 @@ def test_build_robot_interaction_frame_0121_radar_cmd():
         'password_cmd': 2,
         'password': 'ABC123',
         'password_is_alnum_ascii': True,
+        'armor_fortify_cmd': 0,
+        'fortify_center_x_mm': 0,
+        'fortify_center_y_mm': 0,
     }
 
 
@@ -556,12 +573,15 @@ def test_build_robot_interaction_frame_0121_radar_cmd_only():
     frame = RefereeFrameAssembler().push_bytes(raw)[0]
     parsed = frame.to_dict()['parsed']
 
-    assert user_data == b'\x02\x00\x00\x00\x00\x00\x00\x00'
+    assert user_data == b'\x02\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
     assert parsed['robot_interaction']['data_cmd_id'] == 0x0121
     assert parsed['radar_cmd'] == {
         'valid_radar_cmd_length': True,
         'radar_cmd': 2,
         'password_cmd': 0,
+        'armor_fortify_cmd': 0,
+        'fortify_center_x_mm': 0,
+        'fortify_center_y_mm': 0,
     }
 
 
