@@ -80,6 +80,7 @@ QMainWindow, QWidget#central {
 QFrame#header {
     background: #14262c;
     border: 0;
+    border-bottom: 3px solid #2d8877;
 }
 QLabel#brand {
     color: #ffffff;
@@ -111,6 +112,47 @@ QFrame#section {
     background: #ffffff;
     border: 1px solid #d7e0e3;
     border-radius: 9px;
+}
+QFrame#settingsShell {
+    background: #ffffff;
+    border: 1px solid #d7e0e3;
+    border-radius: 11px;
+}
+QWidget#settingsContent {
+    background: #f2f5f6;
+}
+QFrame#settingsNav {
+    background: #172c32;
+    border-radius: 8px;
+}
+QLabel#navTitle {
+    color: #ffffff;
+    font-size: 16px;
+    font-weight: 700;
+}
+QLabel#navHint {
+    color: #9eb0b5;
+    font-size: 10px;
+    letter-spacing: 1px;
+}
+QPushButton#settingsNavItem {
+    color: #c4d0d3;
+    text-align: left;
+    min-height: 48px;
+    padding: 0 12px;
+    background: transparent;
+    border: 0;
+    border-radius: 6px;
+    font-size: 13px;
+}
+QPushButton#settingsNavItem:hover {
+    color: #ffffff;
+    background: #213c42;
+}
+QPushButton#settingsNavItem:checked {
+    color: #ffffff;
+    background: #28534d;
+    border-left: 3px solid #58b8a6;
 }
 QLabel#sectionTitle {
     color: #34424d;
@@ -286,7 +328,7 @@ class MatchLauncher(QMainWindow):
         self.serial_devices = set()
         self.config = load_config(CONFIG_PATH)
 
-        self.setWindowTitle("SHARK 雷达比赛启动台")
+        self.setWindowTitle("比赛控制中心")
         self._size_for_available_screen()
         self.setStyleSheet(APP_STYLE)
         self._build_ui()
@@ -329,15 +371,15 @@ class MatchLauncher(QMainWindow):
 
         header = QFrame()
         header.setObjectName("header")
-        header.setFixedHeight(76)
+        header.setFixedHeight(82)
         header_layout = QHBoxLayout(header)
-        header_layout.setContentsMargins(22, 10, 22, 10)
+        header_layout.setContentsMargins(26, 12, 26, 12)
 
         brand_layout = QVBoxLayout()
         brand_layout.setSpacing(2)
-        brand = QLabel("SHARK 雷达比赛启动台")
+        brand = QLabel("比赛控制中心")
         brand.setObjectName("brand")
-        subtitle = QLabel("比赛参数 · 相机 / 标定 / 裁判通信")
+        subtitle = QLabel("视觉系统 · 比赛配置与运行监控")
         subtitle.setObjectName("subtitle")
         brand_layout.addWidget(brand)
         brand_layout.addWidget(subtitle)
@@ -372,9 +414,11 @@ class MatchLauncher(QMainWindow):
         self.settings_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.settings_scroll.setFrameShape(QFrame.NoFrame)
         settings_widget = QWidget()
+        settings_widget.setObjectName("settingsContent")
         settings_layout = QVBoxLayout(settings_widget)
-        settings_layout.setContentsMargins(2, 2, 8, 2)
-        settings_layout.setSpacing(10)
+        settings_layout.setContentsMargins(3, 3, 3, 3)
+        self.settings_pages = QStackedWidget()
+        settings_layout.addWidget(self.settings_pages)
 
         match_section, match_form = self._make_section("比赛设置")
         self.red_side = QPushButton("己方红方")
@@ -450,7 +494,7 @@ class MatchLauncher(QMainWindow):
         self.vulnerability_mode.setEnabled(False)
         self.vulnerability_mode.setToolTip("视觉端双倍易伤决策已关闭，后续由无线电程序负责")
         match_form.addRow("双倍易伤", self.vulnerability_mode)
-        settings_layout.addWidget(match_section)
+        self._add_settings_page(match_section)
 
         serial_section, serial_form = self._make_section("裁判系统与设备")
         self.referee_mode = QComboBox()
@@ -498,7 +542,7 @@ class MatchLauncher(QMainWindow):
         camera_params_layout.addWidget(self.exposure)
         camera_params_layout.addWidget(self.gain)
         serial_form.addRow("曝光 / 增益", camera_params)
-        settings_layout.addWidget(serial_section)
+        self._add_settings_page(serial_section)
 
         calibration_section, calibration_form = self._make_section("标定与测试")
         self.calibration_preset = QComboBox()
@@ -538,9 +582,45 @@ class MatchLauncher(QMainWindow):
         video_layout.addWidget(self.test_video, 1)
         video_layout.addWidget(self.browse_video_button)
         calibration_form.addRow("测试视频", video_row)
-        settings_layout.addWidget(calibration_section)
-        settings_layout.addStretch()
+        self._add_settings_page(calibration_section)
         self.settings_scroll.setWidget(settings_widget)
+
+        self.settings_nav = QFrame()
+        self.settings_nav.setObjectName("settingsNav")
+        self.settings_nav.setFixedWidth(176)
+        nav_layout = QVBoxLayout(self.settings_nav)
+        nav_layout.setContentsMargins(12, 18, 12, 14)
+        nav_layout.setSpacing(7)
+        nav_title = QLabel("配置导航")
+        nav_title.setObjectName("navTitle")
+        nav_hint = QLabel("MATCH SETUP")
+        nav_hint.setObjectName("navHint")
+        nav_layout.addWidget(nav_title)
+        nav_layout.addWidget(nav_hint)
+        nav_layout.addSpacing(10)
+        self.settings_nav_group = QButtonGroup(self)
+        self.settings_nav_group.setExclusive(True)
+        self.settings_nav_buttons = []
+        for index, title in enumerate(("比赛参数", "设备与通信", "标定与测试")):
+            button = QPushButton(f"{index + 1:02d}    {title}")
+            button.setObjectName("settingsNavItem")
+            button.setCheckable(True)
+            button.clicked.connect(
+                lambda checked=False, page_index=index: self._select_settings_page(page_index)
+            )
+            self.settings_nav_group.addButton(button, index)
+            self.settings_nav_buttons.append(button)
+            nav_layout.addWidget(button)
+        nav_layout.addStretch()
+        self.settings_nav_buttons[0].setChecked(True)
+
+        self.settings_shell = QFrame()
+        self.settings_shell.setObjectName("settingsShell")
+        settings_shell_layout = QHBoxLayout(self.settings_shell)
+        settings_shell_layout.setContentsMargins(8, 8, 8, 8)
+        settings_shell_layout.setSpacing(10)
+        settings_shell_layout.addWidget(self.settings_nav)
+        settings_shell_layout.addWidget(self.settings_scroll, 1)
 
         operations = QWidget()
         self.operations = operations
@@ -554,7 +634,7 @@ class MatchLauncher(QMainWindow):
         actions_layout = QVBoxLayout(actions_section)
         actions_layout.setContentsMargins(16, 13, 16, 14)
         actions_layout.setSpacing(8)
-        action_title = QLabel("现场操作")
+        action_title = QLabel("比赛控制")
         action_title.setObjectName("sectionTitle")
         actions_layout.addWidget(action_title)
 
@@ -577,7 +657,7 @@ class MatchLauncher(QMainWindow):
         actions_layout.addWidget(self.stop_button)
         operations_layout.addWidget(actions_section)
 
-        log_title = QLabel("运行日志")
+        log_title = QLabel("实时输出")
         log_title.setObjectName("sectionTitle")
         operations_layout.addWidget(log_title)
         self.log_output = QPlainTextEdit()
@@ -591,7 +671,7 @@ class MatchLauncher(QMainWindow):
         self.workspace_splitter = QSplitter(Qt.Horizontal)
         self.workspace_splitter.setChildrenCollapsible(False)
         self.workspace_splitter.setHandleWidth(7)
-        self.workspace_splitter.addWidget(self.settings_scroll)
+        self.workspace_splitter.addWidget(self.settings_shell)
         self.workspace_splitter.addWidget(operations)
         self.workspace_splitter.setStretchFactor(0, 6)
         self.workspace_splitter.setStretchFactor(1, 4)
@@ -604,7 +684,7 @@ class MatchLauncher(QMainWindow):
         self._workspace_mode = None
         self.workspace_stack.addWidget(self.wide_workspace)
         self.workspace_stack.addWidget(self.compact_workspace)
-        self._set_workspace_mode(self.width() < 1180)
+        self._set_workspace_mode(self.width() < 1240)
 
     @staticmethod
     def _make_section(title):
@@ -634,16 +714,16 @@ class MatchLauncher(QMainWindow):
         while self.compact_workspace.count():
             self.compact_workspace.removeTab(0)
 
-        self.settings_scroll.setParent(None)
+        self.settings_shell.setParent(None)
         self.operations.setParent(None)
         if compact:
-            self.compact_workspace.addTab(self.settings_scroll, "比赛配置")
+            self.compact_workspace.addTab(self.settings_shell, "参数配置")
             self.compact_workspace.addTab(self.operations, "操作与日志")
             self.workspace_stack.setCurrentWidget(self.compact_workspace)
         else:
-            self.workspace_splitter.addWidget(self.settings_scroll)
+            self.workspace_splitter.addWidget(self.settings_shell)
             self.workspace_splitter.addWidget(self.operations)
-            self.settings_scroll.show()
+            self.settings_shell.show()
             self.operations.show()
             self.workspace_stack.setCurrentWidget(self.wide_workspace)
             QTimer.singleShot(0, self._apply_splitter_sizes)
@@ -653,7 +733,7 @@ class MatchLauncher(QMainWindow):
         if self._workspace_mode != "wide" or self.workspace_splitter.width() <= 0:
             return
         total_width = self.workspace_splitter.width()
-        settings_width = int(total_width * 0.60)
+        settings_width = int(total_width * 0.62)
         self.workspace_splitter.setSizes([settings_width, total_width - settings_width])
 
     def resizeEvent(self, event):
@@ -663,12 +743,26 @@ class MatchLauncher(QMainWindow):
             for name in (
                 "workspace_stack",
                 "compact_workspace",
-                "settings_scroll",
+                "settings_shell",
                 "operations",
                 "workspace_splitter",
             )
         ):
-            self._set_workspace_mode(self.width() < 1180)
+            self._set_workspace_mode(self.width() < 1240)
+
+    def _add_settings_page(self, section):
+        page = QWidget()
+        layout = QVBoxLayout(page)
+        layout.setContentsMargins(6, 6, 8, 6)
+        layout.setSpacing(12)
+        layout.addWidget(section)
+        layout.addStretch()
+        self.settings_pages.addWidget(page)
+
+    def _select_settings_page(self, index):
+        if 0 <= index < self.settings_pages.count():
+            self.settings_pages.setCurrentIndex(index)
+            self.settings_nav_buttons[index].setChecked(True)
 
     def _connect_signals(self):
         self.save_button.clicked.connect(lambda: self._save_configuration(show_message=True))
@@ -1057,7 +1151,7 @@ class MatchLauncher(QMainWindow):
             self.process.kill()
 
     def _set_action_state(self, running):
-        self.settings_scroll.setEnabled(not running)
+        self.settings_shell.setEnabled(not running)
         self.save_button.setEnabled(not running)
         self.calibrate_button.setEnabled(not running)
         self.start_button.setEnabled(not running)
@@ -1208,14 +1302,14 @@ def _save_screenshot(window, output_path, app):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="SHARK 雷达比赛启动台")
+    parser = argparse.ArgumentParser(description="比赛控制中心")
     parser.add_argument("--smoke-test", action="store_true", help="启动页面后立即退出")
     parser.add_argument("--screenshot", type=Path, help="保存页面截图后退出")
     parser.add_argument("--windowed", action="store_true", help="使用普通窗口而不是最大化")
     arguments = parser.parse_args()
 
     app = QApplication(sys.argv[:1])
-    app.setApplicationName("SHARK Radar Match Console")
+    app.setApplicationName("Match Control Center")
     window = MatchLauncher()
     if arguments.windowed or arguments.smoke_test or arguments.screenshot:
         window.show()
