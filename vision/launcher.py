@@ -33,6 +33,7 @@ from PyQt5.QtWidgets import (
     QFileDialog,
     QFormLayout,
     QFrame,
+    QGridLayout,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -41,9 +42,12 @@ from PyQt5.QtWidgets import (
     QPlainTextEdit,
     QPushButton,
     QScrollArea,
+    QSplitter,
+    QStackedWidget,
     QSizePolicy,
     QSpinBox,
     QStyle,
+    QTabWidget,
     QVBoxLayout,
     QWidget,
 )
@@ -68,55 +72,58 @@ APP_STYLE = """
 QWidget {
     color: #17212b;
     font-family: "Noto Sans CJK SC", "Microsoft YaHei", sans-serif;
-    font-size: 14px;
+    font-size: 13px;
 }
 QMainWindow, QWidget#central {
-    background: #f2f4f5;
+    background: #edf1f2;
 }
 QFrame#header {
-    background: #182129;
+    background: #14262c;
     border: 0;
 }
 QLabel#brand {
     color: #ffffff;
-    font-size: 24px;
+    font-size: 22px;
     font-weight: 700;
 }
 QLabel#subtitle, QLabel#clock {
     color: #aebbc5;
 }
 QFrame#statusBand {
-    background: #ffffff;
+    background: #f8fafb;
     border-bottom: 1px solid #d7dde1;
 }
 QFrame#statusItem {
-    border-right: 1px solid #e1e5e8;
+    background: #ffffff;
+    border: 1px solid #dce3e6;
+    border-radius: 8px;
 }
 QLabel#statusTitle {
     color: #697781;
-    font-size: 12px;
+    font-size: 11px;
 }
 QLabel#statusValue {
     color: #17212b;
-    font-size: 15px;
+    font-size: 13px;
     font-weight: 600;
 }
 QFrame#section {
     background: #ffffff;
-    border: 1px solid #d9dfe3;
-    border-radius: 5px;
+    border: 1px solid #d7e0e3;
+    border-radius: 9px;
 }
 QLabel#sectionTitle {
     color: #34424d;
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 700;
 }
 QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox {
-    min-height: 32px;
-    padding: 0 9px;
+    min-height: 34px;
+    min-width: 0;
+    padding: 0 8px;
     background: #ffffff;
-    border: 1px solid #bcc6cc;
-    border-radius: 4px;
+    border: 1px solid #c6d1d5;
+    border-radius: 6px;
     selection-background-color: #247f6b;
 }
 QLineEdit:focus, QComboBox:focus, QSpinBox:focus, QDoubleSpinBox:focus {
@@ -131,15 +138,16 @@ QCheckBox::indicator {
     height: 18px;
 }
 QPushButton {
-    min-height: 38px;
+    min-height: 36px;
     padding: 0 14px;
-    border: 1px solid #aeb9bf;
-    border-radius: 4px;
+    border: 1px solid #c1cdd1;
+    border-radius: 6px;
     background: #ffffff;
     font-weight: 600;
 }
 QPushButton:hover {
-    background: #edf1f2;
+    background: #f0f5f5;
+    border-color: #98aaaf;
 }
 QPushButton:pressed {
     background: #dfe5e7;
@@ -149,7 +157,7 @@ QPushButton:disabled {
     background: #eef1f2;
 }
 QPushButton#redSide, QPushButton#blueSide {
-    min-height: 38px;
+    min-height: 36px;
     font-size: 15px;
 }
 QPushButton#redSide:checked {
@@ -168,35 +176,62 @@ QPushButton#saveButton {
 }
 QPushButton#calibrateButton {
     color: #ffffff;
-    background: #9b6618;
-    border-color: #7c4f0e;
-    min-height: 50px;
+    background: #8b641f;
+    border-color: #705019;
+    min-height: 46px;
     font-size: 16px;
 }
 QPushButton#startButton {
     color: #ffffff;
     background: #247f6b;
     border-color: #185f51;
-    min-height: 50px;
+    min-height: 48px;
     font-size: 16px;
 }
 QPushButton#stopButton {
     color: #a22530;
     border-color: #c85c65;
-    min-height: 46px;
+    min-height: 42px;
 }
 QPlainTextEdit {
-    background: #11191f;
+    background: #142127;
     color: #d6e0e5;
-    border: 1px solid #26343d;
-    border-radius: 4px;
-    padding: 8px;
+    border: 1px solid #263940;
+    border-radius: 8px;
+    padding: 10px;
     font-family: "JetBrains Mono", "Noto Sans Mono CJK SC", monospace;
     font-size: 12px;
 }
 QScrollArea {
     border: 0;
     background: transparent;
+}
+QTabWidget::pane {
+    background: #ffffff;
+    border: 1px solid #d7e0e3;
+    border-radius: 8px;
+    top: -1px;
+}
+QTabBar::tab {
+    min-height: 36px;
+    padding: 0 22px;
+    color: #53636b;
+    background: #e4eaec;
+    border: 1px solid #d7e0e3;
+    border-bottom: 0;
+    border-top-left-radius: 7px;
+    border-top-right-radius: 7px;
+}
+QTabBar::tab:selected {
+    color: #155f53;
+    background: #ffffff;
+    font-weight: 700;
+}
+QSplitter::handle {
+    background: #dbe3e5;
+}
+QSplitter::handle:horizontal {
+    width: 7px;
 }
 """
 
@@ -214,7 +249,7 @@ class StatusIndicator(QFrame):
         super().__init__(parent)
         self.setObjectName("statusItem")
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        self.setMinimumHeight(74)
+        self.setMinimumHeight(62)
 
         self.dot = QLabel()
         self.dot.setFixedSize(12, 12)
@@ -222,6 +257,7 @@ class StatusIndicator(QFrame):
         title_label.setObjectName("statusTitle")
         self.value_label = QLabel("待检测")
         self.value_label.setObjectName("statusValue")
+        self.value_label.setWordWrap(True)
 
         text_layout = QVBoxLayout()
         text_layout.setContentsMargins(0, 0, 0, 0)
@@ -251,8 +287,7 @@ class MatchLauncher(QMainWindow):
         self.config = load_config(CONFIG_PATH)
 
         self.setWindowTitle("SHARK 雷达比赛启动台")
-        self.setMinimumSize(1100, 720)
-        self.resize(1440, 900)
+        self._size_for_available_screen()
         self.setStyleSheet(APP_STYLE)
         self._build_ui()
         self._load_settings()
@@ -268,6 +303,22 @@ class MatchLauncher(QMainWindow):
         self._poll_status()
         self._append_log("比赛启动台已就绪")
 
+    def _size_for_available_screen(self):
+        screen = QApplication.primaryScreen()
+        available = screen.availableGeometry() if screen is not None else None
+        if available is None or available.width() <= 0 or available.height() <= 0:
+            self.setMinimumSize(820, 520)
+            self.resize(1280, 820)
+            return
+
+        minimum_width = min(900, max(1, available.width()))
+        minimum_height = min(520, max(1, available.height()))
+        width = min(1540, max(minimum_width, int(available.width() * 0.92)))
+        height = min(980, max(minimum_height, int(available.height() * 0.90)))
+        self.setMinimumSize(minimum_width, minimum_height)
+        self.resize(width, height)
+        self.move(available.center().x() - width // 2, available.center().y() - height // 2)
+
     def _build_ui(self):
         central = QWidget()
         central.setObjectName("central")
@@ -278,15 +329,15 @@ class MatchLauncher(QMainWindow):
 
         header = QFrame()
         header.setObjectName("header")
-        header.setFixedHeight(88)
+        header.setFixedHeight(76)
         header_layout = QHBoxLayout(header)
-        header_layout.setContentsMargins(30, 14, 30, 14)
+        header_layout.setContentsMargins(22, 10, 22, 10)
 
         brand_layout = QVBoxLayout()
         brand_layout.setSpacing(2)
         brand = QLabel("SHARK 雷达比赛启动台")
         brand.setObjectName("brand")
-        subtitle = QLabel("江南大学霞客湾校区 SHARK 战队 · RoboMaster 2026")
+        subtitle = QLabel("比赛参数 · 相机 / 标定 / 裁判通信")
         subtitle.setObjectName("subtitle")
         brand_layout.addWidget(brand)
         brand_layout.addWidget(subtitle)
@@ -302,8 +353,8 @@ class MatchLauncher(QMainWindow):
         status_band = QFrame()
         status_band.setObjectName("statusBand")
         status_layout = QHBoxLayout(status_band)
-        status_layout.setContentsMargins(14, 0, 14, 0)
-        status_layout.setSpacing(0)
+        status_layout.setContentsMargins(12, 8, 12, 8)
+        status_layout.setSpacing(8)
         self.program_status = StatusIndicator("运行状态")
         self.camera_status = StatusIndicator("相机状态")
         self.referee_status = StatusIndicator("裁判系统")
@@ -312,18 +363,17 @@ class MatchLauncher(QMainWindow):
         status_layout.addWidget(self.referee_status)
         page.addWidget(status_band)
 
-        body = QHBoxLayout()
-        body.setContentsMargins(22, 18, 22, 20)
-        body.setSpacing(18)
-        page.addLayout(body, 1)
+        self.workspace_stack = QStackedWidget()
+        page.addWidget(self.workspace_stack, 1)
 
         self.settings_scroll = QScrollArea()
         self.settings_scroll.setWidgetResizable(True)
-        self.settings_scroll.setMinimumWidth(610)
+        self.settings_scroll.setMinimumWidth(0)
         self.settings_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.settings_scroll.setFrameShape(QFrame.NoFrame)
         settings_widget = QWidget()
         settings_layout = QVBoxLayout(settings_widget)
-        settings_layout.setContentsMargins(0, 0, 6, 0)
+        settings_layout.setContentsMargins(2, 2, 8, 2)
         settings_layout.setSpacing(10)
 
         match_section, match_form = self._make_section("比赛设置")
@@ -359,18 +409,19 @@ class MatchLauncher(QMainWindow):
         match_form.addRow("识别算法", self.algorithm_mode)
 
         toggles = QWidget()
-        toggle_layout = QHBoxLayout(toggles)
+        toggle_layout = QGridLayout(toggles)
         toggle_layout.setContentsMargins(0, 0, 0, 0)
+        toggle_layout.setHorizontalSpacing(14)
+        toggle_layout.setVerticalSpacing(2)
         self.multi_car = QCheckBox("多车识别")
         self.record_video_checkbox = QCheckBox("录制视觉画面 + 标定地图")
         self.record_video_checkbox.setToolTip(
             "启动比赛后自动录制；优先写入已挂载外接硬盘，未检测到时写入默认目录"
         )
         self.blind_zone = QCheckBox("盲区预测")
-        toggle_layout.addWidget(self.multi_car)
-        toggle_layout.addWidget(self.record_video_checkbox)
-        toggle_layout.addWidget(self.blind_zone)
-        toggle_layout.addStretch()
+        toggle_layout.addWidget(self.multi_car, 0, 0)
+        toggle_layout.addWidget(self.record_video_checkbox, 0, 1, 1, 2)
+        toggle_layout.addWidget(self.blind_zone, 1, 0)
         match_form.addRow("运行选项", toggles)
 
         self.recording_path = QLineEdit()
@@ -490,18 +541,19 @@ class MatchLauncher(QMainWindow):
         settings_layout.addWidget(calibration_section)
         settings_layout.addStretch()
         self.settings_scroll.setWidget(settings_widget)
-        body.addWidget(self.settings_scroll, 5)
 
         operations = QWidget()
+        self.operations = operations
+        operations.setMinimumWidth(0)
         operations_layout = QVBoxLayout(operations)
-        operations_layout.setContentsMargins(0, 0, 0, 0)
+        operations_layout.setContentsMargins(2, 2, 2, 2)
         operations_layout.setSpacing(10)
 
         actions_section = QFrame()
         actions_section.setObjectName("section")
         actions_layout = QVBoxLayout(actions_section)
-        actions_layout.setContentsMargins(16, 14, 16, 16)
-        actions_layout.setSpacing(9)
+        actions_layout.setContentsMargins(16, 13, 16, 14)
+        actions_layout.setSpacing(8)
         action_title = QLabel("现场操作")
         action_title.setObjectName("sectionTitle")
         actions_layout.addWidget(action_title)
@@ -532,7 +584,27 @@ class MatchLauncher(QMainWindow):
         self.log_output.setReadOnly(True)
         self.log_output.setMaximumBlockCount(1500)
         operations_layout.addWidget(self.log_output, 1)
-        body.addWidget(operations, 4)
+
+        self.wide_workspace = QWidget()
+        wide_layout = QVBoxLayout(self.wide_workspace)
+        wide_layout.setContentsMargins(18, 14, 18, 16)
+        self.workspace_splitter = QSplitter(Qt.Horizontal)
+        self.workspace_splitter.setChildrenCollapsible(False)
+        self.workspace_splitter.setHandleWidth(7)
+        self.workspace_splitter.addWidget(self.settings_scroll)
+        self.workspace_splitter.addWidget(operations)
+        self.workspace_splitter.setStretchFactor(0, 6)
+        self.workspace_splitter.setStretchFactor(1, 4)
+        self.workspace_splitter.setSizes([680, 450])
+        wide_layout.addWidget(self.workspace_splitter)
+
+        self.compact_workspace = QTabWidget()
+        self.compact_workspace.setDocumentMode(True)
+        self.compact_workspace.setContentsMargins(12, 8, 12, 12)
+        self._workspace_mode = None
+        self.workspace_stack.addWidget(self.wide_workspace)
+        self.workspace_stack.addWidget(self.compact_workspace)
+        self._set_workspace_mode(self.width() < 1180)
 
     @staticmethod
     def _make_section(title):
@@ -549,9 +621,54 @@ class MatchLauncher(QMainWindow):
         form.setHorizontalSpacing(18)
         form.setVerticalSpacing(7)
         form.setLabelAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+        form.setRowWrapPolicy(QFormLayout.WrapLongRows)
         form.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
         layout.addLayout(form)
         return section, form
+
+    def _set_workspace_mode(self, compact):
+        mode = "compact" if compact else "wide"
+        if self._workspace_mode == mode:
+            return
+
+        while self.compact_workspace.count():
+            self.compact_workspace.removeTab(0)
+
+        self.settings_scroll.setParent(None)
+        self.operations.setParent(None)
+        if compact:
+            self.compact_workspace.addTab(self.settings_scroll, "比赛配置")
+            self.compact_workspace.addTab(self.operations, "操作与日志")
+            self.workspace_stack.setCurrentWidget(self.compact_workspace)
+        else:
+            self.workspace_splitter.addWidget(self.settings_scroll)
+            self.workspace_splitter.addWidget(self.operations)
+            self.settings_scroll.show()
+            self.operations.show()
+            self.workspace_stack.setCurrentWidget(self.wide_workspace)
+            QTimer.singleShot(0, self._apply_splitter_sizes)
+        self._workspace_mode = mode
+
+    def _apply_splitter_sizes(self):
+        if self._workspace_mode != "wide" or self.workspace_splitter.width() <= 0:
+            return
+        total_width = self.workspace_splitter.width()
+        settings_width = int(total_width * 0.60)
+        self.workspace_splitter.setSizes([settings_width, total_width - settings_width])
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        if all(
+            hasattr(self, name)
+            for name in (
+                "workspace_stack",
+                "compact_workspace",
+                "settings_scroll",
+                "operations",
+                "workspace_splitter",
+            )
+        ):
+            self._set_workspace_mode(self.width() < 1180)
 
     def _connect_signals(self):
         self.save_button.clicked.connect(lambda: self._save_configuration(show_message=True))
