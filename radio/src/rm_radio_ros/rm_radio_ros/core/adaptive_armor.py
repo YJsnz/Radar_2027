@@ -343,6 +343,17 @@ class AdaptiveArmorDecision:
     def ingest(self, event, now):
         if not isinstance(event, dict):
             raise ValueError('装甲事件必须为对象')
+        if event.get('kind') == 'end_session':
+            stats = self.statistics
+            if (event.get('schema') != EVENT_SCHEMA or event.get('coordinate_frame') != FRAME
+                    or not stats.match_id or stats.origin not in ('synthetic', 'replay') or self.pending
+                    or event.get('match_id') != stats.match_id or event.get('source') != stats.source):
+                raise ValueError('只能结束本来源匹配且没有未核对请求的模拟会话')
+            number(event.get('timestamp'), 'timestamp', stats.started_at, now + 0.5)
+            self.statistics = ArmorStatistics()
+            self.choice, self.choice_since = None, None
+            self.running = False
+            return True
         if event.get('kind') == 'session' and self.pending:
             raise ValueError('存在未核对的请求，不能替换比赛会话')
         return self.statistics.ingest(event, now, self.config)

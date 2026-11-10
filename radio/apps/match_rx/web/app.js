@@ -10,6 +10,7 @@ let armorGeometryCalibration = loadArmorGeometryCalibration();
 let latestAdaptiveArmorPayload = null;
 let armorStrategyDirty = false;
 let armorGeometryDirty = false;
+let armorQtSimulationActive = false;
 let radarEventSource = null;
 let radarReconnectTimer = 0;
 let radarStreamState = "closed";
@@ -1268,7 +1269,16 @@ function renderArmorPlateOverlay(own, ownValid, ownActive, geometry) {
 }
 
 function renderArmorStrategy(stats, geometry, payload) {
-  const config = payload?.adaptive_armor_config || get(state.latest, ["adaptive_armor_config"], null) || stats.config || {};
+  const age = Date.now() / 1000 - armorNumber(stats.timestamp);
+  const fresh = stats.schema === "shark.radar.adaptive_armor.v1" && age >= -0.5 && age <= 4;
+  const qtSimulation = fresh && stats.origin === "synthetic" && stats.source === "qt-armor-simulator";
+  const config = (qtSimulation ? stats.config : null) || payload?.adaptive_armor_config || get(state.latest, ["adaptive_armor_config"], null) || stats.config || {};
+  if (qtSimulation !== armorQtSimulationActive) {
+    for (const id of ["armorStrategyMode", "armorAutoRequests", "armorSaveStrategy", "armorPlateWidthMm", "armorPlateHeightMm", "armorPlateAreaMm2", "armorGeometryConfirmed", "armorBoundaryPolicy", "armorApplyGeometry"]) {
+      $(id).disabled = qtSimulation;
+    }
+    armorQtSimulationActive = qtSimulation;
+  }
   if (!armorStrategyDirty) {
     $("armorStrategyMode").value = config.mode || "fixed_center";
     $("armorAutoRequests").checked = config.automatic_requests === true;
@@ -1280,13 +1290,11 @@ function renderArmorStrategy(stats, geometry, payload) {
     $("armorGeometryConfirmed").checked = config.geometry_confirmed === true;
     $("armorBoundaryPolicy").value = config.boundary_policy || "unconfirmed";
   }
-  const age = Date.now() / 1000 - armorNumber(stats.timestamp);
-  const fresh = stats.schema === "shark.radar.adaptive_armor.v1" && age >= -0.5 && age <= 4;
   const proposal = fresh && stats.mode === config.mode ? stats.proposal || {} : {};
   const phases = { waiting: "等待条件", preview: "建议就绪 · 仅预览", ready: "建议就绪", pending: "等待裁判确认", timeout: "超时 · 已停止重试", failed: "请求失败", dry_run: "串口演练", confirmed: "裁判已确认" };
   $("armorStrategyPhase").textContent = fresh ? phases[stats.phase] || "等待条件" : "等待策略节点 / 状态过期";
   const sourceLabel = { synthetic: "合成数据 · 仅预览", replay: "离线回放 · 仅预览", live: "实时适配器输入" }[stats.origin] || "等待真实命中事件";
-  if (!armorStrategyDirty) $("armorStrategyNote").textContent = `${config.mode === "adaptive_coverage" ? "按近期受击分布选择覆盖最多的位置" : "固定使用检测面几何中心"}；${sourceLabel}。切换和保存策略本身不会消耗机会。`;
+  if (!armorStrategyDirty) $("armorStrategyNote").textContent = `${config.mode === "adaptive_coverage" ? "按近期受击分布选择覆盖最多的位置" : "固定使用检测面几何中心"}；${sourceLabel}。${qtSimulation ? "临时配置由 Qt 模拟工具管理，结束模拟后恢复。" : "切换和保存策略本身不会消耗机会。"}`;
   $("armorCoverage").textContent = Number.isFinite(armorNumber(proposal.coverage)) ? `${(proposal.coverage * 100).toFixed(1)}%` : "等待独立验证样本";
   $("armorCoverageLabel").textContent = stats.weight_basis === "baseline_damage" ? "预计伤害覆盖" : "预计命中覆盖";
   $("armorCoverageLower").textContent = Number.isFinite(armorNumber(proposal.coverage_lower)) ? `${(proposal.coverage_lower * 100).toFixed(1)}% · ${proposal.validation_blocks} 个时间块` : "—";

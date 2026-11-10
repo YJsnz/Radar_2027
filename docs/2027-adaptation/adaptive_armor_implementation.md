@@ -61,6 +61,8 @@
 
 `origin` 可为 `live`、`replay`、`synthetic`；后两者永远不能产生请求。线上必须确认 `live`、来源名单、正确阵营与完整当局数据。会话开始后不能通过重复 `session` 清空统计；当前会话在新鲜裁判状态从进行中转为非进行中时释放，再允许开始下一局。中途加入且没有全量补齐时，`complete_from_start` 必须为 false。`weight_basis` 默认 count，整局每发等权；仅当每发伤害均可靠时选择 baseline_damage，防止未知伤害与已知伤害混权。
 
+模拟工具另可发送 `kind: "end_session"`：保留相同 schema、coordinate_frame、match_id、source 和当前 timestamp，不带命中载荷。仅匹配来源的 synthetic/replay 会话、无未核对请求、时间合法时才清空统计；live 会话仍必须等待裁判比赛结束，不能被工具复位。Qt 的正常关闭会先等待结束确认，再恢复原运行配置。工具入口和操作见 [tool/README.md](../../tool/README.md)。
+
 ### 4.2 逐发有效命中
 
 ```json
