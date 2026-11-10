@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>SharkRadio 比赛接收台</title>
-    <link rel="stylesheet" href="/styles.css?v=rx-20261110-armor-strategy-v17" />
+    <link rel="stylesheet" href="/styles.css?v=rx-20261110-armor-strategy-v18" />
   </head>
   <body>
     <header class="app-header">
@@ -287,22 +287,12 @@
             <span id="armorRangeBadge" class="badge unknown">等待 0x020E</span>
           </div>
           <figure class="armor-map-figure">
-            <div class="armor-center-tools">
-              <div class="armor-center-tools-copy">
-                <strong>手动选择候选圆心</strong>
-                <span id="armorCandidateStatus" role="status">可直接在装甲板检测面上点击或拖动选点；毫米换算需实测尺寸。</span>
-              </div>
-              <div class="armor-center-tools-actions">
-                <button id="armorSaveCandidate" type="button" disabled>保存本机预览</button>
-                <button id="armorClearCandidate" type="button" disabled>清除候选点</button>
-              </div>
-            </div>
             <div class="armor-map-plot">
               <span class="armor-axis-label armor-axis-y">y</span>
               <div class="armor-plate-art">
-                <div class="armor-plate-stage armor-stage-selectable" id="armorPlateStage">
+                <div class="armor-plate-stage" id="armorPlateStage">
                   <img src="/assets/adaptive-armor-plate.png" alt="裁切后的 1 号装甲板正视示例图" />
-                  <svg id="armorPlateOverlay" class="armor-plate-overlay" viewBox="0 0 1197 1097" preserveAspectRatio="none" role="img" aria-label="装甲检测面、裁判确认范围和本机候选圆心">
+                  <svg id="armorPlateOverlay" class="armor-plate-overlay" viewBox="0 0 1197 1097" preserveAspectRatio="none" role="img" aria-label="装甲检测面、裁判确认范围和策略建议圆心">
                     <defs>
                       <clipPath id="armorDetectionFaceClip"><rect x="103.6" y="103.6" width="990" height="988.9" /></clipPath>
                     </defs>
@@ -310,7 +300,6 @@
                     <g id="armorReinforcementOverlay" clip-path="url(#armorDetectionFaceClip)"></g>
                     <g id="armorHitPointsOverlay" clip-path="url(#armorDetectionFaceClip)"></g>
                     <g id="armorAlgorithmOverlay" clip-path="url(#armorDetectionFaceClip)"></g>
-                    <g id="armorCandidateOverlay" clip-path="url(#armorDetectionFaceClip)"></g>
                   </svg>
                 </div>
               </div>
@@ -319,12 +308,10 @@
             <div class="armor-current-center">
               <span>当前加固中心</span><strong id="armorOwnCenter">—</strong>
               <span>加固半径</span><strong id="armorOwnRadius">—</strong>
-              <span>候选圆心（本机）</span><strong id="armorCandidateCenter">—</strong>
-              <span>候选半径</span><strong id="armorCandidateRadius">—</strong>
               <span>策略建议圆心</span><strong id="armorSuggestedCenter">待尺寸确认</strong>
               <span id="armorCoverageLabel">预计命中覆盖</span><strong id="armorCoverage">—</strong>
             </div>
-            <figcaption>坐标原点为检测面左下角，x 向右、y 向上。点击或拖动可选择本机候选点；只有裁判 0x020E 回报才代表实际生效。</figcaption>
+            <figcaption>坐标原点为检测面左下角，x 向右、y 向上。圆心由固定居中或算法选点策略确定；实际生效范围以裁判 0x020E 回报为准。</figcaption>
           </figure>
           <div class="armor-area-results">
             <article class="armor-result"><span>裁判确认圆面积</span><strong id="armorCurrentCircleArea">—</strong><small>0x020E 半径 r · πr²</small></article>
@@ -333,7 +320,6 @@
           </div>
           <div class="armor-damage-legend" aria-label="装甲区域伤害倍率">
             <span><i class="reinforced"></i>已加固 ×0.5</span>
-            <span><i class="candidate"></i>候选预览（本机）</span>
             <span><i class="algorithm"></i>策略建议</span>
             <span><i class="hit"></i>来袭受击点</span>
             <span><i class="unreinforced"></i>未加固 ×1.5</span>
@@ -445,6 +431,6 @@
       </div>
     </div>
 
-    <script src="/app.js?v=rx-20261110-armor-strategy-v17"></script>
+    <script src="/app.js?v=rx-20261110-armor-strategy-v18"></script>
   </body>
 </html>
