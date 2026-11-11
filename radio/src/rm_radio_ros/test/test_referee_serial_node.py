@@ -1,5 +1,6 @@
 import json
 import sys
+import time
 import types
 
 import pytest
@@ -65,6 +66,23 @@ def _frame_payload(cmd_id, data):
     frame = RefereeFrameAssembler().push_bytes(build_referee_frame(cmd_id, data))[0]
     node = RefereeSerialNode.__new__(RefereeSerialNode)
     return RefereeSerialNode._frame_to_payload(node, frame)
+
+
+def _radar_decision_sync_payload(radar_info_byte):
+    return bytes((int(radar_info_byte) & 0xFF, 0, 0, 0, 0, 0, 0, 0))
+
+
+def _valid_decision_sync(opportunities=1, timestamp=None):
+    return {
+        'valid_radar_info_length': True,
+        'timestamp': time.time() if timestamp is None else float(timestamp),
+        'double_vulnerability_count': int(opportunities),
+    }
+
+
+def _ready_counter_state(node, side='red'):
+    node.active_command_counter_side = side
+    node.command_counter_ready_by_side = {side: True}
 
 
 def test_serial_start_policy_is_optional_and_skipped_in_dry_run():
@@ -181,6 +199,8 @@ def test_serial_node_builds_radar_0121_frame_from_bridge_payload():
     node = RefereeSerialNode.__new__(RefereeSerialNode)
     node.seq = 0
     node.last_radar_cmd_value = 0
+    node.last_radar_decision_sync = _valid_decision_sync()
+    _ready_counter_state(node)
 
     frame, meta = RefereeSerialNode._build_radar_cmd_from_payload(
         node,
@@ -211,7 +231,8 @@ def test_serial_node_builds_password_update_0121_frame():
 
     assert meta['data_cmd_id'] == 0x0121
     assert meta['password_cmd'] == 1
-    assert meta['user_data_hex'] == '00014e454b303031'
+    assert meta['user_data_hex'] == '00014e454b3030310000000000'
+    assert meta['user_data_length'] == 13
     assert parsed['password_cmd'] == 1
     assert parsed['password'] == 'NEK001'
 
@@ -231,6 +252,66 @@ def test_serial_node_builds_generic_0212_interaction_frame():
     assert parsed['sender_id'] == 9
     assert parsed['receiver_id'] == 7
     assert parsed['user_data_hex'] == '010203'
+
+
+def test_serial_node_rejects_interaction_sender_or_receiver_outside_own_team():
+    node = RefereeSerialNode.__new__(RefereeSerialNode)
+    node.seq = 0
+
+    with pytest.raises(ValueError, match='sender_id must match this radar'):
+        RefereeSerialNode._build_interaction_from_payload(
+            node,
+            {'data_cmd_id': 0x0234, 'sender_id': 109, 'receiver_id': 7, 'user_data_hex': '00'},
+        )
+    with pytest.raises(ValueError, match='receiver_id'):
+        RefereeSerialNode._build_interaction_from_payload(
+            node,
+            {'data_cmd_id': 0x0234, 'sender_id': 9, 'receiver_id': 5, 'user_data_hex': '00'},
+        )
+
+
+def test_serial_node_enforces_aggregate_0301_rate_limit(monkeypatch):
+    node = RefereeSerialNode.__new__(RefereeSerialNode)
+    node.tx_pub = FakePublisher()
+    node.get_parameter = _fake_get_parameter({'dry_run': True})
+    node.get_logger = lambda: FakeLogger()
+    node._interaction_send_times = __import__('collections').deque()
+    node.dry_run_count = 0
+    node.last_radar_cmd_value = 0
+    node._publish_json = lambda publisher, payload: publisher.publish(
+        types.SimpleNamespace(data=json.dumps(payload))
+    )
+    clock = {'monotonic': 100.0, 'wall': 1000.0}
+    monkeypatch.setattr(
+        'rm_radio_ros.nodes.referee_serial_node.time.monotonic',
+        lambda: clock['monotonic'],
+    )
+    monkeypatch.setattr(
+        'rm_radio_ros.nodes.referee_serial_node.time.time',
+        lambda: clock['wall'],
+    )
+
+    results = [
+        RefereeSerialNode._send_bytes(
+            node,
+            b'frame',
+            {'cmd_id': 0x0301, 'data_cmd_id': 0x0234},
+        )
+        for _ in range(31)
+    ]
+
+    assert sum(bool(result.get('dry_run')) and not result.get('rate_limited') for result in results) == 30
+    assert results[-1]['rate_limited'] is True
+    assert node.dry_run_count == 30
+    assert node.blocked_interaction_rate_count == 1
+    RefereeSerialNode._commit_radar_cmd_after_send(
+        node,
+        {'rate_limited': True, 'dry_run': True, 'radar_cmd': 1},
+    )
+    assert node.last_radar_cmd_value == 0
+
+    clock['monotonic'] = 101.0
+    assert RefereeSerialNode._allow_0301_send(node) is True
 
 
 def _invincible_targets_node():
@@ -278,8 +359,7 @@ def test_serial_node_accepts_only_complete_0a05_invincible_snapshot(monkeypatch)
         'seq': 9,
         'payload': {
             'robot_main_status': {
-                'opponent_hero': 2,
-                'opponent_engineer': 0,
+                'opponent_heavy': 2,
                 'opponent_infantry_3': 3,
                 'opponent_infantry_4': 1,
                 'opponent_sentry': 0,
@@ -295,7 +375,6 @@ def test_serial_node_accepts_only_complete_0a05_invincible_snapshot(monkeypatch)
     assert snapshot['target_ids'] == [101, 103]
     assert snapshot['target_statuses'] == [
         {'robot_id': 101, 'invincible': True},
-        {'robot_id': 102, 'invincible': False},
         {'robot_id': 103, 'invincible': True},
         {'robot_id': 104, 'invincible': False},
         {'robot_id': 107, 'invincible': False},
@@ -314,11 +393,10 @@ def test_serial_node_accepts_only_complete_0a05_invincible_snapshot(monkeypatch)
     assert all(not entry['invincible'] for entry in stale['target_statuses'])
 
 
-def test_serial_node_sends_one_shared_invincible_list_to_six_receivers(monkeypatch):
+def test_serial_node_sends_one_shared_invincible_list_to_four_receivers(monkeypatch):
     node = _invincible_targets_node()
     node.last_invincible_main_status = {
-        'opponent_hero': 0,
-        'opponent_engineer': 2,
+        'opponent_heavy': 0,
         'opponent_infantry_3': 0,
         'opponent_infantry_4': 3,
         'opponent_sentry': 0,
@@ -341,17 +419,17 @@ def test_serial_node_sends_one_shared_invincible_list_to_six_receivers(monkeypat
 
     node._send_bytes = fake_send
 
-    progress = [RefereeSerialNode._send_invincible_targets_tick(node) for _ in range(6)]
+    progress = [RefereeSerialNode._send_invincible_targets_tick(node) for _ in range(4)]
     batch = progress[-1]
 
     assert batch is not None
     assert all(item['batch_complete'] is False for item in progress[:-1])
     assert batch['batch_complete'] is True
     assert batch['radio_fresh'] is True
-    assert batch['target_ids'] == [102, 104]
-    assert [meta['receiver_id'] for _frame, meta in sent] == [1, 3, 4, 5, 6, 7]
-    assert node.invincible_targets_frame_request_count == 6
-    assert node.invincible_targets_frame_success_count == 6
+    assert batch['target_ids'] == [104]
+    assert [meta['receiver_id'] for _frame, meta in sent] == [1, 3, 4, 7]
+    assert node.invincible_targets_frame_request_count == 4
+    assert node.invincible_targets_frame_success_count == 4
     for frame, meta in sent:
         decoded = RefereeFrameAssembler().push_bytes(frame)[0]
         interaction = decoded.to_dict()['parsed']['robot_interaction']
@@ -360,8 +438,8 @@ def test_serial_node_sends_one_shared_invincible_list_to_six_receivers(monkeypat
         assert interaction['data_cmd_id'] == 0x0234
         assert interaction['sender_id'] == 9
         assert interaction['receiver_id'] == meta['receiver_id']
-        assert message.invincible_mask == 0b01010
-        assert message.invincible_states == (False, True, False, True, False)
+        assert message.invincible_mask == 0b0100
+        assert message.invincible_states == (False, False, True, False)
 
 
 def test_serial_node_continuously_sends_all_not_invincible_without_fresh_0a05():
@@ -374,24 +452,26 @@ def test_serial_node_continuously_sends_all_not_invincible_without_fresh_0a05():
         'captured': sent.append((frame, dict(meta))),
     }
 
-    progress = [RefereeSerialNode._send_invincible_targets_tick(node) for _ in range(6)]
+    progress = [RefereeSerialNode._send_invincible_targets_tick(node) for _ in range(4)]
 
     assert progress[-1]['batch_complete'] is True
     assert progress[-1]['radio_fresh'] is False
-    assert len(sent) == 6
-    assert node.invincible_targets_frame_request_count == 6
+    assert len(sent) == 4
+    assert node.invincible_targets_frame_request_count == 4
     for frame, _meta in sent:
         decoded = RefereeFrameAssembler().push_bytes(frame)[0]
         interaction = decoded.to_dict()['parsed']['robot_interaction']
         message = InvincibleTargetsMessage.from_bytes(bytes.fromhex(interaction['user_data_hex']))
         assert message.invincible_mask == 0
-        assert message.invincible_states == (False, False, False, False, False)
+        assert message.invincible_states == (False, False, False, False)
 
 
 def test_serial_node_accepts_algorithm_request_count_payload():
     node = RefereeSerialNode.__new__(RefereeSerialNode)
     node.seq = 0
     node.last_radar_cmd_value = 1
+    node.last_radar_decision_sync = _valid_decision_sync()
+    _ready_counter_state(node)
 
     payload = RefereeSerialNode._parse_algorithm_radar_cmd_message(node, '{"request_count":2}')
     frame, meta = RefereeSerialNode._build_radar_cmd_from_payload(node, payload)
@@ -399,13 +479,11 @@ def test_serial_node_accepts_algorithm_request_count_payload():
     parsed = decoded.to_dict()['parsed']
 
     assert payload['radar_cmd'] == 2
-    assert meta['user_data_hex'] == '0200000000000000'
-    assert meta['user_data_length'] == 8
-    assert parsed['radar_cmd'] == {
-        'valid_radar_cmd_length': True,
-        'radar_cmd': 2,
-        'password_cmd': 0,
-    }
+    assert meta['user_data_hex'] == '02000000000000000000000000'
+    assert meta['user_data_length'] == 13
+    assert parsed['radar_cmd']['valid_radar_cmd_length'] is True
+    assert parsed['radar_cmd']['radar_cmd'] == 2
+    assert parsed['radar_cmd']['armor_fortify_cmd'] == 0
 
 
 def test_serial_node_accepts_plain_integer_algorithm_payload():
@@ -529,6 +607,79 @@ def test_serial_node_rejects_radar_cmd_jump_or_decrease():
     RefereeSerialNode._validate_radar_cmd_transition(node, 3)
 
 
+@pytest.mark.parametrize(
+    ('opportunities', 'timestamp', 'message'),
+    ((0, None, 'available 0x020E opportunity'), (1, 0.0, 'status is stale')),
+)
+def test_serial_node_blocks_double_vulnerability_without_fresh_opportunity(
+    opportunities, timestamp, message
+):
+    node = RefereeSerialNode.__new__(RefereeSerialNode)
+    node.last_radar_cmd_value = 0
+    node.last_radar_decision_sync = _valid_decision_sync(opportunities, timestamp)
+    _ready_counter_state(node)
+
+    with pytest.raises(ValueError, match=message):
+        RefereeSerialNode._build_radar_cmd_from_payload(
+            node,
+            {'radar_cmd': 1, 'sender_id': 9, 'receiver_id': 0x8080},
+        )
+
+
+def test_serial_node_persists_and_resets_monotonic_counters(tmp_path):
+    path = tmp_path / 'counters.json'
+    node = RefereeSerialNode.__new__(RefereeSerialNode)
+    node.command_counter_state_path = path
+    node.command_counters = {
+        'red': {'radar_cmd': 2, 'armor_fortify_cmd': 1},
+        'blue': {'radar_cmd': 0, 'armor_fortify_cmd': 0},
+    }
+    node.command_counter_ready_by_side = {'red': True, 'blue': False}
+    node.last_error = ''
+    node.get_logger = lambda: FakeLogger()
+
+    assert RefereeSerialNode._save_command_counters(node) is True
+
+    restored = RefereeSerialNode.__new__(RefereeSerialNode)
+    restored.command_counter_state_path = path
+    restored.command_counters = {
+        'red': {'radar_cmd': 0, 'armor_fortify_cmd': 0},
+        'blue': {'radar_cmd': 0, 'armor_fortify_cmd': 0},
+    }
+    restored.command_counter_ready_by_side = {'red': False, 'blue': False}
+    restored.get_logger = lambda: FakeLogger()
+    RefereeSerialNode._load_command_counters(restored)
+    RefereeSerialNode._activate_command_counter_side(restored, 'red')
+
+    assert restored.last_radar_cmd_value == 2
+    assert restored.last_armor_fortify_cmd_value == 1
+    assert RefereeSerialNode._command_counters_ready(restored) is True
+
+    RefereeSerialNode._reset_command_counters_for_new_match(restored, 'red')
+    assert restored.last_radar_cmd_value == 0
+    assert restored.last_armor_fortify_cmd_value == 0
+    assert RefereeSerialNode._command_counters_ready(restored) is True
+    assert json.loads(path.read_text())['red'] == {
+        'radar_cmd': 0,
+        'armor_fortify_cmd': 0,
+        'ready': True,
+    }
+
+
+def test_serial_node_blocks_counter_increment_until_match_start_is_observed():
+    node = RefereeSerialNode.__new__(RefereeSerialNode)
+    node.last_radar_cmd_value = 0
+    node.last_radar_decision_sync = _valid_decision_sync()
+    _ready_counter_state(node)
+    node.command_counter_ready_by_side['red'] = False
+
+    with pytest.raises(ValueError, match='initialized from this match preparation'):
+        RefereeSerialNode._build_radar_cmd_from_payload(
+            node,
+            {'radar_cmd': 1, 'sender_id': 9, 'receiver_id': 0x8080},
+        )
+
+
 def test_serial_node_requires_020e_permission_for_password_update(monkeypatch):
     node = RefereeSerialNode.__new__(RefereeSerialNode)
     node.last_can_change_password = False
@@ -546,8 +697,9 @@ def test_serial_node_requires_020e_permission_for_password_update(monkeypatch):
 
 
 def test_serial_node_blocks_raw_0121_send_frame():
-    assert RefereeSerialNode._is_raw_radar_cmd_frame(0x0301, bytes([0x21, 0x01, 9, 0, 0x80, 0x80, 1]))
-    assert not RefereeSerialNode._is_raw_radar_cmd_frame(0x0301, bytes([0x12, 0x02, 9, 0, 7, 0]))
+    assert RefereeSerialNode._is_raw_interaction_frame(0x0301, bytes([0x21, 0x01, 9, 0, 0x80, 0x80, 1]))
+    assert RefereeSerialNode._is_raw_interaction_frame(0x0301, bytes([0x12, 0x02, 9, 0, 7, 0]))
+    assert not RefereeSerialNode._is_raw_interaction_frame(0x0305, bytes(48))
 
 
 def test_serial_node_limits_0305_rate(monkeypatch):
@@ -645,7 +797,10 @@ def test_serial_node_updates_interference_level_from_020e(monkeypatch):
     })
     node.get_logger = lambda: FakeLogger()
 
-    payload = _frame_payload(0x020E, bytes([(2 << 3) | (1 << 5)]))
+    payload = _frame_payload(
+        0x020E,
+        _radar_decision_sync_payload((2 << 3) | (1 << 5)),
+    )
     RefereeSerialNode._handle_rx_payload(node, payload)
     assert node.interference_update_count == 0
     assert node.rx_interference_update_count == 0
@@ -779,7 +934,7 @@ def test_serial_node_suppresses_020e_level_before_match_running():
     logger = FakeLogger()
     node.get_logger = lambda: logger
 
-    payload = _frame_payload(0x020E, bytes([0x38]))
+    payload = _frame_payload(0x020E, _radar_decision_sync_payload(0x38))
     RefereeSerialNode._handle_rx_payload(node, payload)
 
     assert node.last_radar_decision_sync['own_encryption_level'] == 3
@@ -886,7 +1041,10 @@ def test_serial_node_ignores_single_bad_level3_before_single_rx_switch():
     })
     node.get_logger = lambda: FakeLogger()
 
-    RefereeSerialNode._handle_rx_payload(node, _frame_payload(0x020E, bytes([0x38])))
+    RefereeSerialNode._handle_rx_payload(
+        node,
+        _frame_payload(0x020E, _radar_decision_sync_payload(0x38)),
+    )
 
     assert node.single_rx_mode == 'interference'
     assert node.single_rx_switch_count == 0
@@ -894,7 +1052,10 @@ def test_serial_node_ignores_single_bad_level3_before_single_rx_switch():
     assert node.last_referee_level_observation['level'] == 3
     assert node.last_referee_level_observation['confirmed'] is False
 
-    RefereeSerialNode._handle_rx_payload(node, _frame_payload(0x020E, bytes([0x28])))
+    RefereeSerialNode._handle_rx_payload(
+        node,
+        _frame_payload(0x020E, _radar_decision_sync_payload(0x28)),
+    )
 
     assert node.single_rx_mode == 'interference'
     assert node.single_rx_switch_count == 0
@@ -930,7 +1091,7 @@ def test_serial_node_switches_single_rx_after_confirmed_level3():
         'radio_side': 'blue',
     })
     node.get_logger = lambda: FakeLogger()
-    payload = _frame_payload(0x020E, bytes([0x38]))
+    payload = _frame_payload(0x020E, _radar_decision_sync_payload(0x38))
 
     RefereeSerialNode._handle_rx_payload(node, payload)
     RefereeSerialNode._handle_rx_payload(node, payload)
@@ -974,7 +1135,7 @@ def test_serial_node_returns_single_rx_to_interference_after_confirmed_level1():
         'radio_side': 'red',
     })
     node.get_logger = lambda: FakeLogger()
-    payload = _frame_payload(0x020E, bytes([0x28]))
+    payload = _frame_payload(0x020E, _radar_decision_sync_payload(0x28))
 
     RefereeSerialNode._handle_rx_payload(node, payload)
     assert node.single_rx_mode == 'broadcast'
@@ -1020,7 +1181,7 @@ def test_serial_node_can_keep_single_rx_broadcast_when_return_disabled():
         'radio_side': 'red',
     })
     node.get_logger = lambda: FakeLogger()
-    payload = _frame_payload(0x020E, bytes([0x28]))
+    payload = _frame_payload(0x020E, _radar_decision_sync_payload(0x28))
 
     RefereeSerialNode._handle_rx_payload(node, payload)
     RefereeSerialNode._handle_rx_payload(node, payload)
@@ -1273,7 +1434,13 @@ def _level_escalation_node(confirm_count, side='red'):
 
 def _feed_referee_level(node, level):
     # 0x020E radar_decision_sync carries the interference level in bits 3-4 of its single byte.
-    RefereeSerialNode._handle_rx_payload(node, _frame_payload(0x020E, bytes([(int(level) & 0x3) << 3])))
+    RefereeSerialNode._handle_rx_payload(
+        node,
+        _frame_payload(
+            0x020E,
+            _radar_decision_sync_payload((int(level) & 0x3) << 3),
+        ),
+    )
 
 
 def test_interrupted_level3_stream_escalates_with_confirm_count_2_not_8():

@@ -5,27 +5,17 @@ from dataclasses import dataclass
 from typing import Iterable, List, Optional
 
 from .rm_protocol import (
+    RADAR_DATA_LENGTHS,
     RADAR_WIRE_ROBOT_NAMES,
     RefereeFrame,
     build_radar_cmd_payload,
     parse_radar_frame,
 )
+from .protocol2027 import RADAR_INFO_TO_CLIENT_SLOT_NAMES
 
 
-RADAR_INFO_TO_CLIENT_ORDER = [
-    'opponent_hero',
-    'opponent_engineer',
-    'opponent_infantry_3',
-    'opponent_infantry_4',
-    'opponent_aerial',
-    'opponent_sentry',
-    'ally_hero',
-    'ally_engineer',
-    'ally_infantry_3',
-    'ally_infantry_4',
-    'ally_aerial',
-    'ally_sentry',
-]
+# Internal ROS JSON order mirrors six official 0x0305 slots per side.
+RADAR_INFO_TO_CLIENT_ORDER = list(RADAR_INFO_TO_CLIENT_SLOT_NAMES)
 
 
 @dataclass(frozen=True)
@@ -108,6 +98,8 @@ def radar_info_from_position_frame(frame: RefereeFrame) -> Optional[RadarInfoToC
     if frame.cmd_id != 0x0A01:
         return None
     parsed = parse_radar_frame(frame)
+    if parsed.get('valid_radar_length') is not True:
+        return None
     positions = parsed.get('official_positions_cm') or parsed.get('positions_cm')
     if not positions:
         return None
@@ -147,6 +139,19 @@ class RefereeBridge:
         outputs = []
         timestamp = time.time()
         for frame in frames:
+            parsed = parse_radar_frame(frame)
+            if parsed.get('valid_radar_length') is not True:
+                outputs.append({
+                    'type': 'RefereeFrameDiagnostic',
+                    'timestamp': timestamp,
+                    'cmd_hex': f'0x{frame.cmd_id:04X}',
+                    'seq': frame.seq,
+                    'valid': False,
+                    'reason': 'known_command_data_length_mismatch',
+                    'actual_data_length': len(frame.data),
+                    'expected_data_length': RADAR_DATA_LENGTHS.get(frame.cmd_id),
+                })
+                continue
             radar_info = radar_info_from_position_frame(frame)
             if radar_info is not None:
                 self.last_radar_info = radar_info
@@ -184,8 +189,8 @@ class RefereeBridge:
                             'sentry_mode_name': parsed.get('sentry_mode_name'),
                             'robot_main_status': parsed.get('robot_main_status'),
                             'robot_main_status_names': parsed.get('robot_main_status_names'),
-                            'reserved_engineer_buff_bytes': parsed.get('reserved_engineer_buff_bytes'),
-                            'reserved_engineer_main_status': parsed.get('reserved_engineer_main_status'),
+                            'reserved_buff_bytes': parsed.get('reserved_buff_bytes'),
+                            'reserved_main_status': parsed.get('reserved_main_status'),
                             'enemy_armor_fortification': parsed.get('enemy_armor_fortification'),
                         }
                     self.last_broadcast_status[output_type] = status

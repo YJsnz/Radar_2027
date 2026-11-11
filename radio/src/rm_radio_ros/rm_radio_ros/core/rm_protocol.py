@@ -13,6 +13,9 @@ from .protocol2027 import (
     RADAR_COMMAND_NAMES,
     RADAR_DATA_LENGTHS,
     RADAR_FORTIFICATION_OFFSETS,
+    RADAR_HP_SLOT_NAMES,
+    RADAR_BULLET_SLOT_NAMES,
+    RADAR_POSITION_SLOT_NAMES,
     RADAR_MACRO_DATA_OFFSETS,
     RADAR_MACRO_STATE_1_FIELDS,
     RADAR_MACRO_STATE_2_FIELDS,
@@ -30,17 +33,7 @@ from .protocol2027 import (
 AIR_LENGTH_FIELD = b'\x00\x0F\x00\x0F'
 
 
-RADAR_WIRE_ROBOT_NAMES = [
-    'opponent_hero',
-    'opponent_engineer',
-    'opponent_infantry_3',
-    'opponent_infantry_4',
-    'opponent_aerial',
-    'opponent_sentry',
-]
-
-
-RADAR_LEGACY_ROBOT_NAMES = ['hero', 'engineer', 'standard_3', 'standard_4', 'aerial', 'sentry']
+RADAR_WIRE_ROBOT_NAMES = list(RADAR_POSITION_SLOT_NAMES)
 
 
 ACCESS_CODES = {
@@ -599,9 +592,6 @@ def parse_game_robot_hp(data: Iterable[int]) -> dict:
             result[name] = struct.unpack_from('<h', bytes(values), offset)[0]
         else:
             result[name] = le_u16(values, offset)
-    # Temporary compatibility alias for the existing ID-1 vulnerability
-    # decision consumer. ID 1 is the 2027 heavy robot; slot 2 stays reserved.
-    result['ally_hero'] = result['ally_heavy_hp']
     return result
 
 
@@ -703,56 +693,50 @@ def parse_radar_frame(frame: RefereeFrame) -> dict:
     elif frame.cmd_id == 0x020C:
         result['radar_mark_progress'] = parse_radar_mark_progress(data)
     elif frame.cmd_id == 0x0A01 and len(data) == 24:
-        official_positions = {
+        slot_positions = {
             name: {'x': le_u16(data, index * 4), 'y': le_u16(data, index * 4 + 2)}
             for index, name in enumerate(RADAR_WIRE_ROBOT_NAMES)
         }
-        legacy_positions = {
-            legacy: official_positions[official]
-            for legacy, official in zip(RADAR_LEGACY_ROBOT_NAMES, RADAR_WIRE_ROBOT_NAMES)
+        official_positions = {
+            name: position for name, position in slot_positions.items()
+            if not name.startswith('reserved_')
         }
-        result['positions_cm'] = legacy_positions
+        result['positions_cm'] = official_positions
         result['official_positions_cm'] = official_positions
+        result['reserved_positions_cm'] = {
+            name: position for name, position in slot_positions.items()
+            if name.startswith('reserved_')
+        }
     elif frame.cmd_id == 0x0A02 and len(data) == 12:
-        names = [
-            'opponent_hero',
-            'opponent_engineer',
-            'opponent_infantry_3',
-            'opponent_infantry_4',
-            'reserved',
-            'opponent_sentry',
-        ]
+        slot_hp = {
+            name: le_u16(data, index * 2)
+            for index, name in enumerate(RADAR_HP_SLOT_NAMES)
+        }
         hp = {
-            name: le_u16(data, index * 2)
-            for index, name in enumerate(names)
+            name: value for name, value in slot_hp.items()
+            if not name.startswith('reserved_')
         }
-        legacy_hp = {
-            legacy: hp[official]
-            for legacy, official in zip(
-                ['hero', 'engineer', 'standard_3', 'standard_4', 'reserved', 'sentry'],
-                names,
-            )
-        }
-        result['hp'] = legacy_hp
         result['official_hp'] = hp
+        result['reserved_hp'] = {
+            name: value for name, value in slot_hp.items()
+            if name.startswith('reserved_')
+        }
+        result['hp'] = hp
     elif frame.cmd_id == 0x0A03 and len(data) == 10:
-        names = [
-            'opponent_hero',
-            'opponent_infantry_3',
-            'opponent_infantry_4',
-            'opponent_aerial',
-            'opponent_sentry',
-        ]
-        bullet_allowance = {
+        slot_bullet_allowance = {
             name: le_u16(data, index * 2)
-            for index, name in enumerate(names)
+            for index, name in enumerate(RADAR_BULLET_SLOT_NAMES)
         }
-        legacy_bullet_allowance = {
-            legacy: bullet_allowance[official]
-            for legacy, official in zip(['hero', 'standard_3', 'standard_4', 'aerial', 'sentry'], names)
+        bullet_allowance = {
+            name: value for name, value in slot_bullet_allowance.items()
+            if not name.startswith('reserved_')
         }
-        result['bullet_allowance'] = legacy_bullet_allowance
         result['official_bullet_allowance'] = bullet_allowance
+        result['reserved_bullet_allowance'] = {
+            name: value for name, value in slot_bullet_allowance.items()
+            if name.startswith('reserved_')
+        }
+        result['bullet_allowance'] = bullet_allowance
     elif frame.cmd_id == 0x0A04 and len(data) == RADAR_DATA_LENGTHS[0x0A04]:
         state_1 = le_u32(data, RADAR_MACRO_DATA_OFFSETS['occupation_state_1'])
         state_2 = le_u32(data, RADAR_MACRO_DATA_OFFSETS['occupation_state_2'])
@@ -785,7 +769,7 @@ def parse_radar_frame(frame: RefereeFrame) -> dict:
             }
             for name, offset in RADAR_BUFF_ROBOT_SPECS
         }
-        result['reserved_engineer_buff_bytes'] = data[
+        result['reserved_buff_bytes'] = data[
             RADAR_RESERVED_BUFF_OFFSET:RADAR_RESERVED_BUFF_OFFSET + 7
         ]
         sentry_mode = data[RADAR_SENTRY_MODE_OFFSET]
@@ -798,7 +782,7 @@ def parse_radar_frame(frame: RefereeFrame) -> dict:
             name: data[offset]
             for name, offset in RADAR_MAIN_STATUS_ROBOT_SPECS
         }
-        result['reserved_engineer_main_status'] = data[RADAR_RESERVED_MAIN_STATUS_OFFSET]
+        result['reserved_main_status'] = data[RADAR_RESERVED_MAIN_STATUS_OFFSET]
         result['robot_main_status_names'] = {
             name: RADAR_MAIN_STATUS_NAMES.get(value, f'unknown_{value}')
             for name, value in result['robot_main_status'].items()

@@ -18,7 +18,7 @@ WIRE_STATUS_ROBOT_NUMBERS = (
     ("opponent_sentry", 7),
 )
 # The 2027 roster has one heavy robot, infantry 3/4 and sentry. Reserved
-# engineer/aerial slots must not become interaction recipients.
+# slots 2 and 6 must not become interaction recipients.
 RECIPIENT_ROBOT_NUMBERS = (1, 3, 4, 7)
 
 
@@ -123,7 +123,7 @@ class InvincibleTargetsMessage:
 
     @property
     def invincible_states(self) -> tuple[bool, ...]:
-        return tuple(bool(self.invincible_mask & (1 << index)) for index in range(5))
+        return tuple(bool(self.invincible_mask & (1 << index)) for index in range(4))
 
     def to_dict(self) -> dict:
         return {

@@ -12,6 +12,9 @@ from .protocol2027 import (
     RADAR_FORTIFICATION_OFFSETS,
     RADAR_MAIN_STATUS_BASE_OFFSET,
     RADAR_SENTRY_MODE_OFFSET,
+    RADAR_POSITION_SLOT_NAMES,
+    RADAR_HP_SLOT_NAMES,
+    RADAR_BULLET_SLOT_NAMES,
 )
 from .radar_wireless_constraints import (
     BUFF_FIELD_MAX,
@@ -45,16 +48,14 @@ INTERFERENCE_PASSWORDS = {
     3: b"R3L003",
 }
 ROBOT_KEYS = [
-    "opponent_hero",
-    "opponent_engineer",
+    "opponent_heavy",
     "opponent_infantry_3",
     "opponent_infantry_4",
-    "opponent_aerial",
     "opponent_sentry",
 ]
 BUFF_ROBOT_KEYS = [
-    "opponent_hero",
-    "opponent_engineer",
+    "opponent_heavy",
+    "reserved_robot_2",
     "opponent_infantry_3",
     "opponent_infantry_4",
     "opponent_sentry",
@@ -156,26 +157,24 @@ def _default_broadcast_config() -> dict[str, Any]:
     return {
         "enabled_cmds": ["0x0A01", "0x0A02", "0x0A03", "0x0A04", "0x0A05"],
         "robots": {
-            "opponent_hero": {"x": 400, "y": 300},
-            "opponent_engineer": {"x": 800, "y": 500},
+            "opponent_heavy": {"x": 400, "y": 300},
             "opponent_infantry_3": {"x": 1200, "y": 700},
             "opponent_infantry_4": {"x": 1600, "y": 900},
-            "opponent_aerial": {"x": 2000, "y": 1100},
             "opponent_sentry": {"x": 2400, "y": 1300},
         },
         "hp": {
-            "opponent_hero": 500,
-            "opponent_engineer": 250,
+            "opponent_heavy": 500,
+            "reserved_robot_2": 0,
             "opponent_infantry_3": 400,
             "opponent_infantry_4": 390,
-            "reserved": 0,
+            "reserved_robot_6": 0,
             "opponent_sentry": 400,
         },
         "bullets": {
-            "opponent_hero": 45,
+            "opponent_heavy": 45,
             "opponent_infantry_3": 120,
             "opponent_infantry_4": 118,
-            "opponent_aerial": 0,
+            "reserved_robot_6": 0,
             "opponent_sentry": 300,
         },
         "macro": {
@@ -201,8 +200,10 @@ def _default_broadcast_config() -> dict[str, Any]:
 def _position_payload(config: dict[str, Any]) -> bytes:
     robots = config.get("robots") if isinstance(config.get("robots"), dict) else {}
     out: list[int] = []
-    for name in ROBOT_KEYS:
+    for name in RADAR_POSITION_SLOT_NAMES:
         robot = robots.get(name) if isinstance(robots.get(name), dict) else {}
+        if name.startswith("reserved_"):
+            robot = {}
         out.extend(put_le_u16(clamp_int(robot.get("x"), 0, POSITION_X_MAX_CM)))
         out.extend(put_le_u16(clamp_int(robot.get("y"), 0, POSITION_Y_MAX_CM)))
     return bytes(out)
@@ -213,7 +214,7 @@ def _hp_payload(config: dict[str, Any]) -> bytes:
     defaults = _default_broadcast_config()["hp"]
     return b"".join(
         bytes(put_le_u16(clamp_int(hp.get(key, defaults[key]), 0, HP_MAX[key])))
-        for key in ("opponent_hero", "opponent_engineer", "opponent_infantry_3", "opponent_infantry_4", "reserved", "opponent_sentry")
+        for key in RADAR_HP_SLOT_NAMES
     )
 
 
@@ -222,7 +223,7 @@ def _bullet_payload(config: dict[str, Any]) -> bytes:
     defaults = _default_broadcast_config()["bullets"]
     return b"".join(
         bytes(put_le_u16(clamp_int(bullets.get(key, defaults[key]), 0, BULLET_MAX[key])))
-        for key in ("opponent_hero", "opponent_infantry_3", "opponent_infantry_4", "opponent_aerial", "opponent_sentry")
+        for key in RADAR_BULLET_SLOT_NAMES
     )
 
 
@@ -287,7 +288,7 @@ def _buff_payload(config: dict[str, Any]) -> bytes:
         out.extend(put_le_u16(clamp_int(item.get("attack_percent"), 0, BUFF_FIELD_MAX["attack_percent"][name])))
     out.append(clamp_int(config.get("sentry_mode"), 1, 6, 2))
     out.extend(
-        0 if name == "opponent_engineer" else clamp_int(main_status.get(name), 0, 3)
+        0 if name == "reserved_robot_2" else clamp_int(main_status.get(name), 0, 3)
         for name in BUFF_ROBOT_KEYS
     )
     fortification = (
@@ -490,11 +491,11 @@ def _markdown_report(result: dict) -> str:
     for index, frame in enumerate(broadcast_frames, start=1):
         parsed = frame["parsed"]
         if frame["cmd_hex"] == "0x0A01":
-            detail = f"hero={parsed['official_positions_cm']['opponent_hero']}"
+            detail = f"heavy={parsed['official_positions_cm']['opponent_heavy']}"
         elif frame["cmd_hex"] == "0x0A02":
-            detail = f"hero_hp={parsed['official_hp']['opponent_hero']}, sentry_hp={parsed['official_hp']['opponent_sentry']}"
+            detail = f"heavy_hp={parsed['official_hp']['opponent_heavy']}, sentry_hp={parsed['official_hp']['opponent_sentry']}"
         elif frame["cmd_hex"] == "0x0A03":
-            detail = f"hero_bullets={parsed['official_bullet_allowance']['opponent_hero']}"
+            detail = f"heavy_bullets={parsed['official_bullet_allowance']['opponent_heavy']}"
         elif frame["cmd_hex"] == "0x0A04":
             detail = f"coins={parsed['remaining_coins']}/{parsed['total_coins']}"
         elif frame["cmd_hex"] == "0x0A05":

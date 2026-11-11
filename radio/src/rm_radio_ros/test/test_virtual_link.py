@@ -7,7 +7,7 @@ def test_2027_buff_payload_is_47_bytes_and_upgrades_old_raw_config():
 
     assert len(payload) == 47
     assert len(upgraded) == 47
-    assert upgraded[1:3] == bytes([200, 0])  # Hero cooling is capped at +200/s.
+    assert upgraded[1:3] == bytes([200, 0])  # 重装冷却样例上限为 +200/s。
     assert upgraded[35] == 6
     assert upgraded[36:] == bytes(11)
 
@@ -53,11 +53,11 @@ def test_virtual_link_uses_custom_broadcast_and_password_with_optional_noise():
         rx_side='red',
         broadcast_config={
             'enabled_cmds': ['0x0A01', '0x0A02', '0x0A05'],
-            'robots': {'opponent_hero': {'x': 2222, 'y': 1333}},
-            'hp': {'opponent_hero': 321},
-            'buffs': {'opponent_hero': {'attack_percent': 88}},
+            'robots': {'opponent_heavy': {'x': 2222, 'y': 1333}},
+            'hp': {'opponent_heavy': 321},
+            'buffs': {'opponent_heavy': {'attack_percent': 88}},
             'sentry_mode': 4,
-            'robot_main_status': {'opponent_hero': 2, 'opponent_sentry': 1},
+            'robot_main_status': {'opponent_heavy': 2, 'opponent_sentry': 1},
         },
         interference_password='ZXCV12',
         interference_level=3,
@@ -67,8 +67,8 @@ def test_virtual_link_uses_custom_broadcast_and_password_with_optional_noise():
 
     assert result['frequency_plan']['broadcast_hz'] == 433920000
     assert [frame['cmd_hex'] for frame in result['broadcast']['frames']] == ['0x0A01', '0x0A02', '0x0A05']
-    assert result['broadcast']['frames'][0]['parsed']['official_positions_cm']['opponent_hero'] == {'x': 2222, 'y': 1333}
-    assert result['broadcast']['frames'][1]['parsed']['official_hp']['opponent_hero'] == 321
+    assert result['broadcast']['frames'][0]['parsed']['official_positions_cm']['opponent_heavy'] == {'x': 2222, 'y': 1333}
+    assert result['broadcast']['frames'][1]['parsed']['official_hp']['opponent_heavy'] == 321
     assert result['broadcast']['frames'][2]['parsed']['buff_status']['opponent_heavy']['attack_percent'] == 88
     assert result['broadcast']['frames'][2]['parsed']['sentry_mode'] == 4
     assert result['broadcast']['frames'][2]['parsed']['sentry_mode_name'] == 'enhanced_offensive'

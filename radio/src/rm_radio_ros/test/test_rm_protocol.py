@@ -140,8 +140,6 @@ def test_parse_0003_game_robot_hp_from_2027_protocol_table():
         'enemy_base_hp': 1400,
         'ally_control_degree': 17,
         'enemy_control_degree': 23,
-        # ID-1 compatibility alias, pending downstream role-name migration.
-        'ally_hero': 600,
         'damage_difference': -321,
     }
     assert parse_game_robot_hp(payload[:-1]) == {
@@ -318,7 +316,11 @@ def test_assemble_broadcast_cycle_across_air_packets():
         frames.extend(assembler.push_air_payload(chunk))
 
     assert [frame.cmd_id for frame in frames] == [0x0A01, 0x0A02, 0x0A03, 0x0A04, 0x0A05]
-    assert frames[0].to_dict()['parsed']['positions_cm']['hero'] == {'x': 256, 'y': 770}
+    assert frames[0].to_dict()['parsed']['positions_cm']['opponent_heavy'] == {'x': 256, 'y': 770}
+    assert frames[0].to_dict()['parsed']['reserved_positions_cm'] == {
+        'reserved_robot_2': {'x': 1284, 'y': 1798},
+        'reserved_robot_6': {'x': 4368, 'y': 4882},
+    }
     assert frames[3].to_dict()['parsed']['remaining_coins'] == 256
     assert frames[4].to_dict()['parsed']['sentry_mode'] == 35
     assert frames[4].to_dict()['parsed']['robot_main_status']['opponent_sentry'] == 40
@@ -435,7 +437,7 @@ def test_parse_radar_buff_status_from_protocol_table():
         'opponent_infantry_4': 3,
         'opponent_sentry': 9,
     }
-    assert parsed['reserved_engineer_main_status'] == 1
+    assert parsed['reserved_main_status'] == 1
     assert parsed['robot_main_status_names'] == {
         'opponent_heavy': 'alive',
         'opponent_infantry_3': 'invincible_not_weakened',

@@ -88,10 +88,11 @@ const roles = {
 };
 
 const robotLabels = {
-  opponent_hero: "英雄", opponent_engineer: "工程", opponent_infantry_3: "步兵3",
-  opponent_infantry_4: "步兵4", opponent_aerial: "空中", opponent_sentry: "哨兵",
-  hero: "英雄", engineer: "工程", standard_3: "步兵3", standard_4: "步兵4",
-  aerial: "空中", sentry: "哨兵", reserved: "保留",
+  opponent_heavy: "重装", opponent_infantry_3: "步兵3",
+  opponent_infantry_4: "步兵4", opponent_sentry: "哨兵",
+  ally_heavy: "己方重装", ally_infantry_3: "己方步兵3",
+  ally_infantry_4: "己方步兵4", ally_sentry: "己方哨兵",
+  reserved_robot_2: "保留槽 2", reserved_robot_6: "保留槽 6",
 };
 
 const mainStatusLabels = {

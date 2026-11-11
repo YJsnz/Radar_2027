@@ -36,6 +36,10 @@ from ..core.radio_config import (
     interference_setters_for_side_level,
     normalize_interference_level,
 )
+from ..core.protocol2027 import (
+    RADAR_CLIENT_INTERACTION_MAX_RATE_HZ,
+    valid_radar_client_map_payload,
+)
 
 
 def _node_int_parameter(node: Node, name: str, default: int) -> int:
@@ -77,7 +81,7 @@ def _bytes_from_json_value(value: object) -> bytes:
 
 
 def _valid_0305_payload(data: bytes) -> bool:
-    return len(data) == 48 and any(data)
+    return valid_radar_client_map_payload(data)
 
 
 class OptionalSerialPort:
@@ -271,6 +275,10 @@ class RefereeSerialNode(Node):
         self.declare_parameter('frame_timeout_sec', 2.0)
         self.declare_parameter('exclusive_port_lock', True)
         self.declare_parameter('require_serial_open_on_start', False)
+        self.declare_parameter(
+            'command_counter_state_path',
+            '~/.local/state/shark-radar/radar_command_counters_2027.json',
+        )
 
         self.seq = 0
         self.tx_count = 0
@@ -298,6 +306,8 @@ class RefereeSerialNode(Node):
         self.detected_radar_sender_id: Optional[int] = None
         self.last_0305_tx_time = 0.0
         self.blocked_0305_rate_count = 0
+        self._interaction_send_times = deque()
+        self.blocked_interaction_rate_count = 0
         self.last_invincible_main_status: Optional[dict[str, int]] = None
         self.last_invincible_source_frame_sequence: Optional[int] = None
         self.last_invincible_source_received_at: Optional[float] = None
@@ -316,6 +326,17 @@ class RefereeSerialNode(Node):
         self._last_valid_frame_monotonic: Optional[float] = None
         self._frame_watchdog_armed_at: Optional[float] = None
         self._frame_watchdog_error = ''
+        self.command_counters = {
+            'red': {'radar_cmd': 0, 'armor_fortify_cmd': 0},
+            'blue': {'radar_cmd': 0, 'armor_fortify_cmd': 0},
+        }
+        self.command_counter_ready_by_side = {'red': False, 'blue': False}
+        self.active_command_counter_side = ''
+        self.command_counter_state_path = Path(
+            str(self.get_parameter('command_counter_state_path').value)
+        ).expanduser()
+        self._load_command_counters()
+        self._activate_command_counter_side(self._effective_radio_side())
         self.interference_level = self._initial_interference_level()
         self.interference_update_count = 0
         self.last_interference_update: Optional[dict] = None
@@ -382,7 +403,8 @@ class RefereeSerialNode(Node):
                 max(float(self.get_parameter('invincible_targets_send_rate_hz').value), 0.1),
                 4.0,
             )
-            invincible_frame_rate = invincible_rate_per_receiver * 6.0
+            receiver_count = len(invincible_target_receivers(self._effective_radio_side()))
+            invincible_frame_rate = invincible_rate_per_receiver * receiver_count
             self.create_timer(1.0 / invincible_frame_rate, self._send_invincible_targets_tick)
         frame_timeout_sec = max(float(self.get_parameter('frame_timeout_sec').value), 0.0)
         frame_watchdog_period = min(max(frame_timeout_sec / 4.0, 0.1), 0.5) if frame_timeout_sec else 1.0
@@ -395,7 +417,7 @@ class RefereeSerialNode(Node):
             self.get_logger().info(
                 f'invincible-target broadcast enabled: data_cmd_id='
                 f'0x{_node_int_parameter(self, "invincible_targets_data_cmd_id", INVINCIBLE_TARGETS_DATA_CMD_ID):04X}, '
-                f'rate={invincible_rate_per_receiver:.1f}Hz x 6 receivers '
+                f'rate={invincible_rate_per_receiver:.1f}Hz x {receiver_count} receivers '
                 f'({invincible_frame_rate:.1f} frames/s round-robin)'
             )
         if bool(self.get_parameter('single_rx_auto_broadcast_after_level3').value):
@@ -434,6 +456,19 @@ class RefereeSerialNode(Node):
             return 1
 
     def _send_bytes(self, frame: bytes, meta: dict) -> dict:
+        if int(meta.get('cmd_id', 0)) == 0x0301 and not self._allow_0301_send():
+            payload = dict(meta)
+            payload.update({
+                'timestamp': time.time(),
+                'frame_hex': frame.hex(),
+                'frame_length': len(frame),
+                'dry_run': bool(self.get_parameter('dry_run').value),
+                'written': False,
+                'rate_limited': True,
+            })
+            self.last_tx = payload
+            self._publish_json(self.tx_pub, payload)
+            return payload
         payload = dict(meta)
         payload.update({
             'timestamp': time.time(),
@@ -457,18 +492,48 @@ class RefereeSerialNode(Node):
         self._publish_json(self.tx_pub, payload)
         return payload
 
+    def _allow_0301_send(self) -> bool:
+        now = time.monotonic()
+        recent = getattr(self, '_interaction_send_times', None)
+        if recent is None:
+            recent = deque()
+            self._interaction_send_times = recent
+        while recent and now - recent[0] >= 1.0:
+            recent.popleft()
+        limit = RADAR_CLIENT_INTERACTION_MAX_RATE_HZ
+        if len(recent) >= limit:
+            self.blocked_interaction_rate_count = int(
+                getattr(self, 'blocked_interaction_rate_count', 0)
+            ) + 1
+            self.last_error = f'blocked 0x0301 above {limit}Hz aggregate protocol limit'
+            if self.blocked_interaction_rate_count in (1, 10) or self.blocked_interaction_rate_count % 100 == 0:
+                self.get_logger().warning(self.last_error)
+            return False
+        recent.append(now)
+        self.blocked_interaction_rate_count = 0
+        return True
+
     def _commit_radar_cmd_after_send(self, result: dict) -> None:
-        if not (result.get('written') is True or result.get('dry_run') is True):
+        if result.get('rate_limited') is True or not (
+            result.get('written') is True or result.get('dry_run') is True
+        ):
             return
+        previous_radar_cmd = int(getattr(self, 'last_radar_cmd_value', 0))
+        previous_fortify_cmd = int(getattr(self, 'last_armor_fortify_cmd_value', 0))
         try:
-            radar_cmd = int(result.get('radar_cmd', self.last_radar_cmd_value))
+            radar_cmd = int(
+                result.get('radar_cmd', getattr(self, 'last_radar_cmd_value', 0))
+            )
         except (TypeError, ValueError):
             radar_cmd = int(getattr(self, 'last_radar_cmd_value', 0))
         if radar_cmd > int(getattr(self, 'last_radar_cmd_value', 0)):
             self.last_radar_cmd_value = radar_cmd
         try:
             armor_fortify_cmd = int(
-                result.get('armor_fortify_cmd', self.last_armor_fortify_cmd_value)
+                result.get(
+                    'armor_fortify_cmd',
+                    getattr(self, 'last_armor_fortify_cmd_value', 0),
+                )
             )
         except (TypeError, ValueError):
             return
@@ -476,6 +541,20 @@ class RefereeSerialNode(Node):
             self.last_armor_fortify_cmd_value = armor_fortify_cmd
             self.last_armor_fortify_center_x_mm = int(result.get('fortify_center_x_mm', 0))
             self.last_armor_fortify_center_y_mm = int(result.get('fortify_center_y_mm', 0))
+        side = str(getattr(self, 'active_command_counter_side', '') or '')
+        if side in ('red', 'blue'):
+            counters = getattr(self, 'command_counters', {}).get(side)
+            if isinstance(counters, dict):
+                counters['radar_cmd'] = int(getattr(self, 'last_radar_cmd_value', 0))
+                counters['armor_fortify_cmd'] = int(
+                    getattr(self, 'last_armor_fortify_cmd_value', 0)
+                )
+                changed = (
+                    counters['radar_cmd'] != previous_radar_cmd
+                    or counters['armor_fortify_cmd'] != previous_fortify_cmd
+                )
+                if changed and result.get('written') is True:
+                    self._save_command_counters()
 
     def _handle_send_frame(self, msg: String) -> None:
         try:
@@ -483,8 +562,8 @@ class RefereeSerialNode(Node):
             cmd_id = int(payload['cmd_id'], 0) if isinstance(payload['cmd_id'], str) else int(payload['cmd_id'])
             data = _bytes_from_json_value(payload.get('data_hex', payload.get('data', '')))
             seq = int(payload['seq']) if 'seq' in payload else self._next_seq()
-            if self._is_raw_radar_cmd_frame(cmd_id, data):
-                self.last_error = 'blocked raw 0x0301/0x0121 send_frame; use ~/send_radar_cmd'
+            if self._is_raw_interaction_frame(cmd_id, data):
+                self.last_error = 'blocked raw 0x0301 send_frame; use ~/send_interaction or ~/send_radar_cmd'
                 self.get_logger().warning(self.last_error)
                 return
             if cmd_id == 0x0305 and not _valid_0305_payload(data):
@@ -634,7 +713,7 @@ class RefereeSerialNode(Node):
             status = payload.get('robot_main_status')
             if not isinstance(status, dict):
                 raise ValueError('RadarEnemyBuffStatus.robot_main_status must be an object')
-            # Strictly validate all five official 0x0A05 fields before making
+            # Strictly validate all four active 0x0A05 fields before making
             # this snapshot authoritative.  The returned IDs are intentionally
             # discarded here because side can hot-switch before the send tick.
             invincible_target_statuses(status, self._effective_radio_side())
@@ -856,6 +935,7 @@ class RefereeSerialNode(Node):
         sender_id = int(payload.get('sender_id', self._effective_sender_id()))
         receiver_id = int(payload.get('receiver_id', _node_int_parameter(self, 'receiver_id', 0x8080)))
         user_data = _bytes_from_json_value(payload.get('user_data_hex', payload.get('user_data', '')))
+        self._validate_interaction_address(data_cmd_id, sender_id, receiver_id)
         seq = int(payload['seq']) if 'seq' in payload else self._next_seq()
         frame = build_robot_interaction_frame(data_cmd_id, sender_id, receiver_id, user_data, seq=seq)
         return frame, {
@@ -869,6 +949,31 @@ class RefereeSerialNode(Node):
             'user_data_hex': user_data.hex(),
             'seq': seq,
         }
+
+    def _validate_interaction_address(self, data_cmd_id: int, sender_id: int, receiver_id: int) -> None:
+        try:
+            side = self._effective_radio_side()
+        except Exception:  # noqa: BLE001 - permit unit tests with minimally initialized nodes
+            side = 'blue' if self._effective_sender_id() >= 100 else 'red'
+        expected_sender_id = radar_sender_id_for_side(side)
+        if int(sender_id) != expected_sender_id:
+            raise ValueError(
+                f'0x0301 sender_id must match this radar ({expected_sender_id}), got {sender_id}'
+            )
+        if int(data_cmd_id) == 0x0121:
+            expected_receivers = (0x8080,)
+        elif 0x0200 <= int(data_cmd_id) <= 0x02FF:
+            expected_receivers = invincible_target_receivers(side)
+        else:
+            raise ValueError(
+                f'0x0301 data_cmd_id must be 0x0200..0x02FF, got 0x{int(data_cmd_id):04X}'
+            )
+        if int(receiver_id) not in expected_receivers:
+            allowed = ', '.join(f'0x{value:04X}' for value in expected_receivers)
+            raise ValueError(
+                f'0x{int(data_cmd_id):04X} receiver_id {receiver_id} is not valid for {side}; '
+                f'allowed: {allowed}'
+            )
 
     def _build_radar_cmd_from_payload(
         self,
@@ -891,6 +996,8 @@ class RefereeSerialNode(Node):
         password_cmd = int(payload.get('password_cmd', 0))
         password = payload.get('password') if password_present else None
         self._validate_radar_cmd_transition(radar_cmd, password_present=password_present)
+        if radar_cmd > int(getattr(self, 'last_radar_cmd_value', 0)):
+            self._validate_double_vulnerability_eligibility()
         self._validate_password_update_allowed(password_cmd)
 
         has_explicit_fortify_cmd = 'armor_fortify_cmd' in payload
@@ -917,6 +1024,7 @@ class RefereeSerialNode(Node):
             fortify_center_y_mm = int(getattr(self, 'last_armor_fortify_center_y_mm', 0))
         sender_id = int(payload.get('sender_id', self._effective_sender_id()))
         receiver_id = int(payload.get('receiver_id', _node_int_parameter(self, 'receiver_id', 0x8080)))
+        self._validate_interaction_address(0x0121, sender_id, receiver_id)
         seq = int(payload['seq']) if 'seq' in payload else self._next_seq()
         user_data = build_radar_cmd_payload(
             radar_cmd,
@@ -950,8 +1058,8 @@ class RefereeSerialNode(Node):
         return frame, meta
 
     @staticmethod
-    def _is_raw_radar_cmd_frame(cmd_id: int, data: bytes) -> bool:
-        return int(cmd_id) == 0x0301 and len(data) >= 2 and int.from_bytes(data[:2], 'little') == 0x0121
+    def _is_raw_interaction_frame(cmd_id: int, data: bytes) -> bool:
+        return int(cmd_id) == 0x0301
 
     def _allow_0305_send(self) -> bool:
         configured_rate = _node_float_parameter(self, 'radar_client_max_rate_hz', 5.0)
@@ -982,6 +1090,32 @@ class RefereeSerialNode(Node):
         if int(radar_cmd) > last + 1:
             raise ValueError(f'radar_cmd must increase by exactly 1: last={last}, requested={radar_cmd}')
 
+    def _validate_double_vulnerability_eligibility(self) -> None:
+        if not self._command_counters_ready():
+            raise ValueError(
+                'double-vulnerability request blocked until its monotonic counter is initialized '
+                'from this match preparation'
+            )
+        sync = getattr(self, 'last_radar_decision_sync', None)
+        if not isinstance(sync, dict) or sync.get('valid_radar_info_length') is not True:
+            raise ValueError('double-vulnerability request requires a valid 0x020E referee status')
+        try:
+            received_at = float(sync['timestamp'])
+            opportunities = int(sync['double_vulnerability_count'])
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ValueError('double-vulnerability request requires a timestamped 0x020E opportunity count') from exc
+        freshness_sec = max(
+            3.0,
+            3.0 * _node_float_parameter(self, 'status_period_sec', 1.0),
+        )
+        if time.time() - received_at > freshness_sec:
+            raise ValueError('double-vulnerability request blocked because 0x020E referee status is stale')
+        if not 1 <= opportunities <= 2:
+            raise ValueError(
+                'double-vulnerability request requires an available 0x020E opportunity: '
+                f'got {opportunities}'
+            )
+
     def _validate_armor_fortify_transition(self, armor_fortify_cmd: int) -> None:
         if not 0 <= int(armor_fortify_cmd) <= 0xFF:
             raise ValueError(
@@ -999,6 +1133,11 @@ class RefereeSerialNode(Node):
             )
 
     def _validate_armor_fortification_eligibility(self, payload: dict) -> None:
+        if not self._command_counters_ready():
+            raise ValueError(
+                'armor fortification blocked until its monotonic counter is initialized '
+                'from this match preparation'
+            )
         try:
             cumulative_hit_count = int(payload['cumulative_hit_count'])
         except (KeyError, TypeError, ValueError) as exc:
@@ -1169,6 +1308,8 @@ class RefereeSerialNode(Node):
                     'rx_raw_hex': payload.get('raw_hex'),
                 })
                 self.last_game_status = event
+                if int(event.get('game_progress', -1)) in (1, 2, 3):
+                    self._reset_command_counters_for_new_match(self._effective_radio_side())
                 game_status_pub = getattr(self, 'game_status_pub', None)
                 if game_status_pub is not None:
                     self._publish_json(game_status_pub, event)
@@ -1222,6 +1363,90 @@ class RefereeSerialNode(Node):
                 return str(detected_side)
         return str(self.get_parameter('radio_side').value).strip().lower()
 
+    def _command_counters_ready(self) -> bool:
+        side = str(getattr(self, 'active_command_counter_side', '') or '')
+        return bool(getattr(self, 'command_counter_ready_by_side', {}).get(side, False))
+
+    def _load_command_counters(self) -> None:
+        path = getattr(self, 'command_counter_state_path', None)
+        if path is None or not path.exists():
+            return
+        try:
+            state = json.loads(path.read_text(encoding='utf-8'))
+            if not isinstance(state, dict) or state.get('schema') != 'shark.radar.command_counters.v1':
+                raise ValueError('unsupported counter-state schema')
+            for side in ('red', 'blue'):
+                entry = state.get(side)
+                if not isinstance(entry, dict) or entry.get('ready') is not True:
+                    continue
+                radar_cmd = int(entry['radar_cmd'])
+                armor_fortify_cmd = int(entry['armor_fortify_cmd'])
+                if not 0 <= radar_cmd <= 0xFF or not 0 <= armor_fortify_cmd <= 0xFF:
+                    raise ValueError(f'{side} counter is outside uint8 range')
+                self.command_counters[side] = {
+                    'radar_cmd': radar_cmd,
+                    'armor_fortify_cmd': armor_fortify_cmd,
+                }
+                self.command_counter_ready_by_side[side] = True
+        except (OSError, TypeError, ValueError, KeyError, json.JSONDecodeError) as exc:
+            self.last_error = f'failed to load 0x0121 monotonic counters: {exc}'
+            self.get_logger().error(self.last_error)
+
+    def _save_command_counters(self) -> bool:
+        path = getattr(self, 'command_counter_state_path', None)
+        if path is None:
+            return False
+        state = {'schema': 'shark.radar.command_counters.v1'}
+        for side in ('red', 'blue'):
+            counters = self.command_counters[side]
+            state[side] = {
+                **counters,
+                'ready': bool(self.command_counter_ready_by_side.get(side, False)),
+            }
+        temporary = path.with_name(f'.{path.name}.{os.getpid()}.tmp')
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            temporary.write_text(
+                json.dumps(state, ensure_ascii=False, sort_keys=True) + '\n',
+                encoding='utf-8',
+            )
+            os.chmod(temporary, 0o600)
+            os.replace(temporary, path)
+            return True
+        except OSError as exc:
+            self.last_error = f'failed to save 0x0121 monotonic counters: {exc}'
+            self.get_logger().error(self.last_error)
+            try:
+                temporary.unlink(missing_ok=True)
+            except OSError:
+                pass
+            return False
+
+    def _activate_command_counter_side(self, side: str) -> None:
+        clean_side = str(side).strip().lower()
+        if clean_side not in ('red', 'blue'):
+            return
+        if not isinstance(getattr(self, 'command_counters', None), dict):
+            self.command_counters = {
+                'red': {'radar_cmd': 0, 'armor_fortify_cmd': 0},
+                'blue': {'radar_cmd': 0, 'armor_fortify_cmd': 0},
+            }
+        if not isinstance(getattr(self, 'command_counter_ready_by_side', None), dict):
+            self.command_counter_ready_by_side = {'red': False, 'blue': False}
+        self.active_command_counter_side = clean_side
+        counters = self.command_counters[clean_side]
+        self.last_radar_cmd_value = int(counters['radar_cmd'])
+        self.last_armor_fortify_cmd_value = int(counters['armor_fortify_cmd'])
+
+    def _reset_command_counters_for_new_match(self, side: str) -> None:
+        clean_side = str(side).strip().lower()
+        if clean_side not in ('red', 'blue'):
+            return
+        self.command_counters[clean_side] = {'radar_cmd': 0, 'armor_fortify_cmd': 0}
+        self.command_counter_ready_by_side[clean_side] = True
+        self._activate_command_counter_side(clean_side)
+        self._save_command_counters()
+
     def _effective_sender_id(self) -> int:
         if self._auto_detect_radio_side_enabled():
             detected_sender_id = getattr(self, 'detected_radar_sender_id', None)
@@ -1244,6 +1469,7 @@ class RefereeSerialNode(Node):
         self.detected_robot_id = int(robot_id)
         self.detected_radio_side = str(side)
         self.detected_radar_sender_id = radar_sender_id_for_side(str(side))
+        self._activate_command_counter_side(str(side))
 
     def _match_running_for_referee_level(self) -> bool:
         if not bool(_node_bool_parameter(self, 'apply_referee_level_only_when_running', False)):
@@ -1544,9 +1770,10 @@ class RefereeSerialNode(Node):
             'scheduled_frame_rate_hz': min(
                 max(_node_float_parameter(self, 'invincible_targets_send_rate_hz', 3.0), 0.1),
                 4.0,
-            ) * 6.0,
+            ) * len(invincible_target_receivers(self._effective_radio_side())),
             'pending_receiver_count': (
-                6 - len((getattr(self, '_pending_invincible_targets_batch', None) or {}).get('results', []))
+                len(invincible_target_receivers(self._effective_radio_side()))
+                - len((getattr(self, '_pending_invincible_targets_batch', None) or {}).get('results', []))
                 if getattr(self, '_pending_invincible_targets_batch', None)
                 else 0
             ),
@@ -1595,6 +1822,11 @@ class RefereeSerialNode(Node):
                 5.0,
             ),
             'blocked_0305_rate_count': int(getattr(self, 'blocked_0305_rate_count', 0)),
+            'interaction_max_rate_hz': RADAR_CLIENT_INTERACTION_MAX_RATE_HZ,
+            'interaction_window_send_count': len(getattr(self, '_interaction_send_times', ())),
+            'blocked_interaction_rate_count': int(
+                getattr(self, 'blocked_interaction_rate_count', 0)
+            ),
             'invincible_targets': invincible_snapshot,
             'auto_interference_level': bool(self.get_parameter('auto_interference_level').value),
             'auto_rx_interference_level': bool(_node_bool_parameter(self, 'auto_rx_interference_level', True)),
@@ -1648,6 +1880,15 @@ class RefereeSerialNode(Node):
             'last_armor_fortify_center_y_mm': int(
                 getattr(self, 'last_armor_fortify_center_y_mm', 0)
             ),
+            'command_counters': {
+                'side': str(getattr(self, 'active_command_counter_side', '') or ''),
+                'ready': self._command_counters_ready(),
+                'radar_cmd': int(getattr(self, 'last_radar_cmd_value', 0)),
+                'armor_fortify_cmd': int(
+                    getattr(self, 'last_armor_fortify_cmd_value', 0)
+                ),
+                'state_path': str(getattr(self, 'command_counter_state_path', '')),
+            },
             'algorithm_request_cache_size': len(getattr(self, 'algorithm_request_acks', {})),
             'serial_open': self.serial_port.is_open,
             'require_serial_open_on_start': bool(

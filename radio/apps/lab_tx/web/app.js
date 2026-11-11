@@ -1,28 +1,28 @@
 const robotLabels = {
-  opponent_hero: "英雄", opponent_engineer: "工程", opponent_infantry_3: "步兵3",
-  opponent_infantry_4: "步兵4", opponent_aerial: "空中", opponent_sentry: "哨兵", reserved: "保留",
+  opponent_heavy: "重装", reserved_robot_2: "保留槽 2", reserved_robot_6: "保留槽 6",
+  opponent_infantry_3: "步兵3", opponent_infantry_4: "步兵4", opponent_sentry: "哨兵",
 };
-const robotKeys = ["opponent_hero", "opponent_engineer", "opponent_infantry_3", "opponent_infantry_4", "opponent_aerial", "opponent_sentry"];
-const hpKeys = ["opponent_hero", "opponent_engineer", "opponent_infantry_3", "opponent_infantry_4", "reserved", "opponent_sentry"];
-const bulletKeys = ["opponent_hero", "opponent_infantry_3", "opponent_infantry_4", "opponent_aerial", "opponent_sentry"];
-const buffKeys = ["opponent_hero", "opponent_engineer", "opponent_infantry_3", "opponent_infantry_4", "opponent_sentry"];
+const robotKeys = ["opponent_heavy", "opponent_infantry_3", "opponent_infantry_4", "opponent_sentry"];
+const hpKeys = ["opponent_heavy", "reserved_robot_2", "opponent_infantry_3", "opponent_infantry_4", "reserved_robot_6", "opponent_sentry"];
+const bulletKeys = ["opponent_heavy", "opponent_infantry_3", "opponent_infantry_4", "reserved_robot_6", "opponent_sentry"];
+const buffKeys = ["opponent_heavy", "reserved_robot_2", "opponent_infantry_3", "opponent_infantry_4", "opponent_sentry"];
 const hpMax = {
-  opponent_hero: 600, opponent_engineer: 250, opponent_infantry_3: 400,
-  opponent_infantry_4: 400, reserved: 0, opponent_sentry: 400,
+  opponent_heavy: 600, reserved_robot_2: 0, opponent_infantry_3: 400,
+  opponent_infantry_4: 400, reserved_robot_6: 0, opponent_sentry: 400,
 };
 const bulletMax = {
-  opponent_hero: 100, opponent_infantry_3: 1500, opponent_infantry_4: 1500,
-  opponent_aerial: 750, opponent_sentry: 1900,
+  opponent_heavy: 100, opponent_infantry_3: 1500, opponent_infantry_4: 1500,
+  reserved_robot_6: 0, opponent_sentry: 1900,
 };
 const buffMax = {
-  hp_recovery_percent: Object.fromEntries(buffKeys.map((key) => [key, 25])),
+  hp_recovery_percent: Object.fromEntries(buffKeys.map((key) => [key, key === "reserved_robot_2" ? 0 : 25])),
   shooting_heat_cooling: {
-    opponent_hero: 200, opponent_engineer: 0, opponent_infantry_3: 120,
+    opponent_heavy: 200, reserved_robot_2: 0, opponent_infantry_3: 120,
     opponent_infantry_4: 120, opponent_sentry: 120,
   },
-  defense_percent: Object.fromEntries(buffKeys.map((key) => [key, 99])),
-  negative_defense_percent: Object.fromEntries(buffKeys.map((key) => [key, 100])),
-  attack_percent: Object.fromEntries(buffKeys.map((key) => [key, 300])),
+  defense_percent: Object.fromEntries(buffKeys.map((key) => [key, key === "reserved_robot_2" ? 0 : 99])),
+  negative_defense_percent: Object.fromEntries(buffKeys.map((key) => [key, key === "reserved_robot_2" ? 0 : 100])),
+  attack_percent: Object.fromEntries(buffKeys.map((key) => [key, key === "reserved_robot_2" ? 0 : 300])),
 };
 const cmdList = [
   ["0x0A01", "坐标"], ["0x0A02", "血量"], ["0x0A03", "发弹量"], ["0x0A04", "经济"], ["0x0A05", "增益状态"],

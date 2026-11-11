@@ -60,8 +60,8 @@ class RadarIntegrationNode(Node):
         self.declare_parameter('auto_double_vulnerability_enabled', False)
         self.declare_parameter('auto_double_vulnerability_mask_path', '')
         self.declare_parameter('auto_double_vulnerability_zone_dwell_sec', 3.0)
-        self.declare_parameter('auto_double_vulnerability_hero_hp_drop_amount', 100)
-        self.declare_parameter('auto_double_vulnerability_hero_hp_window_sec', 3.0)
+        self.declare_parameter('auto_double_vulnerability_heavy_hp_drop_amount', 100)
+        self.declare_parameter('auto_double_vulnerability_heavy_hp_window_sec', 3.0)
         self.declare_parameter('auto_double_vulnerability_endgame_sec', 30.0)
         self.declare_parameter('auto_double_vulnerability_referee_timeout_sec', 2.5)
 
@@ -113,14 +113,14 @@ class RadarIntegrationNode(Node):
                 zone_dwell_sec=float(
                     self.get_parameter('auto_double_vulnerability_zone_dwell_sec').value
                 ),
-                hero_hp_drop_amount=int(
+                heavy_hp_drop_amount=int(
                     self.get_parameter(
-                        'auto_double_vulnerability_hero_hp_drop_amount'
+                        'auto_double_vulnerability_heavy_hp_drop_amount'
                     ).value
                 ),
-                hero_hp_window_sec=float(
+                heavy_hp_window_sec=float(
                     self.get_parameter(
-                        'auto_double_vulnerability_hero_hp_window_sec'
+                        'auto_double_vulnerability_heavy_hp_window_sec'
                     ).value
                 ),
                 endgame_trigger_sec=float(

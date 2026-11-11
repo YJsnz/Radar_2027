@@ -31,3 +31,4 @@ rm_referee_serial_node:
     read_period_sec: 0.01
     status_period_sec: 1.0
     frame_timeout_sec: 2.0
+    command_counter_state_path: ~/.local/state/shark-radar/radar_command_counters_2027.json

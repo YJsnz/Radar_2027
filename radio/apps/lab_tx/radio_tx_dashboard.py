@@ -76,11 +76,9 @@ FOUR_SDR_ROLE_LABELS = {
     "interference_tx": "干扰波 TX",
 }
 ROBOT_KEYS = [
-    "opponent_hero",
-    "opponent_engineer",
+    "opponent_heavy",
     "opponent_infantry_3",
     "opponent_infantry_4",
-    "opponent_aerial",
     "opponent_sentry",
 ]
 
@@ -146,23 +144,23 @@ def _radio_process_env(base: dict[str, str] | None = None) -> dict[str, str]:
         env["ROS_HOME"] = "/tmp/ros_home"
     return env
 HP_KEYS = [
-    "opponent_hero",
-    "opponent_engineer",
+    "opponent_heavy",
+    "reserved_robot_2",
     "opponent_infantry_3",
     "opponent_infantry_4",
-    "reserved",
+    "reserved_robot_6",
     "opponent_sentry",
 ]
 BULLET_KEYS = [
-    "opponent_hero",
+    "opponent_heavy",
     "opponent_infantry_3",
     "opponent_infantry_4",
-    "opponent_aerial",
+    "reserved_robot_6",
     "opponent_sentry",
 ]
 BUFF_KEYS = [
-    "opponent_hero",
-    "opponent_engineer",
+    "opponent_heavy",
+    "reserved_robot_2",
     "opponent_infantry_3",
     "opponent_infantry_4",
     "opponent_sentry",
@@ -170,13 +168,12 @@ BUFF_KEYS = [
 SIDE_LABELS = {"red": "红方", "blue": "蓝方"}
 WAVE_LABELS = {"broadcast": "信息波", "interference": "干扰波"}
 ROBOT_LABELS = {
-    "opponent_hero": "英雄",
-    "opponent_engineer": "工程",
+    "opponent_heavy": "重装",
+    "reserved_robot_2": "保留槽 2",
+    "reserved_robot_6": "保留槽 6",
     "opponent_infantry_3": "步兵3",
     "opponent_infantry_4": "步兵4",
-    "opponent_aerial": "空中",
     "opponent_sentry": "哨兵",
-    "reserved": "保留",
 }
 GROUP_LABELS = {"hp": "血量", "bullets": "发弹量"}
 

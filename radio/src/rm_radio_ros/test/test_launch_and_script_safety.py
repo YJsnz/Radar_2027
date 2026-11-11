@@ -746,7 +746,9 @@ def test_lab_tx_panel_uses_independently_identified_tx_uris():
     assert 'def _is_tx_process_command(command: str)' in dashboard
     assert 'return "start_dual_tx.sh" in token_basenames' in dashboard
     assert '报告相同硬件序列号' in dashboard
-    assert 'app.js?v=tx-20260716-protocol-ranges' in html
+    assert re.search(r'app\.js\?v=tx-\d{8}-protocol-roles-v\d+', html)
+    assert 'opponent_heavy' in web
+    assert 'reserved_robot_2' in web
     assert 'id="broadcastAutoChange"' in html
     assert 'broadcast.auto_change_data = $("broadcastAutoChange").checked' in web
     assert '"$INTERFERENCE_TX_RF_PORT"' in launcher

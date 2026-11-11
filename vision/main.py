@@ -1833,7 +1833,6 @@ def ser_receive():
                 if vulnerability_result is not None:
                     received_commands.append("0x020E")
                     received_cmd_id2, received_data2, received_seq2 = vulnerability_result
-                    received_data2 = list(received_data2)[0]
                     double_vulnerability_chance, opponent_double_vulnerability, encryption_level, key_modifiable = Radar_decision(received_data2)
                 if target_result is not None:
                     received_commands.append("0x0105")

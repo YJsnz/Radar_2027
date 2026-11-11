@@ -544,15 +544,17 @@ Web 界面分两页，加一个高级抽屉。
 
 视觉侧已不再自主触发，决策统一在无线电侧。触发条件：
 
-- 任一敌方英雄 / 步兵 / 哨兵在批准的 ROI 掩码内**停留 ≥ 3 秒**（`zone_dwell_sec`）
-- 或滚动 3 秒窗口内本方英雄**累计掉血 ≥ 100 HP**（`hero_hp_drop_amount` / `hero_hp_window_sec`）
+- 任一敌方重装 / 步兵 / 哨兵在批准的 ROI 掩码内**停留 ≥ 3 秒**（`zone_dwell_sec`）
+- 或滚动 3 秒窗口内本方重装**累计掉血 ≥ 100 HP**（`heavy_hp_drop_amount` / `heavy_hp_window_sec`）
 - 比赛进入**最后 30 秒**（`endgame_sec`）时，把剩余机会全部消耗或排队 — 双倍易伤持续 30 秒，留着不用就浪费了
+
+以上为项目内的战术触发启发式，规则没有规定掉血阈值、ROI 驻留或残局触发条件。机会数和当前生效状态以有效 0x020E 回报为准；0x0121 在前一次生效期间允许排队请求，节点只在计数单调递增、机会仍可用且状态新鲜时发送。
 
 ROI 掩码打包在 `assets/double_vulnerability_trigger_mask.npz`，预览图见 `docs/double_vulnerability_trigger_mask_preview.png` 与 `docs/double_vulnerability_trigger_mask_overlay.png`。
 
 ### 11.3 无敌目标广播（`core/invincible_targets.py`）
 
-团队自定义消息，走裁判 `0x0301`，`data_cmd_id = 0x0234`。把敌方英雄 / 工程 / 3 号步兵 / 4 号步兵 / 哨兵的无敌状态（main_status 为 2 或 3）打包，分发给本方 1/3/4/5/6/7 号机器人。3 Hz × 6 个接收者 = 18 fps。
+团队自定义消息，走裁判 `0x0301`，`data_cmd_id = 0x0234`。把敌方重装 / 3 号步兵 / 4 号步兵 / 哨兵的无敌状态（main_status 为 2 或 3）打包，分发给本方 1/3/4/7 号机器人。3 Hz × 4 个接收者 = 12 fps。
 
 ### 11.4 干扰密码（`nodes/auto_password_node.py`）
 

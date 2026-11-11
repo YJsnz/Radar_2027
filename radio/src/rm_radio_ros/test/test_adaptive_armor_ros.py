@@ -44,6 +44,8 @@ def test_generated_semantic_request_passes_existing_serial_guards_and_encodes_13
     node.last_radar_cmd_value = 0
     node.last_armor_fortify_cmd_value = 0
     node.last_radar_decision_sync = referee(303)['last_radar_decision_sync']
+    node.active_command_counter_side = 'red'
+    node.command_counter_ready_by_side = {'red': True}
     node._effective_sender_id = lambda: 9
     node.get_parameter = lambda name: SimpleNamespace(value={
         'status_period_sec': 0.2, 'receiver_id': 0x8080,

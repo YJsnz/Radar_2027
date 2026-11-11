@@ -108,13 +108,13 @@ def build_data_radar(target_robot_id, target_position_x, target_position_y):
 def build_data_radar_all(send_map, state):
     """
     构建 0x0305 的 map_robot_data_t 数据段（共24个uint16_t，48字节）：
-    1) 对方: hero/engineer/infantry3/infantry4/aerial/sentry 的 x,y
-    2) 己方: hero/engineer/infantry3/infantry4/aerial/sentry 的 x,y
+    1) 对方: 重装/保留/步兵3/步兵4/保留/哨兵的 x,y
+    2) 己方: 同上；保留槽始终为零
     """
     data = bytearray()
 
-    # 角色顺序按协议: 1,2,3,4,6,7 (hero/engineer/inf3/inf4/aerial/sentry)
-    role_order = ['1', '2', '3', '4', '6', '7']
+    # 2027 0x0305 槽位：1、保留、3、4、保留、7。
+    role_order = ['1', None, '3', '4', None, '7']
     if state == 'R':
         opponent_prefix, ally_prefix = 'B', 'R'
     else:
@@ -122,12 +122,22 @@ def build_data_radar_all(send_map, state):
 
     for prefix in (opponent_prefix, ally_prefix):
         for role in role_order:
+            if role is None:
+                data.extend(b'\x00\x00\x00\x00')
+                continue
             key = f"{prefix}{role}"
             x, y = send_map.get(key, (0, 0))
-            data.extend(bytearray(struct.pack('H', int(x))))
-            data.extend(bytearray(struct.pack('H', int(y))))
+            data.extend(struct.pack('<H', int(x)))
+            data.extend(struct.pack('<H', int(y)))
 
     return data
+
+
+def is_valid_0305_payload(payload):
+    data = bytes(payload)
+    if len(data) != 48 or not any(data):
+        return False
+    return all(not any(data[offset:offset + 4]) for offset in (4, 16, 28, 40))
 
 
 
@@ -138,13 +148,24 @@ def generate_random_password():
     return password
 
 
-def build_data_decision(radar_cmd, state, password_cmd=0, password=None):
+def build_data_decision(
+    radar_cmd,
+    state,
+    password_cmd=0,
+    password=None,
+    armor_fortify_cmd=0,
+    fortify_center_x_mm=0,
+    fortify_center_y_mm=0,
+):
     """
-    构建0x0121雷达自主决策数据包（radar_cmd_t 共8字节）
+    构建0x0121雷达自主决策数据包（radar_cmd_t 共13字节）
     :param radar_cmd: uint8_t 雷达是否确认触发双倍易伤标志 (即原 chances_flag)
     :param state: 'R' 红方 / 'B' 蓝方
     :param password_cmd: uint8_t 密钥指令类型 (0=无操作, 1=更新己方密钥, 2=验证对方密钥)
     :param password: list[6] 密钥值，6个ASCII码整数，为None时填充0
+    :param armor_fortify_cmd: uint8_t 单调递增的装甲加固请求计数
+    :param fortify_center_x_mm: uint16_t 检测面坐标系中的圆心 X，单位 mm
+    :param fortify_center_y_mm: uint16_t 检测面坐标系中的圆心 Y，单位 mm
     """
     if password is None:
         password = [0] * 6
@@ -159,11 +180,12 @@ def build_data_decision(radar_cmd, state, password_cmd=0, password=None):
     else:
         data.extend(bytearray(struct.pack('H', 109)))
     data.extend(bytearray([0x80, 0x80]))
-    # radar_cmd_t 数据段 (8字节)
+    # radar_cmd_t 数据段 (13字节)
     data.extend(bytearray(struct.pack('B', radar_cmd)))      # byte0: radar_cmd
     data.extend(bytearray(struct.pack('B', password_cmd)))    # byte1: password_cmd
     for i in range(6):                                        # byte2-7: password_1~6
         data.extend(bytearray(struct.pack('B', password[i])))
+    data.extend(struct.pack('<BHH', armor_fortify_cmd, fortify_center_x_mm, fortify_center_y_mm))
     return data
 
 
@@ -253,9 +275,16 @@ def receive_packet(serial_data, expected_cmd_id, info):
 
 
 def Radar_decision(byte_data):
-    # 确保输入是一个字节
-    if not isinstance(byte_data, int) or byte_data < 0 or byte_data > 255:
-        raise ValueError("输入必须是一个字节（0-255）")
+    # 2027 0x020E 固定为 8 字节；状态字节位于 payload[0]。
+    if isinstance(byte_data, int):
+        raise ValueError("2027 0x020E payload 必须是 8 字节")
+    try:
+        payload = bytes(byte_data)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("0x020E payload 必须是 8 字节") from exc
+    if len(payload) != 8:
+        raise ValueError(f"2027 0x020E payload 必须是 8 字节，收到 {len(payload)} 字节")
+    byte_data = payload[0]
 
     # 提取第 0-1 位的双倍易伤机会
     double_vulnerability_chance = byte_data & 0b00000011

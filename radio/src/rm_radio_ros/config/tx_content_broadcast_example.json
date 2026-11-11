@@ -6,11 +6,9 @@
     "broadcast": {
       "enabled_cmds": ["0x0A01", "0x0A04"],
       "robots": {
-        "opponent_hero": { "x": 1234, "y": 5678 },
-        "opponent_engineer": { "x": 1100, "y": 2100 },
+        "opponent_heavy": { "x": 1234, "y": 5678 },
         "opponent_infantry_3": { "x": 1200, "y": 2200 },
         "opponent_infantry_4": { "x": 1300, "y": 2300 },
-        "opponent_aerial": { "x": 1400, "y": 2400 },
         "opponent_sentry": { "x": 1500, "y": 2500 }
       },
       "macro": {

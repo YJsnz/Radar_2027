@@ -125,20 +125,29 @@ def test_0305_payload_order_is_opponents_then_allies_for_red_and_is_48_bytes():
     positions = {
         'B1': {'x': 1, 'y': 2},
         'B2': {'x': 3, 'y': 4},
+        'B6': {'x': 5, 'y': 6},
+        'B3': {'x': 7, 'y': 8},
+        'B4': {'x': 9, 'y': 10},
+        'B7': {'x': 11, 'y': 12},
         'R1': {'x': 101, 'y': 102},
+        'R3': {'x': 103, 'y': 104},
+        'R4': {'x': 105, 'y': 106},
+        'R7': {'x': 107, 'y': 108},
     }
     payload = build_0305_payload(positions, 'red')
 
     assert payload is not None
     assert len(payload) == 48
     values = struct.unpack('<24H', payload)
-    assert values[:4] == (1, 2, 3, 4)
-    assert values[12:14] == (101, 102)
+    assert values[:12] == (1, 2, 0, 0, 7, 8, 9, 10, 0, 0, 11, 12)
+    assert values[12:] == (101, 102, 0, 0, 103, 104, 105, 106, 0, 0, 107, 108)
 
 
 def test_0305_blue_side_places_visual_allies_in_the_second_protocol_half():
     positions = {
         'R1': {'x': 11, 'y': 12},
+        'R2': {'x': 51, 'y': 52},
+        'R6': {'x': 61, 'y': 62},
         'B1': {'x': 1011, 'y': 1012},
         'B6': {'x': 1061, 'y': 1062},
     }
@@ -146,6 +155,5 @@ def test_0305_blue_side_places_visual_allies_in_the_second_protocol_half():
 
     assert payload is not None
     values = struct.unpack('<24H', payload)
-    assert values[:2] == (11, 12)  # 对方英雄：前 24 B
-    assert values[12:14] == (1011, 1012)  # 己方英雄：后 24 B
-    assert values[20:22] == (1061, 1062)  # 己方 6 号空中机器人
+    assert values[:6] == (11, 12, 0, 0, 0, 0)  # 对方 1 号重装，其余对应槽位
+    assert values[12:18] == (1011, 1012, 0, 0, 0, 0)  # 己方保留槽清零

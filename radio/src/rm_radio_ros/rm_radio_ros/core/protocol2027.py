@@ -11,6 +11,39 @@ from __future__ import annotations
 
 
 PROTOCOL_VERSION = "RoboMaster 2027 Communication Protocol V1.0.0 (2026-10-29)"
+RADAR_CLIENT_INTERACTION_MAX_RATE_HZ = 30
+RADAR_CLIENT_MAP_MAX_RATE_HZ = 5
+
+# Positional robot data uses six slots per side. Slots 2 and 6 are reserved
+# this season and must never be treated as robot states or transmitted data.
+ROBOT_POSITION_SLOT_ROLES = ("1", None, "3", "4", None, "7")
+ROBOT_POSITION_SLOT_NAMES = (
+    "opponent_heavy",
+    "reserved_robot_2",
+    "opponent_infantry_3",
+    "opponent_infantry_4",
+    "reserved_robot_6",
+    "opponent_sentry",
+)
+RADAR_POSITION_SLOT_NAMES = ROBOT_POSITION_SLOT_NAMES
+RADAR_0305_RESERVED_BYTE_RANGES = (4, 16, 28, 40)
+
+
+def valid_radar_client_map_payload(payload: bytes | bytearray) -> bool:
+    data = bytes(payload)
+    if len(data) != 48 or not any(data):
+        return False
+    return all(
+        not any(data[offset : offset + 4])
+        for offset in RADAR_0305_RESERVED_BYTE_RANGES
+    )
+
+
+RADAR_INFO_TO_CLIENT_SLOT_NAMES = tuple(
+    f"{side}_{name.removeprefix('opponent_')}"
+    for side in ("opponent", "ally")
+    for name in ROBOT_POSITION_SLOT_NAMES
+)
 
 GAME_ROBOT_HP_LENGTH = 24
 GAME_ROBOT_HP_FIELD_OFFSETS = {
@@ -74,6 +107,22 @@ RADAR_MACRO_DATA_OFFSETS = {
     "occupation_state_1": 4,
     "occupation_state_2": 8,
 }
+
+RADAR_HP_SLOT_NAMES = (
+    "opponent_heavy",
+    "reserved_robot_2",
+    "opponent_infantry_3",
+    "opponent_infantry_4",
+    "reserved_robot_6",
+    "opponent_sentry",
+)
+RADAR_BULLET_SLOT_NAMES = (
+    "opponent_heavy",
+    "opponent_infantry_3",
+    "opponent_infantry_4",
+    "reserved_robot_6",
+    "opponent_sentry",
+)
 
 # Each field is (name, bit offset, width, kind, maximum legal enum value).
 # Reserved bits are intentionally absent and must remain zero in generated data.

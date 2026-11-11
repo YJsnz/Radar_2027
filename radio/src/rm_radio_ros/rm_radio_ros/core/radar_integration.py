@@ -4,16 +4,15 @@ import struct
 from copy import deepcopy
 from typing import Mapping, Optional
 
+from .protocol2027 import ROBOT_POSITION_SLOT_ROLES
 
-ROBOT_ROLE_IDS = ('1', '2', '3', '4', '6', '7')
+ROBOT_ROLE_IDS = tuple(role for role in ROBOT_POSITION_SLOT_ROLES if role is not None)
 ROBOT_NAMES = tuple(f'{side}{role}' for side in ('R', 'B') for role in ROBOT_ROLE_IDS)
 VISION_STATES = {'measured', 'occlusion_hold', 'blind_prediction', 'missing'}
 RADIO_WIRE_NAMES = (
-    'opponent_hero',
-    'opponent_engineer',
+    'opponent_heavy',
     'opponent_infantry_3',
     'opponent_infantry_4',
-    'opponent_aerial',
     'opponent_sentry',
 )
 
@@ -57,13 +56,16 @@ def clean_position(position: object) -> dict[str, int]:
 
 
 def build_0305_payload(positions: Mapping[str, object], own_side: str) -> bytes | None:
-    """Build map_robot_data_t: six opponents followed by six allies."""
+    """Build 0x0305: six slots per side; reserved slots are always zero."""
     ally = side_prefix(own_side)
     opponent = 'B' if ally == 'R' else 'R'
     values: list[int] = []
     has_nonzero = False
     for prefix in (opponent, ally):
-        for role in ROBOT_ROLE_IDS:
+        for role in ROBOT_POSITION_SLOT_ROLES:
+            if role is None:
+                values.extend((0, 0))
+                continue
             position = clean_position(positions.get(f'{prefix}{role}'))
             x, y = position['x'], position['y']
             has_nonzero = has_nonzero or x != 0 or y != 0
@@ -193,7 +195,9 @@ class RadarFusionState:
 
         prefix = opponent_prefix(self.own_side)
         clean_radio: dict[str, dict] = {}
-        for index, role in enumerate(ROBOT_ROLE_IDS):
+        for index, role in enumerate(ROBOT_POSITION_SLOT_ROLES):
+            if role is None:
+                continue
             raw = robots[index] if index < len(robots) and isinstance(robots[index], Mapping) else {}
             position = clean_position({
                 'x': raw.get('target_pos_x', 0),

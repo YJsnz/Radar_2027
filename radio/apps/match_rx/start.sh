@@ -467,6 +467,7 @@ if is_true "$RUN_REFEREE"; then
     radar_cmd_topic:="$RADAR_CMD_TOPIC" \
     require_serial_open_on_start:="$REQUIRE_REFEREE_SERIAL_OPEN_ON_START" \
     frame_timeout_sec:="$REFEREE_FRAME_TIMEOUT_SEC" \
+    command_counter_state_path:="$REFEREE_COMMAND_COUNTER_STATE_PATH" \
     auto_send_invincible_targets:="$AUTO_SEND_INVINCIBLE_TARGETS" \
     invincible_targets_data_cmd_id:="$INVINCIBLE_TARGETS_DATA_CMD_ID" \
     invincible_targets_send_rate_hz:="$INVINCIBLE_TARGETS_SEND_RATE_HZ" \
@@ -498,8 +499,8 @@ if is_true "$RUN_RADAR_INTEGRATION"; then
     -p auto_double_vulnerability_enabled:="$RADAR_AUTO_DOUBLE_ENABLED" \
     -p auto_double_vulnerability_mask_path:="$RADAR_AUTO_DOUBLE_MASK_PATH" \
     -p auto_double_vulnerability_zone_dwell_sec:="$RADAR_AUTO_DOUBLE_ZONE_DWELL_SEC" \
-    -p auto_double_vulnerability_hero_hp_drop_amount:="$RADAR_AUTO_DOUBLE_HERO_HP_DROP_AMOUNT" \
-    -p auto_double_vulnerability_hero_hp_window_sec:="$RADAR_AUTO_DOUBLE_HERO_HP_WINDOW_SEC" \
+    -p auto_double_vulnerability_heavy_hp_drop_amount:="$RADAR_AUTO_DOUBLE_HEAVY_HP_DROP_AMOUNT" \
+    -p auto_double_vulnerability_heavy_hp_window_sec:="$RADAR_AUTO_DOUBLE_HEAVY_HP_WINDOW_SEC" \
     -p auto_double_vulnerability_endgame_sec:="$RADAR_AUTO_DOUBLE_ENDGAME_SEC" \
     -p auto_double_vulnerability_referee_timeout_sec:="$RADAR_AUTO_DOUBLE_REFEREE_TIMEOUT_SEC"
 fi

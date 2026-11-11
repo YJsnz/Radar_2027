@@ -60,7 +60,7 @@ def test_bridge_emits_official_payloads():
         'RadarEnemyMacroStatus',
         'RadarCommand0121',
     ]
-    assert outputs[1]['payload']['opponent_engineer'] == 0x0302
+    assert outputs[1]['payload']['opponent_heavy'] == 0x0100
     assert outputs[2]['payload']['remaining_coins'] == 1
     assert outputs[2]['payload']['total_coins'] == 2
     assert outputs[3]['payload']['password_cmd'] == 2
@@ -75,7 +75,7 @@ def test_bridge_includes_new_0a05_main_status_fields():
     assert outputs[0]['payload']['sentry_mode'] == 5
     assert outputs[0]['payload']['sentry_mode_name'] == 'enhanced_defensive'
     assert outputs[0]['payload']['robot_main_status']['opponent_heavy'] == 0
-    assert outputs[0]['payload']['reserved_engineer_main_status'] == 1
+    assert outputs[0]['payload']['reserved_main_status'] == 1
     assert outputs[0]['payload']['robot_main_status_names']['opponent_infantry_4'] == 'invincible_weakened'
 
 
@@ -92,6 +92,24 @@ def test_bridge_emits_referee_status_payloads():
     assert outputs[1]['payload']['enemy']['opponent_heavy'] is True
     assert outputs[1]['payload']['enemy']['opponent_sentry'] is True
     assert outputs[1]['payload']['ally']['ally_sentry'] is True
+
+
+def test_bridge_does_not_publish_known_commands_with_invalid_lengths_as_status():
+    bridge = RefereeBridge()
+    outputs = bridge.process_frames([
+        _frame(0x020E, b'\x01'),
+        _frame(0x0003, bytes(20)),
+        _frame(0x0A05, bytes(46)),
+    ])
+
+    assert [event['type'] for event in outputs] == [
+        'RefereeFrameDiagnostic',
+        'RefereeFrameDiagnostic',
+        'RefereeFrameDiagnostic',
+    ]
+    assert [event['expected_data_length'] for event in outputs] == [8, 24, 47]
+    assert bridge.last_referee_status == {}
+    assert bridge.last_broadcast_status == {}
 
 
 def test_bridge_emits_2027_game_robot_hp_payload():
@@ -125,7 +143,11 @@ def test_decoded_radar_info_can_build_protocol_0305_payload():
 
     assert payload is not None
     assert len(payload) == 48
-    assert payload[:12] == bytes(range(12))
+    assert payload[:24] == bytes([
+        0, 1, 2, 3, 0, 0, 0, 0,
+        8, 9, 10, 11, 12, 13, 14, 15,
+        0, 0, 0, 0, 20, 21, 22, 23,
+    ])
     assert payload[24:] == b'\x00' * 24
 
 
@@ -155,6 +177,9 @@ def test_0305_payload_validator_accepts_nonzero_protocol_payload():
 
     assert is_valid_0305_payload(bytes(payload))
 
+    payload[4] = 1
+    assert not is_valid_0305_payload(bytes(payload))
+
 
 def test_algorithm_protocol_patch_decodes_0105_and_020e_bitfields():
     dart_message_cls = type('DartStatusMessage', (), {'STRUCT_CLASS': object})
@@ -173,10 +198,14 @@ def test_algorithm_protocol_patch_decodes_0105_and_020e_bitfields():
     dart_packed = (5 & 0x07) | ((3 & 0x07) << 3) | ((4 & 0x07) << 6) | (0x2A << 9)
     dart = serial_protocol.DartStatData.from_buffer_copy(bytes([12]) + dart_packed.to_bytes(2, 'little'))
     radar_info_byte = (2 << 0) | (1 << 2) | (3 << 3) | (1 << 5)
-    radar_info = serial_protocol.RadarInfoData.from_buffer_copy(bytes([radar_info_byte]))
+    fortify_info_byte = 1 | (5 << 1)
+    radar_info = serial_protocol.RadarInfoData.from_buffer_copy(
+        bytes([radar_info_byte, fortify_info_byte, 0x34, 0x12, 0x78, 0x56, 0xBC, 0x9A])
+    )
 
     assert serial_protocol.DartStatusMessage.STRUCT_CLASS is serial_protocol.DartStatData
     assert referee_comm.RadarInfoMessage.STRUCT_CLASS is serial_protocol.RadarInfoData
+    assert __import__('ctypes').sizeof(serial_protocol.RadarInfoData) == 8
     assert dart.dart_remaining_time == 12
     assert dart.recent_hit_target == 5
     assert dart.accumulated_hit_count == 3
@@ -186,4 +215,10 @@ def test_algorithm_protocol_patch_decodes_0105_and_020e_bitfields():
     assert radar_info.is_double_vulnerability == 1
     assert radar_info.own_encryption_level == 3
     assert radar_info.can_change_password == 1
-    assert radar_info.reserve == 0
+    assert radar_info.reserved == 0
+    assert radar_info.armor_fortify_active == 1
+    assert radar_info.remaining_fortify_opportunities == 5
+    assert radar_info.fortify_reserved == 0
+    assert radar_info.fortify_center_x_mm == 0x1234
+    assert radar_info.fortify_center_y_mm == 0x5678
+    assert radar_info.fortify_radius_mm == 0x9ABC

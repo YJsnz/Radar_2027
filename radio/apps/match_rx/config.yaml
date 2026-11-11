@@ -79,7 +79,8 @@ referee:
   dry_run: false
   require_serial_open_on_start: false
   frame_timeout_sec: 2.0
-  # Team-defined 0x0301 / data_cmd_id 0x0234 message; 3 Hz x 6 receivers = 18 fps.
+  command_counter_state_path: ~/.local/state/shark-radar/radar_command_counters_2027.json
+  # Team-defined 0x0301 / data_cmd_id 0x0234 message; 3 Hz x 4 active receivers = 12 fps.
   auto_send_invincible_targets: true
   invincible_targets_data_cmd_id: 564
   invincible_targets_send_rate_hz: 3.0
@@ -136,11 +137,11 @@ radar_integration:
   auto_double_vulnerability:
     enabled: true
     mask_path: bundled
-    # Any one enemy hero/infantry/sentry must remain in the approved ROI.
+    # Any one enemy heavy/infantry/sentry must remain in the approved ROI.
     zone_dwell_sec: 3.0
     # A cumulative drop of at least 100 HP inside a rolling 3 s window is "rapid".
-    hero_hp_drop_amount: 100
-    hero_hp_window_sec: 3.0
+    heavy_hp_drop_amount: 100
+    heavy_hp_window_sec: 3.0
     # Double vulnerability lasts 30 s, so consume/queue all remaining chances
     # once the match clock reaches the final 30 s.
     endgame_sec: 30.0

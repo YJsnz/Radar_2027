@@ -15,38 +15,21 @@ from .protocol2027 import (
     RADAR_COMMAND_DATA_LENGTHS,
     RADAR_MACRO_STATE_1_FIELDS,
     RADAR_MACRO_STATE_2_FIELDS,
+    RADAR_HP_SLOT_NAMES,
+    RADAR_BULLET_SLOT_NAMES,
+    RADAR_POSITION_SLOT_NAMES,
 )
 
 
 POSITION_X_MAX_CM = 2800
 POSITION_Y_MAX_CM = 1500
 
-ROBOT_KEYS = (
-    "opponent_hero",
-    "opponent_engineer",
-    "opponent_infantry_3",
-    "opponent_infantry_4",
-    "opponent_aerial",
-    "opponent_sentry",
-)
-HP_KEYS = (
-    "opponent_hero",
-    "opponent_engineer",
-    "opponent_infantry_3",
-    "opponent_infantry_4",
-    "reserved",
-    "opponent_sentry",
-)
-BULLET_KEYS = (
-    "opponent_hero",
-    "opponent_infantry_3",
-    "opponent_infantry_4",
-    "opponent_aerial",
-    "opponent_sentry",
-)
+ROBOT_KEYS = tuple(name for name in RADAR_POSITION_SLOT_NAMES if not name.startswith("reserved_"))
+HP_KEYS = RADAR_HP_SLOT_NAMES
+BULLET_KEYS = RADAR_BULLET_SLOT_NAMES
 BUFF_ROBOT_KEYS = (
-    "opponent_hero",
-    "opponent_engineer",
+    "opponent_heavy",
+    "reserved_robot_2",
     "opponent_infantry_3",
     "opponent_infantry_4",
     "opponent_sentry",
@@ -55,11 +38,11 @@ BUFF_ROBOT_KEYS = (
 # Legacy 2026 sample ranges below are retained for existing lab controls and
 # are not certified 2027 limits. This migration updates wire layout only.
 HP_MAX = {
-    "opponent_hero": 600,
-    "opponent_engineer": 250,
+    "opponent_heavy": 600,
+    "reserved_robot_2": 0,
     "opponent_infantry_3": 400,
     "opponent_infantry_4": 400,
-    "reserved": 0,
+    "reserved_robot_6": 0,
     "opponent_sentry": 400,
 }
 
@@ -68,10 +51,10 @@ HP_MAX = {
 # 0x0A03.  The sentry value includes 300 initial, 1000 team exchange and six
 # 100-round supply-zone grants.
 BULLET_MAX = {
-    "opponent_hero": 100,
+    "opponent_heavy": 100,
     "opponent_infantry_3": 1500,
     "opponent_infantry_4": 1500,
-    "opponent_aerial": 750,
+    "reserved_robot_6": 0,
     "opponent_sentry": 1900,
 }
 
@@ -79,23 +62,23 @@ BULLET_MAX = {
 # zeroed to preserve the 2027 0x0A05 slot layout.
 BUFF_FIELD_MAX = {
     "hp_recovery_percent": {
-        key: 0 if key == "opponent_engineer" else 25 for key in BUFF_ROBOT_KEYS
+        key: 0 if key == "reserved_robot_2" else 25 for key in BUFF_ROBOT_KEYS
     },
     "shooting_heat_cooling": {
-        "opponent_hero": 200,
-        "opponent_engineer": 0,
+        "opponent_heavy": 200,
+        "reserved_robot_2": 0,
         "opponent_infantry_3": 120,
         "opponent_infantry_4": 120,
         "opponent_sentry": 120,
     },
     "defense_percent": {
-        key: 0 if key == "opponent_engineer" else 99 for key in BUFF_ROBOT_KEYS
+        key: 0 if key == "reserved_robot_2" else 99 for key in BUFF_ROBOT_KEYS
     },
     "negative_defense_percent": {
-        key: 0 if key == "opponent_engineer" else 100 for key in BUFF_ROBOT_KEYS
+        key: 0 if key == "reserved_robot_2" else 100 for key in BUFF_ROBOT_KEYS
     },
     "attack_percent": {
-        key: 0 if key == "opponent_engineer" else 300 for key in BUFF_ROBOT_KEYS
+        key: 0 if key == "reserved_robot_2" else 300 for key in BUFF_ROBOT_KEYS
     },
 }
 
@@ -181,9 +164,11 @@ def random_payload_for_command(
 
     out: list[int] = []
     if command == 0x0A01:
-        for _key in ROBOT_KEYS:
-            out.extend(_put_u16(rng.randint(0, POSITION_X_MAX_CM)))
-            out.extend(_put_u16(rng.randint(0, POSITION_Y_MAX_CM)))
+        for key in RADAR_POSITION_SLOT_NAMES:
+            x = rng.randint(0, POSITION_X_MAX_CM) if not key.startswith("reserved_") else 0
+            y = rng.randint(0, POSITION_Y_MAX_CM) if not key.startswith("reserved_") else 0
+            out.extend(_put_u16(x))
+            out.extend(_put_u16(y))
     elif command == 0x0A02:
         for key in HP_KEYS:
             out.extend(_put_u16(rng.randint(0, HP_MAX[key])))
@@ -206,7 +191,7 @@ def random_payload_for_command(
             out.extend(_put_u16(rng.randint(0, BUFF_FIELD_MAX["attack_percent"][key])))
         out.append(rng.randint(1, 6))
         out.extend(
-            0 if key == "opponent_engineer" else rng.randint(0, 3)
+            0 if key == "reserved_robot_2" else rng.randint(0, 3)
             for key in BUFF_ROBOT_KEYS
         )
         out.extend(bytes(6))

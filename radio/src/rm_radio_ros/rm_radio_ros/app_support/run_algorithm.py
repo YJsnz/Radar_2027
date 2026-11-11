@@ -9,6 +9,11 @@ import threading
 import time
 from pathlib import Path
 
+from rm_radio_ros.core.protocol2027 import (
+    ROBOT_POSITION_SLOT_ROLES,
+    valid_radar_client_map_payload,
+)
+
 
 def _truthy(value: str) -> bool:
     return value.strip().lower() not in {"0", "false", "no", "off"}
@@ -47,6 +52,9 @@ def radar_info_to_0305_payload(message: dict) -> bytes | None:
     values: list[int] = []
     has_nonzero_position = False
     for index in range(12):
+        if ROBOT_POSITION_SLOT_ROLES[index % 6] is None:
+            values.extend((0, 0))
+            continue
         robot = robots[index] if index < len(robots) and isinstance(robots[index], dict) else {}
         x = _u16(robot.get("target_pos_x", 0))
         y = _u16(robot.get("target_pos_y", 0))
@@ -59,9 +67,7 @@ def radar_info_to_0305_payload(message: dict) -> bytes | None:
 
 
 def is_valid_0305_payload(payload: bytes) -> bool:
-    if len(payload) != 48:
-        return False
-    return any(payload)
+    return valid_radar_client_map_payload(payload)
 
 
 def _patch_algorithm_protocol_structures(serial_protocol, referee_comm=None) -> None:
@@ -84,7 +90,13 @@ def _patch_algorithm_protocol_structures(serial_protocol, referee_comm=None) -> 
             ("is_double_vulnerability", ctypes.c_uint8, 1),
             ("own_encryption_level", ctypes.c_uint8, 2),
             ("can_change_password", ctypes.c_uint8, 1),
-            ("reserve", ctypes.c_uint8, 2),
+            ("reserved", ctypes.c_uint8, 2),
+            ("armor_fortify_active", ctypes.c_uint8, 1),
+            ("remaining_fortify_opportunities", ctypes.c_uint8, 3),
+            ("fortify_reserved", ctypes.c_uint8, 4),
+            ("fortify_center_x_mm", ctypes.c_uint16),
+            ("fortify_center_y_mm", ctypes.c_uint16),
+            ("fortify_radius_mm", ctypes.c_uint16),
         ]
 
     serial_protocol.DartStatData = DartStatData

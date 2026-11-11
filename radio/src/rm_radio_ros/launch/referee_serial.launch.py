@@ -27,6 +27,7 @@ def generate_launch_description():
     exclusive_port_lock = LaunchConfiguration('exclusive_port_lock')
     require_serial_open_on_start = LaunchConfiguration('require_serial_open_on_start')
     frame_timeout_sec = LaunchConfiguration('frame_timeout_sec')
+    command_counter_state_path = LaunchConfiguration('command_counter_state_path')
     auto_interference_level = LaunchConfiguration('auto_interference_level')
     auto_rx_interference_level = LaunchConfiguration('auto_rx_interference_level')
     apply_referee_level_only_when_running = LaunchConfiguration('apply_referee_level_only_when_running')
@@ -60,6 +61,10 @@ def generate_launch_description():
         DeclareLaunchArgument('exclusive_port_lock', default_value='true'),
         DeclareLaunchArgument('require_serial_open_on_start', default_value='false'),
         DeclareLaunchArgument('frame_timeout_sec', default_value='2.0'),
+        DeclareLaunchArgument(
+            'command_counter_state_path',
+            default_value='~/.local/state/shark-radar/radar_command_counters_2027.json',
+        ),
         DeclareLaunchArgument('auto_interference_level', default_value='false'),
         DeclareLaunchArgument('auto_rx_interference_level', default_value='true'),
         DeclareLaunchArgument('apply_referee_level_only_when_running', default_value='false'),
@@ -107,6 +112,10 @@ def generate_launch_description():
                     value_type=bool,
                 ),
                 'frame_timeout_sec': ParameterValue(frame_timeout_sec, value_type=float),
+                'command_counter_state_path': ParameterValue(
+                    command_counter_state_path,
+                    value_type=str,
+                ),
                 'auto_interference_level': ParameterValue(auto_interference_level, value_type=bool),
                 'auto_rx_interference_level': ParameterValue(auto_rx_interference_level, value_type=bool),
                 'apply_referee_level_only_when_running': ParameterValue(

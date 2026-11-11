@@ -76,7 +76,7 @@ def test_broadcast_auto_change_uses_randomized_payload_specs():
     plan = dashboard.build_plan(state)
     cycle = plan['tx_setters']['command_cycle']
 
-    assert [item['payload_size'] for item in cycle] == [24, 12, 10, 8, 41]
+    assert [item['payload_size'] for item in cycle] == [24, 12, 10, 12, 47]
     assert all(item['randomize_payload'] is True for item in cycle)
     assert all('payload_data' not in item for item in cycle)
 
@@ -105,7 +105,8 @@ def test_randomize_broadcast_stays_inside_all_rulebook_ranges():
             0 <= broadcast['hp'][key] <= maximum
             for key, maximum in dashboard.HP_MAX.items()
         )
-        assert broadcast['hp']['reserved'] == 0
+        assert broadcast['hp']['reserved_robot_2'] == 0
+        assert broadcast['hp']['reserved_robot_6'] == 0
         assert all(
             0 <= broadcast['bullets'][key] <= maximum
             for key, maximum in dashboard.BULLET_MAX.items()
@@ -125,16 +126,16 @@ def test_broadcast_config_clamps_direct_api_values_before_building_frames():
     state['broadcast'].update(
         {
             'enabled_cmds': ['0x0A01', '0xDEAD'],
-            'robots': {'opponent_hero': {'x': 99999, 'y': 99999}},
-            'hp': {'opponent_engineer': 99999, 'reserved': 123},
-            'bullets': {'opponent_aerial': 99999},
+            'robots': {'opponent_heavy': {'x': 99999, 'y': 99999}},
+            'hp': {'reserved_robot_2': 123, 'reserved_robot_6': 123},
+            'bullets': {'reserved_robot_6': 123},
             'macro': {
                 'remaining_coins': 500,
                 'total_coins': 100,
                 'occupation_bits': 0xFFFFFFFF,
             },
             'buffs': {
-                'opponent_hero': {
+                'opponent_heavy': {
                     'hp_recovery_percent': 999,
                     'shooting_heat_cooling': 999,
                     'defense_percent': 999,
@@ -143,7 +144,7 @@ def test_broadcast_config_clamps_direct_api_values_before_building_frames():
                 },
             },
             'sentry_mode': 99,
-            'robot_main_status': {'opponent_hero': 99},
+            'robot_main_status': {'opponent_heavy': 99},
             'buff_raw': [255] * 41,
         }
     )
@@ -151,18 +152,18 @@ def test_broadcast_config_clamps_direct_api_values_before_building_frames():
     config = dashboard._broadcast_config(state)
 
     assert config['enabled_cmds'] == ['0x0A01']
-    assert config['robots']['opponent_hero'] == {'x': 2800, 'y': 1500}
-    assert config['hp']['opponent_engineer'] == 250
-    assert config['hp']['reserved'] == 0
-    assert config['bullets']['opponent_aerial'] == 750
+    assert config['robots']['opponent_heavy'] == {'x': 2800, 'y': 1500}
+    assert config['hp']['reserved_robot_2'] == 0
+    assert config['hp']['reserved_robot_6'] == 0
+    assert config['bullets']['reserved_robot_6'] == 0
     assert config['macro']['remaining_coins'] == config['macro']['total_coins'] == 100
     assert config['macro']['occupation_bits'] == dashboard.normalize_occupation_bits(0xFFFFFFFF)
-    assert config['buffs']['opponent_hero'] == {
-        field: maxima['opponent_hero']
+    assert config['buffs']['opponent_heavy'] == {
+        field: maxima['opponent_heavy']
         for field, maxima in dashboard.BUFF_FIELD_MAX.items()
     }
     assert config['sentry_mode'] == 6
-    assert config['robot_main_status']['opponent_hero'] == 3
+    assert config['robot_main_status']['opponent_heavy'] == 3
     assert 'buff_raw' not in config
 
 
