@@ -77,12 +77,12 @@ legacy 还有第二道门 `confirm_armor_detection`（`main.py:331`）：跨帧 
 
 ### 3.1 标定流程（calibration.py，955 行）
 
-- 固定 **2 层**：`height∈{0,1}` 对应 0cm 与 300cm（`button2_clicked` 切换 `self.height=(self.height+1)%2`，`calibration.py:666`）；每层 `points_per_layer`（config，默认 6）对点：左栏相机像素点、右栏地图点，成对点击（`left_top_clicked:612` / `right_top_clicked:633`，坐标按显示缩放比 `left_scale_x/right_scale_x` 还原），可拖动/撤回。
+- 固定 **2 组**：`height∈{0,1}` 是组索引，代码没有固定 0cm／300cm 高度约束（`button2_clicked` 切换 `self.height=(self.height+1)%2`，`calibration.py:666`）；每层 `points_per_layer`（config，默认 6）对点：左栏相机像素点、右栏地图点，成对点击（`left_top_clicked:612` / `right_top_clicked:633`，坐标按显示缩放比 `left_scale_x/right_scale_x` 还原），可拖动/撤回。
 - 求解（`button4_clicked`，`calibration.py:859`）：
   - 检查两层点数齐；`points_per_layer==4` 用 `cv2.getPerspectiveTransform`（精确 4 点），否则 `cv2.findHomography(image_point, map_point, method=0)`（**method=0 是最小二乘，不是 RANSAC**）；返回 None 时提示"高度 i 多点拟合失败，请检查点位是否共线或顺序错误"；
   - 重投影误差 `projected = perspectiveTransform(image_point, M)`，`errors = ||projected-map_point||`，打印 `mean/max/all`（px）；
   - `update_config_state(self.state)`（`calibration.py:59`，保留注释原子改写 `global.state`）；
-  - `np.save(save_path, self.T)` → `arrays_test_red.npy` / `arrays_test_blue.npy`，内容是 **`[M0, M300]` 两个 3×3**（顺序被 `main.py:523-524` 消费为 `M_ground`、`M_height_r`）；另存 `<name>_points.npz`（matrices/image_points/map_points）便于复现；
+  - `np.save(save_path, self.T)` → `arrays_test_red.npy` / `arrays_test_blue.npy`，内容是 **两组 3×3 单应矩阵**，没有随矩阵保存实际高度（顺序被 `main.py:523-524` 消费为 `M_ground`、`M_height_r`）；另存 `<name>_points.npz`（matrices/image_points/map_points）便于复现；
   - `calibration.run_after_save=true` 时 `os.execv` 直接进 `main.py`。
 - 地图预制（`calibration_presets.py`，`calibration_presets.json`）：`{"version":2,"presets":[{name, side:"R"|"B", points_per_layer, map_points:[[layer0],[layer1]], updated_at}]}`，只存地图点；导入时点数不符直接拒绝、有现存地图点需确认、图像点仍需手标；启动台/标定窗口都可用 `SHARK_CALIBRATION_PRESET` 指定方案。当前库内已有 `red人`、`blue` 等 6 点方案。
 
@@ -91,8 +91,8 @@ legacy 还有第二道门 `confirm_armor_detection`（`main.py:331`）：跨帧 
 `project_image_point_to_map(point_x, point_y)`（`main.py:411`，legacy 在 `:2478-2500` 有一份内联副本）：
 
 1. 像素点先 clamp 到 `[0,img_x]×[0,img_y]`；
-2. `cv2.perspectiveTransform` 用 `M_ground`（0cm 层）投影，结果 clamp 到 `[0,width]×[0,height]`（`width/height` 由掩码图尺寸决定，`main.py:527-529`）；
-3. **用掩码图判层**：`mask_image[y_c, x_c]` 为纯黑(0,0,0) 视为地面/公路 → 采用 0cm 结果；否则视为中央高地 → 改用 `M_height_r` 再投一次。
+2. `cv2.perspectiveTransform` 用第一组矩阵 `M_ground` 投影，结果 clamp 到 `[0,width]×[0,height]`（`width/height` 由掩码图尺寸决定，`main.py:527-529`）；
+3. **用掩码图判层**：`mask_image[y_c, x_c]` 为纯黑(0,0,0) 时采用第一组结果；非黑时改用第二组 `M_height_r` 再投一次。2027 各地形归属以新版掩码记录为准，不从旧注释推断实际高度。
    → 选层依据是"场地地图上的颜色分区"（`images-2026/map_mask26.jpg`），**不是几何高度**；2027 场地一旦改配色/改高地轮廓，必须重做 mask，否则落点直接偏一层。
 4. 锚点（投影输入点）由 `projection.point_source` 决定：`car_bottom`（默认）= 车辆框 `(left+0.5w, top+0.92h)`；`armor_bottom` = 装甲板框 `(x0+0.5w, y0+1.5h)`（`main.py:2468-2476`）。
 
@@ -203,7 +203,7 @@ referee = (display_x, 1500 - display_y)
 1. 相机序列号 `config.yaml:185` 段内 `device_serial: DA7873943`（启动台可改，但配置文件里是写死的具体机器）；
 2. 串口 `/dev/ttyUSB0`（`config.yaml:138`，启动台可改）；
 3. 场地 `2800×1500` 散落在 `config.yaml:8`、`main.py:432`、`:2524`、`vision_telemetry.py:19`、`tracking/types.py:63`、`tracking/pipeline.py:327`；
-4. 双层固定 0/300cm（`calibration.py:666` 两值取模；`M_height_r` 命名，`main.py:524`）；
+4. 固定两组矩阵（`calibration.py` 的组索引两值取模）；没有编码 0/300cm 实际高度，名称不代表物理共面；
 5. 2026 地图/掩码文件名 `images-2026/*`（`config.yaml:169` 段）；
 6. 编号白名单 `allowed_numbers=[1,2,3,4,7]`（`main.py:271-279`）、盲区角色 `blind_zone_roles={'1','2','7'}` 硬编码在 `main.py:594`、吊射点坐标 `config.yaml:191` 段；
 7. `ROBOT_ROLE_IDS` 无 '5'（`vision_telemetry.py:6`）但 armor.yaml 有 R5/B5 类 —— 5 号不会被上报；
@@ -222,7 +222,7 @@ referee = (display_x, 1500 - display_y)
 | 高 | `config.yaml:169` 段、`main.py:411/2478`、`images-2026/map_mask26.jpg` | 选层靠地图掩码颜色；换场地必须重做 `mask`/`red.jpg`/`blue.jpg`/`backup`，且 mask 必须与标定图同尺寸，否则 clamp 与判层全错 |
 | 高 | `RM_serial_py/ser_api.py:108-167`、`:255-279` | 0x0305 报文布局、0x0121 接收方 ID、位域定义直接对应裁判系统通信协议 V1.0.0(20261029)；2027 协议若有字段/命令字变化，这里与 `radio/` 需同步 |
 | 高 | `armor.yaml` 12 类、`main.py:271-279,594`、`vision_telemetry.py:6` | 兵种/编号集合（无 5、无 6）与盲区角色、白名单耦合；2027 若恢复 5 号或调整被标记对象，须同时改模型类别、白名单、telemetry 角色集与 radio 侧解析 |
-| 中 | `calibration.py:666`、`main.py:524` | 0cm/300cm 两层是硬编码概念（含变量名），2027 场地高地高度/层数变化时要改标定 UI、数据格式（npy 数组个数）与 `main.py` 消费顺序 |
+| 中 | `calibration.py:666`、`main.py:524` | 固定的是两组点及矩阵数量，未编码实际高度；2027 多坡向和多高度不能自动视为两个平面，需检查选点共面性与各区域误差，详见投影精度审阅 |
 | 中 | `.engine` 三个文件 | TensorRT/CUDA/GPU 版本绑定（README 锁定 TRT 10.13.3.9 / CUDA 12.8）；换机器或升级驱动必须用 `onnx2engine.py` / `scripts/build_armor_batch_engine.py` 重建，否则运行时段错误 |
 | 中 | `main.py:1122-1558`（整段发送逻辑） | legacy 与 radio_ros 两套发送/盲区/易伤代码并存，`chances_flag`、`guess_value` 等全局状态多；2027 若彻底改 ROS 通信，建议删除 legacy 路径收敛到 telemetry |
 | 中 | `config.yaml:191`（blind_zone.points） | 吊射点是 2026 场地像素坐标（按 calib 地图系），换场地全废；`base_time/offset_time=4.7s` 也是 2026 节奏调出来的 |

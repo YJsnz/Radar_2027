@@ -4,6 +4,7 @@
 > 对照组：`RoboMaster 2027 机甲大师超级对抗赛比赛规则手册 V1.0.0（20261015）`、`RoboMaster 2027 机甲大师高校系列赛通信协议 V1.0.0（20261029）`，以及仓库内两份 2026 版 PDF。
 > 详细调研报告见同目录：`rules2027_radar_analysis.md`、`protocol2027_analysis.md`、`radio_code_analysis.md`、`vision_code_analysis.md`。
 > 当前通讯实现状态以 [2027 通讯协议对照报告](protocol2027_compliance_audit.md) 和根目录 README TODO 为准；本文件下方“初始适配影响矩阵”及 2026-11-10 现状描述是修复前的调研快照。
+> 2026-11-13 地图与标定入口：[当前标定点说明及示意图](map2027_calibration_points.md)、[完整接入准备度检查](map2027_integration_readiness.md)。地图素材已具备，不表示已完成实际相机标定或切换运行配置。
 
 ---
 
