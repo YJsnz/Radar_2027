@@ -35,7 +35,9 @@ def main():
     # "ground/road" comment does not describe this season's road geometry.
     # Fill enclosed object holes so a base/flag standing on highland cannot
     # accidentally select the ground homography. Keep the external boundaries.
-    highland = np.isin(labels, (3, 4, 5, 6)).astype(np.uint8) * 255
+    # Region 9 contains the central highland's two stair/edge bands. Merge
+    # their top-view footprints with the highland, as in the mask26 treatment.
+    highland = np.isin(labels, (3, 4, 5, 6, 9)).astype(np.uint8) * 255
     contours, _ = cv2.findContours(highland, cv2.RETR_EXTERNAL,
                                    cv2.CHAIN_APPROX_SIMPLE)
     filled = np.zeros_like(highland)
@@ -72,20 +74,30 @@ def main():
     fig.savefig(output / "comparison.png", dpi=150)
     plt.close(fig)
 
+    fig, axes = plt.subplots(2, 2, figsize=(10, 5), layout="constrained")
+    for row, (start, end, side) in enumerate(((850, 1125, "Upper"), (1675, 1950, "Lower"))):
+        for col, (pixels, title) in enumerate(((blue, "map"), (overlay, "high layer"))):
+            axes[row, col].imshow(pixels[start:end, 350:1150], interpolation="nearest")
+            axes[row, col].set_title(f"{side} stair band - {title}")
+            axes[row, col].axis("off")
+    fig.savefig(output / "stairs_detail.png", dpi=150)
+    plt.close(fig)
+
     files = {name: {"sha256": digest(output / name),
                     "size_px": list(Image.open(output / name).size)}
-             for name in [*masks, "overlay_blue.png", "comparison.png"]}
+             for name in [*masks, "overlay_blue.png", "comparison.png", "stairs_detail.png"]}
     write_json(output / "manifest.json", {
         "schema": "ysu.radar.two_layer_mask.v1",
-        "profile": "rmuc2027-v1.0.0-two-layer2",
+        "profile": "rmuc2027-v1.0.0-two-layer3",
         "source_sha256": SOURCE_SHA256,
         "terrain_manifest_sha256": digest(terrain / "manifest.json"),
         "display_manifest_sha256": digest(display / "manifest.json"),
         "mask26_reference_sha256": digest(old_mask),
         "encoding_rgb": {"M_ground": [0, 0, 0], "M_height_r": [0, 255, 0]},
-        "highland_region_ids": [3, 4, 5, 6],
-        "highland_regions": ["central_highland", "trapezoid_highland", "commanding_structure", "road_structure"],
+        "highland_region_ids": [3, 4, 5, 6, 9],
+        "highland_regions": ["central_highland", "trapezoid_highland", "commanding_structure", "road_structure", "tunnel_boundary"],
         "road_assignment_basis": "CAD road deck about 200 mm above local base ground; include ramps in second-layer footprint",
+        "stair_assignment_basis": "merge both central highland stair/edge bands (region 9) into the second-layer footprint, following mask26",
         "boundary_policy": "union of visible highland contours; enclosed object holes filled",
         "other_regions": "black unless enclosed inside highland external contours",
         "orientations": {"map_mask27.png": "blue_bottom",
@@ -96,6 +108,7 @@ def main():
         "format_compatible_with_legacy_two_layer_mask": True,
         "physical_validation": False,
         "limitations": ["Two homographies approximate different elevations and ramps.",
+                        "Stair/edge top-view footprints do not resolve lower tunnel passages.",
                         "Requires 2027 camera-to-map calibration; not 2026 matrices.",
                         "This is a layer selector, not an occlusion or forbidden-area mask.",
                         "Default configuration is not switched."],

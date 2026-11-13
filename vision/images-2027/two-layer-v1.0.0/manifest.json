@@ -1,6 +1,6 @@
 {
   "schema": "ysu.radar.two_layer_mask.v1",
-  "profile": "rmuc2027-v1.0.0-two-layer2",
+  "profile": "rmuc2027-v1.0.0-two-layer3",
   "source_sha256": "a5ad3ede3b7674fc98f2e73b71717216383cb2b4b5dcdbe900c2038918bea8e0",
   "terrain_manifest_sha256": "12e589d3b8ef68ca75f99d8dac8dbe9fba3d88ec97b41af8812b3b2758481c64",
   "display_manifest_sha256": "1841678979a51452e5eb3501d896ebc68c47d39ea5117f29537d1588ec4e42a0",
@@ -21,15 +21,18 @@
     3,
     4,
     5,
-    6
+    6,
+    9
   ],
   "highland_regions": [
     "central_highland",
     "trapezoid_highland",
     "commanding_structure",
-    "road_structure"
+    "road_structure",
+    "tunnel_boundary"
   ],
   "road_assignment_basis": "CAD road deck about 200 mm above local base ground; include ramps in second-layer footprint",
+  "stair_assignment_basis": "merge both central highland stair/edge bands (region 9) into the second-layer footprint, following mask26",
   "boundary_policy": "union of visible highland contours; enclosed object holes filled",
   "other_regions": "black unless enclosed inside highland external contours",
   "orientations": {
@@ -37,50 +40,58 @@
     "map_mask27_red.png": "red_bottom",
     "map_mask27_topdown.png": "topdown"
   },
-  "highland_pixels": 2203500,
-  "enclosed_pixels_filled": 129106,
+  "highland_pixels": 2325267,
+  "enclosed_pixels_filled": 145749,
   "format_compatible_with_legacy_two_layer_mask": true,
   "physical_validation": false,
   "limitations": [
     "Two homographies approximate different elevations and ramps.",
+    "Stair/edge top-view footprints do not resolve lower tunnel passages.",
     "Requires 2027 camera-to-map calibration; not 2026 matrices.",
     "This is a layer selector, not an occlusion or forbidden-area mask.",
     "Default configuration is not switched."
   ],
   "files": {
     "map_mask27_topdown.png": {
-      "sha256": "6ab192014fdd7965e752db724b1926a53a15ecebd5462766493cbba3790f62b6",
+      "sha256": "ce2bc1ab280d2ba65264317ddc9d2167c7c20375618f439af5db19bfb9bb27d0",
       "size_px": [
         2800,
         1500
       ]
     },
     "map_mask27_red.png": {
-      "sha256": "06fab49df668117cf1eaf7a818bcc4ade061319e1292e0307dec64a902ea2477",
+      "sha256": "4c0664c06e80ee36a220a53471020db36dba9bdc4d187045f107982a7b6ba77c",
       "size_px": [
         1500,
         2800
       ]
     },
     "map_mask27.png": {
-      "sha256": "f3d12af150cd076b1c96c8e734aa7e91e1a4a729e51788faf9ad28ab69de8487",
+      "sha256": "6ed79c4fd8ebd83e0ee1b73edf2b9d176a5e62087dcfe2441e81c922b42f1bfa",
       "size_px": [
         1500,
         2800
       ]
     },
     "overlay_blue.png": {
-      "sha256": "4928042573a9f2305dd6363d5f06ca6266e78a2fca2e358f971cc74eddf47da7",
+      "sha256": "7688080f219cd21ee435ee689fdb48f035293f900ffb1fc3eef4bd94fa0f0a1e",
       "size_px": [
         1500,
         2800
       ]
     },
     "comparison.png": {
-      "sha256": "c46a1d7f2e3adf0b845ee85ccb73ebb54ade708cf9ebd85b03613495d82aae87",
+      "sha256": "a5f128bccbbdf4296061152d5700c13b6eae677ceeccac4cce9e0ee34f776182",
       "size_px": [
         1500,
         1050
+      ]
+    },
+    "stairs_detail.png": {
+      "sha256": "a6e485907d0f1c544bb0710e7a29ebc66ac325e896b9d00e4ab000f7d96cc19e",
+      "size_px": [
+        1500,
+        750
       ]
     }
   }
