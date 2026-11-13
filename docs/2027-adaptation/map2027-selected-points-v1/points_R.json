@@ -1,0 +1,728 @@
+{
+  "version": 1,
+  "season": 2027,
+  "map_profile": "rmuc2027-v1.0.0-display1",
+  "side": "R",
+  "map_image": "vision/images-2027/display-v1.0.0/red_bottom.png",
+  "map_sha256": "f30a1239d39d729217ce7d5aa5fdff135292d084300ec61cc56c7f64e35d734d",
+  "image_size": [
+    1500,
+    2800
+  ],
+  "coordinate_system": "image_px_top_left_x_right_y_down",
+  "layer_colors": [
+    "#ffdc3b",
+    "#2ddbf2"
+  ],
+  "map_points": [
+    [
+      [
+        460.713,
+        2006.853
+      ],
+      [
+        750.0,
+        2255.775
+      ],
+      [
+        1216.028,
+        1918.645
+      ],
+      [
+        370.825,
+        687.264
+      ],
+      [
+        1039.287,
+        793.147
+      ],
+      [
+        119.155,
+        1595.728
+      ]
+    ],
+    [
+      [
+        106.084,
+        1556.391
+      ],
+      [
+        357.509,
+        1186.914
+      ],
+      [
+        603.529,
+        1482.992
+      ],
+      [
+        1393.916,
+        1546.136
+      ],
+      [
+        1306.185,
+        1469.872
+      ],
+      [
+        953.239,
+        1684.999
+      ]
+    ]
+  ],
+  "annotation_profile": "rmuc2027-v1.0.0-red-candidates1",
+  "date": "2026-11-13",
+  "blue_reference_sha256": "1ba0933d393ff4c33a486c3cc17147fc5bf4a2ccafaaeb09728bb6a3e0898df1",
+  "blue_reference_file": "docs/2027-adaptation/map2027-selected-points-v1/points_B.json",
+  "reference_seed_map_points": [
+    [
+      [
+        460.713,
+        2006.853
+      ],
+      [
+        750.0,
+        2255.775
+      ],
+      [
+        1216.028,
+        1918.645
+      ],
+      [
+        370.825,
+        687.264
+      ],
+      [
+        1039.287,
+        793.147
+      ],
+      [
+        119.155,
+        1595.728
+      ]
+    ],
+    [
+      [
+        106.084,
+        1556.391
+      ],
+      [
+        357.106,
+        1188.122
+      ],
+      [
+        603.529,
+        1482.992
+      ],
+      [
+        1393.916,
+        1546.136
+      ],
+      [
+        1306.185,
+        1469.872
+      ],
+      [
+        953.239,
+        1684.999
+      ]
+    ]
+  ],
+  "cad_profile": "rmuc2027-v1.0.0-cad1",
+  "source_step_sha256": "a5ad3ede3b7674fc98f2e73b71717216383cb2b4b5dcdbe900c2038918bea8e0",
+  "cad_manifest_sha256": "262d53a92835dad1f6c5361e5044e8b890e8bc664b9f28d1f5ef0c991d21fee9",
+  "cad_mesh_sha256": "9b47501e307b6da1f54be87cfb91c4f9744c9f194cbc37a2964e307b3d8c6d22",
+  "cad_linear_deflection_mm": 5.0,
+  "coordinate_notes": {
+    "map_uv": "1500x2800 原图像素；左上原点，向右 u、向下 v。",
+    "field_xy_cm": "沿用版本化参考坐标，红方在下时 X=2800-v、Y=1500-u；不是已验收的裁判坐标。",
+    "cad_xyz_mm": "原始 CAD 绝对坐标；Z 不是相对地面高度。来自 CAD 网格顶点或线端两侧顶点的中点，未经 STEP 精确边反求。",
+    "visual_reference": "所有选点确认、示意与局部图均使用带地胶的 display-v1.0.0/red_bottom.png，未使用黑色 CAD 渲染图。"
+  },
+  "point_details": [
+    {
+      "id": "L1-1",
+      "title": "己方梯形高地坡脚角",
+      "definition": "红方左下梯形高地斜坡与基础地面相接的尖角。",
+      "reference_seed_map_uv": [
+        460.713,
+        2006.853
+      ],
+      "map_uv": [
+        460.713,
+        2006.853
+      ],
+      "shift_map_px": 0.001,
+      "feature_basis": "mesh_vertex",
+      "component_id": 22,
+      "component_path": [
+        "00_RMUC20270001_ASM",
+        "红梯高_制高_发射井",
+        "Next assembly relationship",
+        "梯形高地带丝印_红方"
+      ],
+      "cad_xyz_mm": [
+        6068.5387,
+        -1267.5301,
+        -1717.0701
+      ],
+      "field_xy_cm": [
+        793.147,
+        1039.287
+      ],
+      "mesh_feature_vertices": [
+        {
+          "map_uv": [
+            460.7134927233876,
+            2006.853330327455
+          ],
+          "cad_xyz_mm": [
+            6068.538665771484,
+            -1267.530083656311,
+            -1717.0701026916504
+          ]
+        }
+      ],
+      "physical_validation": false
+    },
+    {
+      "id": "L1-2",
+      "title": "堡垒下端接地尖角",
+      "definition": "堡垒外轮廓朝红方基地的接地尖角；不是外侧白线尖角。",
+      "reference_seed_map_uv": [
+        750.0,
+        2255.775
+      ],
+      "map_uv": [
+        750.0,
+        2255.775
+      ],
+      "shift_map_px": 0.0,
+      "feature_basis": "mesh_vertex",
+      "component_id": 70,
+      "component_path": [
+        "00_RMUC20270001_ASM",
+        "Next assembly relationship",
+        "堡垒_新"
+      ],
+      "cad_xyz_mm": [
+        8557.7546,
+        1624.3436,
+        -1641.3436
+      ],
+      "field_xy_cm": [
+        544.225,
+        750.0
+      ],
+      "mesh_feature_vertices": [
+        {
+          "map_uv": [
+            749.9999966024443,
+            2255.7749985385026
+          ],
+          "cad_xyz_mm": [
+            8557.754591457906,
+            1624.3436425360856,
+            -1641.3436331847822
+          ]
+        }
+      ],
+      "physical_validation": false
+    },
+    {
+      "id": "L1-3",
+      "title": "右侧挡边坡脚角",
+      "definition": "中央高地右侧隧道挡边朝红方端的接地角；不是旁边白线折角。",
+      "reference_seed_map_uv": [
+        1216.028,
+        1918.645
+      ],
+      "map_uv": [
+        1216.028,
+        1918.645
+      ],
+      "shift_map_px": 0.0,
+      "feature_basis": "mesh_vertex",
+      "component_id": 11,
+      "component_path": [
+        "00_RMUC20270001_ASM",
+        "0_中央高地总装",
+        "中央高地_侧边隧道挡边_红"
+      ],
+      "cad_xyz_mm": [
+        5186.4543,
+        6283.0262,
+        -1763.4432
+      ],
+      "field_xy_cm": [
+        881.355,
+        283.972
+      ],
+      "mesh_feature_vertices": [
+        {
+          "map_uv": [
+            1216.027950935206,
+            1918.6448665565335
+          ],
+          "cad_xyz_mm": [
+            5186.454296110463,
+            6283.026224456811,
+            -1763.4432198159639
+          ]
+        }
+      ],
+      "physical_validation": false
+    },
+    {
+      "id": "L1-4",
+      "title": "蓝色竖线末端中心",
+      "definition": "左上公路侧蓝色长线的下端中心，统一取线宽中点。",
+      "reference_seed_map_uv": [
+        370.825,
+        687.264
+      ],
+      "map_uv": [
+        370.825,
+        687.264
+      ],
+      "shift_map_px": 0.0,
+      "feature_basis": "line_end_midpoint",
+      "component_id": 50,
+      "component_path": [
+        "00_RMUC20270001_ASM",
+        "Next assembly relationship",
+        "公路带丝印_蓝方",
+        "=>[0:1:1:50]"
+      ],
+      "cad_xyz_mm": [
+        -7127.352,
+        -2166.1108,
+        -1739.6151
+      ],
+      "field_xy_cm": [
+        2112.736,
+        1129.175
+      ],
+      "mesh_feature_vertices": [
+        {
+          "map_uv": [
+            372.82461504316825,
+            686.2685841637995
+          ],
+          "cad_xyz_mm": [
+            -7137.304782867432,
+            -2146.117687225342,
+            -1739.0915155410767
+          ]
+        },
+        {
+          "map_uv": [
+            368.82463099099095,
+            688.2591414856097
+          ],
+          "cad_xyz_mm": [
+            -7117.399215698242,
+            -2186.1038208007812,
+            -1740.1386499404907
+          ]
+        }
+      ],
+      "physical_validation": false
+    },
+    {
+      "id": "L1-5",
+      "title": "对侧梯形高地坡脚角",
+      "definition": "蓝方右上梯形高地斜坡与基础地面相接的尖角；不是坡顶蓝线角。",
+      "reference_seed_map_uv": [
+        1039.287,
+        793.147
+      ],
+      "map_uv": [
+        1039.287,
+        793.147
+      ],
+      "shift_map_px": 0.001,
+      "feature_basis": "mesh_vertex",
+      "component_id": 34,
+      "component_path": [
+        "00_RMUC20270001_ASM",
+        "蓝梯高_制高_发射井",
+        "Next assembly relationship",
+        "梯形高地带丝印_蓝方"
+      ],
+      "cad_xyz_mm": [
+        -6068.5244,
+        4516.2177,
+        -1717.0701
+      ],
+      "field_xy_cm": [
+        2006.853,
+        460.713
+      ],
+      "mesh_feature_vertices": [
+        {
+          "map_uv": [
+            1039.2865344790675,
+            793.1466588630162
+          ],
+          "cad_xyz_mm": [
+            -6068.524360656738,
+            4516.2177085876465,
+            -1717.0701026916504
+          ]
+        }
+      ],
+      "physical_validation": false
+    },
+    {
+      "id": "L1-6",
+      "title": "白色短横线左端中心",
+      "definition": "左侧洞口附近白色短横线的左端中心，统一取线宽中点。",
+      "reference_seed_map_uv": [
+        119.155,
+        1595.728
+      ],
+      "map_uv": [
+        119.155,
+        1595.728
+      ],
+      "shift_map_px": 0.001,
+      "feature_basis": "line_end_midpoint",
+      "component_id": 1,
+      "component_path": [
+        "00_RMUC20270001_ASM",
+        "战场大地面_带丝印"
+      ],
+      "cad_xyz_mm": [
+        1957.2816,
+        -4681.9491,
+        -1805.4794
+      ],
+      "field_xy_cm": [
+        1204.272,
+        1380.845
+      ],
+      "mesh_feature_vertices": [
+        {
+          "map_uv": [
+            119.15454350357572,
+            1593.227499392533
+          ],
+          "cad_xyz_mm": [
+            1932.2816133499146,
+            -4681.949138641357,
+            -1805.4794073104858
+          ]
+        },
+        {
+          "map_uv": [
+            119.15454350357572,
+            1598.2275080644947
+          ],
+          "cad_xyz_mm": [
+            1982.2816848754883,
+            -4681.949138641357,
+            -1805.4794073104858
+          ]
+        }
+      ],
+      "physical_validation": false
+    },
+    {
+      "id": "L2-1",
+      "title": "左侧红色竖线顶端",
+      "definition": "左侧红色竖线的上端中心，取两个线宽边界的中点。",
+      "reference_seed_map_uv": [
+        106.084,
+        1556.391
+      ],
+      "map_uv": [
+        106.084,
+        1556.391
+      ],
+      "shift_map_px": 0.0,
+      "feature_basis": "line_end_midpoint",
+      "component_id": 22,
+      "component_path": [
+        "00_RMUC20270001_ASM",
+        "红梯高_制高_发射井",
+        "Next assembly relationship",
+        "梯形高地带丝印_红方"
+      ],
+      "cad_xyz_mm": [
+        1563.9123,
+        -4812.6113,
+        -1608.8324
+      ],
+      "field_xy_cm": [
+        1243.609,
+        1393.916
+      ],
+      "mesh_feature_vertices": [
+        {
+          "map_uv": [
+            104.08385219178035,
+            1556.3905541088482
+          ],
+          "cad_xyz_mm": [
+            1563.912272453308,
+            -4832.60440826416,
+            -1609.3559265136719
+          ]
+        },
+        {
+          "map_uv": [
+            108.08383624395742,
+            1556.3905541088482
+          ],
+          "cad_xyz_mm": [
+            1563.912272453308,
+            -4792.618274688721,
+            -1608.3087921142578
+          ]
+        }
+      ],
+      "physical_validation": false
+    },
+    {
+      "id": "L2-2",
+      "title": "白色扳手上缘接合角",
+      "definition": "中央高地左上白色扳手图案，开口与柄部接合处的上缘角；红蓝图案细节不同。",
+      "reference_seed_map_uv": [
+        357.106,
+        1188.122
+      ],
+      "map_uv": [
+        357.509,
+        1186.914
+      ],
+      "shift_map_px": 1.273,
+      "feature_basis": "mesh_vertex",
+      "component_id": 9,
+      "component_path": [
+        "00_RMUC20270001_ASM",
+        "0_中央高地总装",
+        "中央高地_地面带丝印"
+      ],
+      "cad_xyz_mm": [
+        -2130.8503,
+        -2299.2215,
+        -1443.0858
+      ],
+      "field_xy_cm": [
+        1613.086,
+        1142.491
+      ],
+      "mesh_feature_vertices": [
+        {
+          "map_uv": [
+            357.5089839154614,
+            1186.9141830767462
+          ],
+          "cad_xyz_mm": [
+            -2130.8503151015975,
+            -2299.221515659684,
+            -1443.0858401326927
+          ]
+        }
+      ],
+      "physical_validation": false
+    },
+    {
+      "id": "L2-3",
+      "title": "装配区红线外侧角",
+      "definition": "中央装配区红色轮廓带外侧的左端转折顶点，对应蓝方图的蓝线角。",
+      "reference_seed_map_uv": [
+        603.529,
+        1482.992
+      ],
+      "map_uv": [
+        603.529,
+        1482.992
+      ],
+      "shift_map_px": 0.0,
+      "feature_basis": "mesh_vertex",
+      "component_id": 2,
+      "component_path": [
+        "00_RMUC20270001_ASM",
+        "0_中央高地总装",
+        "0_装配区总装",
+        "Next assembly relationship"
+      ],
+      "cad_xyz_mm": [
+        829.929,
+        160.1389,
+        -1240.3437
+      ],
+      "field_xy_cm": [
+        1317.008,
+        896.471
+      ],
+      "mesh_feature_vertices": [
+        {
+          "map_uv": [
+            603.5293339960014,
+            1482.9922039770777
+          ],
+          "cad_xyz_mm": [
+            829.928994178772,
+            160.13893485069275,
+            -1240.343689918518
+          ]
+        }
+      ],
+      "physical_validation": false
+    },
+    {
+      "id": "L2-4",
+      "title": "右侧红色竖线顶端",
+      "definition": "右侧红色竖线的上端中心，取两个线宽边界的中点。",
+      "reference_seed_map_uv": [
+        1393.916,
+        1546.136
+      ],
+      "map_uv": [
+        1393.916,
+        1546.136
+      ],
+      "shift_map_px": 0.0,
+      "feature_basis": "line_end_midpoint",
+      "component_id": 46,
+      "component_path": [
+        "00_RMUC20270001_ASM",
+        "Next assembly relationship",
+        "公路带丝印_红方",
+        "=>[0:1:1:46]"
+      ],
+      "cad_xyz_mm": [
+        1461.3663,
+        8061.2988,
+        -1608.8324
+      ],
+      "field_xy_cm": [
+        1253.864,
+        106.084
+      ],
+      "mesh_feature_vertices": [
+        {
+          "map_uv": [
+            1391.9161551834513,
+            1546.135953328797
+          ],
+          "cad_xyz_mm": [
+            1461.3662958145142,
+            8041.3055419921875,
+            -1608.3087921142578
+          ]
+        },
+        {
+          "map_uv": [
+            1395.9161869356901,
+            1546.135953328797
+          ],
+          "cad_xyz_mm": [
+            1461.3662958145142,
+            8081.292152404785,
+            -1609.3559265136719
+          ]
+        }
+      ],
+      "physical_validation": false
+    },
+    {
+      "id": "L2-5",
+      "title": "右侧公路内缘端角",
+      "definition": "右侧公路内缘窄条横向端边的上表面角；邻接挡边存在不同 Z。",
+      "reference_seed_map_uv": [
+        1306.185,
+        1469.872
+      ],
+      "map_uv": [
+        1306.185,
+        1469.872
+      ],
+      "shift_map_px": 0.001,
+      "feature_basis": "mesh_vertex",
+      "component_id": 47,
+      "component_path": [
+        "00_RMUC20270001_ASM",
+        "Next assembly relationship",
+        "公路带丝印_红方",
+        "=>[0:1:1:47]"
+      ],
+      "cad_xyz_mm": [
+        698.7318,
+        7184.2918,
+        -1586.8675
+      ],
+      "field_xy_cm": [
+        1330.128,
+        193.815
+      ],
+      "mesh_feature_vertices": [
+        {
+          "map_uv": [
+            1306.1854071580099,
+            1469.8724845380584
+          ],
+          "cad_xyz_mm": [
+            698.7318396568298,
+            7184.291839599609,
+            -1586.8674516677856
+          ]
+        }
+      ],
+      "physical_validation": false
+    },
+    {
+      "id": "L2-6",
+      "title": "中央高地白线下缘角",
+      "definition": "中央高地下侧白线从水平段转向右上斜段的下缘折角。",
+      "reference_seed_map_uv": [
+        953.239,
+        1684.999
+      ],
+      "map_uv": [
+        953.239,
+        1684.999
+      ],
+      "shift_map_px": 0.0,
+      "feature_basis": "mesh_vertex",
+      "component_id": 9,
+      "component_path": [
+        "00_RMUC20270001_ASM",
+        "0_中央高地总装",
+        "中央高地_地面带丝印"
+      ],
+      "cad_xyz_mm": [
+        2849.9999,
+        3656.0373,
+        -1393.5454
+      ],
+      "field_xy_cm": [
+        1115.001,
+        546.761
+      ],
+      "mesh_feature_vertices": [
+        {
+          "map_uv": [
+            953.2390103451942,
+            1684.9993564076926
+          ],
+          "cad_xyz_mm": [
+            2849.9999046248645,
+            3656.0373306233582,
+            -1393.5454396275047
+          ]
+        }
+      ],
+      "physical_validation": false
+    }
+  ],
+  "physical_validation": false,
+  "integrated_into_runtime": false,
+  "limitations": [
+    "不保证两组各自共面，不计算单应矩阵或相机外参。",
+    "原地胶图分辨率与配准存在误差，CAD 网格显示小数不表示实地精度。",
+    "红方候选参考蓝方布局逐点核对对应实体；L2-3 为红线角，L2-2 为红侧实际扳手接合角，均未现场验证。",
+    "L2-5 的 Z 指公路角点，邻接挡边有近乎相同 XY 但不同 Z，现场须确认可见实体。"
+  ]
+}

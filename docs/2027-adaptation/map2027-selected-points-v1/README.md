@@ -4,6 +4,8 @@
 
 面向后续操作的说明与嵌入示意图见 [当前标定点说明](../map2027_calibration_points.md)；本文保留坐标规范依据和资产验证记录。
 
+同日补充：[红方对应候选集说明](../map2027_red_calibration_points.md)、[points_R.json](points_R.json)、[红方总图](overview_R.png)、[第一层局部图](layer1_details_R.png)、[第二层局部图](layer2_details_R.png)。红方点按对应实体逐点核对，尚无实拍和矩阵；蓝方原始数据及本页的蓝方规范记录保持不变。
+
 ## 使用哪些图和数据
 
 - **所有可视核对和示意均使用带地胶的 `display-v1.0.0/blue_bottom.png`**。没有使用缺少地胶细节的黑色 CAD 渲染图选点，也没有将标线、阴影或纹理重绘成新特征。
