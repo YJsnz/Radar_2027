@@ -1,0 +1,1021 @@
+[
+  {
+    "component_id": 1,
+    "region_ids": [
+      1,
+      2
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "战场大地面_带丝印"
+    ],
+    "primitive_count": 4
+  },
+  {
+    "component_id": 2,
+    "region_ids": [
+      11
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "0_中央高地总装",
+      "0_装配区总装",
+      "Next assembly relationship"
+    ],
+    "primitive_count": 7
+  },
+  {
+    "component_id": 3,
+    "region_ids": [
+      11
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "0_中央高地总装",
+      "0_装配区总装",
+      "Next assembly relationship",
+      "=>[0:1:1:7]"
+    ],
+    "primitive_count": 10
+  },
+  {
+    "component_id": 4,
+    "region_ids": [
+      11
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "0_中央高地总装",
+      "0_装配区总装",
+      "Next assembly relationship",
+      "=>[0:1:1:8]"
+    ],
+    "primitive_count": 5
+  },
+  {
+    "component_id": 5,
+    "region_ids": [
+      11
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "0_中央高地总装",
+      "0_装配区总装",
+      "Next assembly relationship"
+    ],
+    "primitive_count": 9
+  },
+  {
+    "component_id": 6,
+    "region_ids": [
+      11
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "0_中央高地总装",
+      "0_装配区总装",
+      "Next assembly relationship"
+    ],
+    "primitive_count": 9
+  },
+  {
+    "component_id": 7,
+    "region_ids": [
+      11
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "0_中央高地总装",
+      "0_装配区总装",
+      "Next assembly relationship"
+    ],
+    "primitive_count": 3
+  },
+  {
+    "component_id": 8,
+    "region_ids": [
+      11
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "0_中央高地总装",
+      "0_装配区总装",
+      "Next assembly relationship"
+    ],
+    "primitive_count": 3
+  },
+  {
+    "component_id": 9,
+    "region_ids": [
+      3
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "0_中央高地总装",
+      "中央高地_地面带丝印"
+    ],
+    "primitive_count": 4
+  },
+  {
+    "component_id": 10,
+    "region_ids": [
+      9
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "0_中央高地总装",
+      "中央高地_侧边隧道挡边"
+    ],
+    "primitive_count": 3
+  },
+  {
+    "component_id": 11,
+    "region_ids": [
+      9
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "0_中央高地总装",
+      "中央高地_侧边隧道挡边_红"
+    ],
+    "primitive_count": 3
+  },
+  {
+    "component_id": 12,
+    "region_ids": [
+      11
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "0_中央高地总装",
+      "Next assembly relationship"
+    ],
+    "primitive_count": 1
+  },
+  {
+    "component_id": 13,
+    "region_ids": [
+      11
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "0_中央高地总装",
+      "Next assembly relationship"
+    ],
+    "primitive_count": 1
+  },
+  {
+    "component_id": 14,
+    "region_ids": [
+      11
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "0_中央高地总装",
+      "Next assembly relationship",
+      "=>[0:1:1:16]"
+    ],
+    "primitive_count": 16
+  },
+  {
+    "component_id": 15,
+    "region_ids": [
+      11
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "0_中央高地总装",
+      "Next assembly relationship",
+      "=>[0:1:1:17]"
+    ],
+    "primitive_count": 3
+  },
+  {
+    "component_id": 16,
+    "region_ids": [
+      11
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "0_中央高地总装",
+      "Next assembly relationship",
+      "=>[0:1:1:16]"
+    ],
+    "primitive_count": 16
+  },
+  {
+    "component_id": 17,
+    "region_ids": [
+      11
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "0_中央高地总装",
+      "Next assembly relationship",
+      "=>[0:1:1:17]"
+    ],
+    "primitive_count": 3
+  },
+  {
+    "component_id": 18,
+    "region_ids": [
+      11
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "0_中央高地总装",
+      "Next assembly relationship"
+    ],
+    "primitive_count": 1
+  },
+  {
+    "component_id": 19,
+    "region_ids": [
+      11
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "0_中央高地总装",
+      "Next assembly relationship"
+    ],
+    "primitive_count": 1
+  },
+  {
+    "component_id": 20,
+    "region_ids": [
+      11
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "0_中央高地总装",
+      "Next assembly relationship"
+    ],
+    "primitive_count": 1
+  },
+  {
+    "component_id": 21,
+    "region_ids": [
+      11
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "0_中央高地总装",
+      "Next assembly relationship"
+    ],
+    "primitive_count": 1
+  },
+  {
+    "component_id": 22,
+    "region_ids": [
+      4
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "红梯高_制高_发射井",
+      "Next assembly relationship",
+      "梯形高地带丝印_红方"
+    ],
+    "primitive_count": 4
+  },
+  {
+    "component_id": 23,
+    "region_ids": [
+      5
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "红梯高_制高_发射井",
+      "Next assembly relationship",
+      "制高点_红色_下侧"
+    ],
+    "primitive_count": 1
+  },
+  {
+    "component_id": 24,
+    "region_ids": [
+      5
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "红梯高_制高_发射井",
+      "Next assembly relationship",
+      "制高点_红色_上侧"
+    ],
+    "primitive_count": 4
+  },
+  {
+    "component_id": 25,
+    "region_ids": [
+      10
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "红梯高_制高_发射井",
+      "Next assembly relationship",
+      "1号风机框"
+    ],
+    "primitive_count": 2
+  },
+  {
+    "component_id": 26,
+    "region_ids": [
+      11
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "红梯高_制高_发射井",
+      "Next assembly relationship",
+      "Next assembly relationship"
+    ],
+    "primitive_count": 1
+  },
+  {
+    "component_id": 27,
+    "region_ids": [
+      11
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "红梯高_制高_发射井",
+      "Next assembly relationship",
+      "Next assembly relationship"
+    ],
+    "primitive_count": 1
+  },
+  {
+    "component_id": 28,
+    "region_ids": [
+      11
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "红梯高_制高_发射井",
+      "红飞镖发射井_木质结构",
+      "飞镖发射井_木制结构"
+    ],
+    "primitive_count": 4
+  },
+  {
+    "component_id": 29,
+    "region_ids": [
+      11
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "红梯高_制高_发射井",
+      "红飞镖发射井_木质结构",
+      "Next assembly relationship",
+      "=>[0:1:1:31]"
+    ],
+    "primitive_count": 5
+  },
+  {
+    "component_id": 30,
+    "region_ids": [
+      11
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "红梯高_制高_发射井",
+      "红飞镖发射井_木质结构",
+      "Next assembly relationship",
+      "=>[0:1:1:32]"
+    ],
+    "primitive_count": 3
+  },
+  {
+    "component_id": 31,
+    "region_ids": [
+      11
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "红梯高_制高_发射井",
+      "红飞镖发射井_木质结构",
+      "3-V2-202411210001_1"
+    ],
+    "primitive_count": 1
+  },
+  {
+    "component_id": 32,
+    "region_ids": [
+      11
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "红梯高_制高_发射井",
+      "红飞镖发射井_木质结构",
+      "2-V1-202411210002_1",
+      "=>[0:1:1:35]"
+    ],
+    "primitive_count": 1
+  },
+  {
+    "component_id": 33,
+    "region_ids": [
+      11
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "红梯高_制高_发射井",
+      "红飞镖发射井_木质结构",
+      "2-V1-202411210002_1",
+      "=>[0:1:1:36]"
+    ],
+    "primitive_count": 1
+  },
+  {
+    "component_id": 34,
+    "region_ids": [
+      4
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "蓝梯高_制高_发射井",
+      "Next assembly relationship",
+      "梯形高地带丝印_蓝方"
+    ],
+    "primitive_count": 4
+  },
+  {
+    "component_id": 35,
+    "region_ids": [
+      5
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "蓝梯高_制高_发射井",
+      "Next assembly relationship",
+      "制高点_蓝色_下侧"
+    ],
+    "primitive_count": 1
+  },
+  {
+    "component_id": 36,
+    "region_ids": [
+      5
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "蓝梯高_制高_发射井",
+      "Next assembly relationship",
+      "制高点_蓝色_上侧"
+    ],
+    "primitive_count": 4
+  },
+  {
+    "component_id": 37,
+    "region_ids": [
+      10
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "蓝梯高_制高_发射井",
+      "Next assembly relationship",
+      "1号风机框"
+    ],
+    "primitive_count": 2
+  },
+  {
+    "component_id": 38,
+    "region_ids": [
+      11
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "蓝梯高_制高_发射井",
+      "Next assembly relationship",
+      "Next assembly relationship"
+    ],
+    "primitive_count": 1
+  },
+  {
+    "component_id": 39,
+    "region_ids": [
+      11
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "蓝梯高_制高_发射井",
+      "Next assembly relationship",
+      "Next assembly relationship"
+    ],
+    "primitive_count": 1
+  },
+  {
+    "component_id": 40,
+    "region_ids": [
+      11
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "蓝梯高_制高_发射井",
+      "蓝飞镖发射井_木质结构",
+      "飞镖发射井_木制结构"
+    ],
+    "primitive_count": 4
+  },
+  {
+    "component_id": 41,
+    "region_ids": [
+      11
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "蓝梯高_制高_发射井",
+      "蓝飞镖发射井_木质结构",
+      "Next assembly relationship",
+      "=>[0:1:1:31]"
+    ],
+    "primitive_count": 5
+  },
+  {
+    "component_id": 42,
+    "region_ids": [
+      11
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "蓝梯高_制高_发射井",
+      "蓝飞镖发射井_木质结构",
+      "Next assembly relationship",
+      "=>[0:1:1:32]"
+    ],
+    "primitive_count": 3
+  },
+  {
+    "component_id": 43,
+    "region_ids": [
+      11
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "蓝梯高_制高_发射井",
+      "蓝飞镖发射井_木质结构",
+      "3-V2-202411210001_1"
+    ],
+    "primitive_count": 1
+  },
+  {
+    "component_id": 44,
+    "region_ids": [
+      11
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "蓝梯高_制高_发射井",
+      "蓝飞镖发射井_木质结构",
+      "2-V1-202411210002_1",
+      "=>[0:1:1:35]"
+    ],
+    "primitive_count": 1
+  },
+  {
+    "component_id": 45,
+    "region_ids": [
+      11
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "蓝梯高_制高_发射井",
+      "蓝飞镖发射井_木质结构",
+      "2-V1-202411210002_1",
+      "=>[0:1:1:36]"
+    ],
+    "primitive_count": 1
+  },
+  {
+    "component_id": 46,
+    "region_ids": [
+      6
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "Next assembly relationship",
+      "公路带丝印_红方",
+      "=>[0:1:1:46]"
+    ],
+    "primitive_count": 3
+  },
+  {
+    "component_id": 47,
+    "region_ids": [
+      6
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "Next assembly relationship",
+      "公路带丝印_红方",
+      "=>[0:1:1:47]"
+    ],
+    "primitive_count": 2
+  },
+  {
+    "component_id": 48,
+    "region_ids": [
+      11
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "Next assembly relationship",
+      "Next assembly relationship"
+    ],
+    "primitive_count": 1
+  },
+  {
+    "component_id": 49,
+    "region_ids": [
+      11
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "Next assembly relationship",
+      "Next assembly relationship"
+    ],
+    "primitive_count": 1
+  },
+  {
+    "component_id": 50,
+    "region_ids": [
+      6
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "Next assembly relationship",
+      "公路带丝印_蓝方",
+      "=>[0:1:1:50]"
+    ],
+    "primitive_count": 3
+  },
+  {
+    "component_id": 51,
+    "region_ids": [
+      6
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "Next assembly relationship",
+      "公路带丝印_蓝方",
+      "=>[0:1:1:51]"
+    ],
+    "primitive_count": 2
+  },
+  {
+    "component_id": 52,
+    "region_ids": [
+      11
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "Next assembly relationship",
+      "Next assembly relationship"
+    ],
+    "primitive_count": 1
+  },
+  {
+    "component_id": 53,
+    "region_ids": [
+      11
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "Next assembly relationship",
+      "Next assembly relationship"
+    ],
+    "primitive_count": 1
+  },
+  {
+    "component_id": 54,
+    "region_ids": [
+      7
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "Next assembly relationship",
+      "资源区_带丝印",
+      "=>[0:1:1:54]"
+    ],
+    "primitive_count": 5
+  },
+  {
+    "component_id": 55,
+    "region_ids": [
+      7
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "Next assembly relationship",
+      "资源区_带丝印",
+      "=>[0:1:1:55]"
+    ],
+    "primitive_count": 2
+  },
+  {
+    "component_id": 56,
+    "region_ids": [
+      11
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "Next assembly relationship",
+      "Next assembly relationship"
+    ],
+    "primitive_count": 4
+  },
+  {
+    "component_id": 57,
+    "region_ids": [
+      11
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "Next assembly relationship",
+      "Next assembly relationship"
+    ],
+    "primitive_count": 4
+  },
+  {
+    "component_id": 58,
+    "region_ids": [
+      11
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "Next assembly relationship",
+      "Next assembly relationship"
+    ],
+    "primitive_count": 4
+  },
+  {
+    "component_id": 59,
+    "region_ids": [
+      11
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "Next assembly relationship",
+      "Next assembly relationship"
+    ],
+    "primitive_count": 4
+  },
+  {
+    "component_id": 60,
+    "region_ids": [
+      11
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "Next assembly relationship",
+      "Next assembly relationship"
+    ],
+    "primitive_count": 4
+  },
+  {
+    "component_id": 61,
+    "region_ids": [
+      11
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "Next assembly relationship",
+      "Next assembly relationship"
+    ],
+    "primitive_count": 4
+  },
+  {
+    "component_id": 62,
+    "region_ids": [
+      7
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "Next assembly relationship",
+      "资源区_带丝印",
+      "=>[0:1:1:54]"
+    ],
+    "primitive_count": 5
+  },
+  {
+    "component_id": 63,
+    "region_ids": [
+      7
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "Next assembly relationship",
+      "资源区_带丝印",
+      "=>[0:1:1:55]"
+    ],
+    "primitive_count": 2
+  },
+  {
+    "component_id": 64,
+    "region_ids": [
+      11
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "Next assembly relationship",
+      "Next assembly relationship"
+    ],
+    "primitive_count": 4
+  },
+  {
+    "component_id": 65,
+    "region_ids": [
+      11
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "Next assembly relationship",
+      "Next assembly relationship"
+    ],
+    "primitive_count": 4
+  },
+  {
+    "component_id": 66,
+    "region_ids": [
+      11
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "Next assembly relationship",
+      "Next assembly relationship"
+    ],
+    "primitive_count": 4
+  },
+  {
+    "component_id": 67,
+    "region_ids": [
+      11
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "Next assembly relationship",
+      "Next assembly relationship"
+    ],
+    "primitive_count": 4
+  },
+  {
+    "component_id": 68,
+    "region_ids": [
+      11
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "Next assembly relationship",
+      "Next assembly relationship"
+    ],
+    "primitive_count": 4
+  },
+  {
+    "component_id": 69,
+    "region_ids": [
+      11
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "Next assembly relationship",
+      "Next assembly relationship"
+    ],
+    "primitive_count": 4
+  },
+  {
+    "component_id": 70,
+    "region_ids": [
+      8
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "Next assembly relationship",
+      "堡垒_新"
+    ],
+    "primitive_count": 3
+  },
+  {
+    "component_id": 71,
+    "region_ids": [
+      8
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "Next assembly relationship",
+      "堡垒_新"
+    ],
+    "primitive_count": 3
+  },
+  {
+    "component_id": 72,
+    "region_ids": [
+      11
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "基地_底座"
+    ],
+    "primitive_count": 4
+  },
+  {
+    "component_id": 73,
+    "region_ids": [
+      11
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "基地_底座"
+    ],
+    "primitive_count": 4
+  },
+  {
+    "component_id": 74,
+    "region_ids": [
+      10
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "2号风机框"
+    ],
+    "primitive_count": 2
+  },
+  {
+    "component_id": 75,
+    "region_ids": [
+      10
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "2号风机框"
+    ],
+    "primitive_count": 2
+  },
+  {
+    "component_id": 76,
+    "region_ids": [
+      11
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "Next assembly relationship"
+    ],
+    "primitive_count": 1
+  },
+  {
+    "component_id": 77,
+    "region_ids": [
+      11
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "Next assembly relationship"
+    ],
+    "primitive_count": 1
+  },
+  {
+    "component_id": 78,
+    "region_ids": [
+      11
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "基地_26_0825",
+      "=>[0:1:1:64]"
+    ],
+    "primitive_count": 7
+  },
+  {
+    "component_id": 79,
+    "region_ids": [
+      11
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "基地_26_0825",
+      "=>[0:1:1:65]"
+    ],
+    "primitive_count": 8
+  },
+  {
+    "component_id": 80,
+    "region_ids": [
+      11
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "基地_26_0825",
+      "=>[0:1:1:64]"
+    ],
+    "primitive_count": 7
+  },
+  {
+    "component_id": 81,
+    "region_ids": [
+      11
+    ],
+    "path": [
+      "00_RMUC20270001_ASM",
+      "基地_26_0825",
+      "=>[0:1:1:65]"
+    ],
+    "primitive_count": 8
+  }
+]

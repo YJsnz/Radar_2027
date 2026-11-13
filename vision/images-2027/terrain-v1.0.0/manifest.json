@@ -1,0 +1,227 @@
+{
+  "schema": "ysu.radar.terrain_candidates.v1",
+  "profile": "rmuc2027-v1.0.0-terrain1",
+  "source_step_sha256": "a5ad3ede3b7674fc98f2e73b71717216383cb2b4b5dcdbe900c2038918bea8e0",
+  "source_glb_sha256": "9b47501e307b6da1f54be87cfb91c4f9744c9f194cbc37a2964e307b3d8c6d22",
+  "cad_manifest_sha256": "262d53a92835dad1f6c5361e5044e8b890e8bc664b9f28d1f5ef0c991d21fee9",
+  "display_manifest_sha256": "1841678979a51452e5eb3501d896ebc68c47d39ea5117f29537d1588ec4e42a0",
+  "vtk_version": "9.1.0",
+  "field_size_cm": [
+    2800,
+    1500
+  ],
+  "image_coordinates": {
+    "topdown.png": [
+      "X_cm",
+      "1500 - Y_cm"
+    ],
+    "red_bottom.png": [
+      "1500 - Y_cm",
+      "2800 - X_cm"
+    ],
+    "blue_bottom.png": [
+      "Y_cm",
+      "X_cm"
+    ]
+  },
+  "source_component_count": 81,
+  "source_primitive_count": 286,
+  "valid_fraction": 0.9999971428571428,
+  "slope_quantization_deg": 0.5,
+  "encoding": {
+    "region_png": "uint8 label IDs, not RGB palette colours",
+    "binary_png": "uint8 0 or 255",
+    "component_ids": "0 invalid; 1-based CAD component index",
+    "slope_deg": "float32 degrees; NaN where unavailable"
+  },
+  "ground_plane_formula": "CAD Z_mm = a * X_mm + b * Y_mm + c",
+  "ground_planes": [
+    {
+      "region_id": 2,
+      "z_from_cad_xy_mm": [
+        0,
+        0.02618592155438318,
+        -1683.878612462743
+      ]
+    },
+    {
+      "region_id": 1,
+      "z_from_cad_xy_mm": [
+        0,
+        -0.02618592159174214,
+        -1598.8087402216845
+      ]
+    }
+  ],
+  "verification": {
+    "cad_depth_coverage_agreement": 1.0,
+    "normal_gradient_check_pixels": 3708318,
+    "normal_gradient_median_delta_deg": 5.900859832763672e-05,
+    "normal_gradient_p95_delta_deg": 0.13349080085754395
+  },
+  "ramp_review_thresholds_deg": [
+    4.0,
+    35.0
+  ],
+  "regions": [
+    {
+      "id": 0,
+      "name": "unknown",
+      "color": "#303030",
+      "pixels": 12
+    },
+    {
+      "id": 1,
+      "name": "ground_y_low",
+      "color": "#c4c8cc",
+      "pixels": 829509
+    },
+    {
+      "id": 2,
+      "name": "ground_y_high",
+      "color": "#90a9b8",
+      "pixels": 829479
+    },
+    {
+      "id": 3,
+      "name": "central_highland",
+      "color": "#54ba79",
+      "pixels": 602138
+    },
+    {
+      "id": 4,
+      "name": "trapezoid_highland",
+      "color": "#e5c14c",
+      "pixels": 698230
+    },
+    {
+      "id": 5,
+      "name": "commanding_structure",
+      "color": "#a37ac9",
+      "pixels": 214576
+    },
+    {
+      "id": 6,
+      "name": "road_structure",
+      "color": "#41b4b0",
+      "pixels": 559450
+    },
+    {
+      "id": 7,
+      "name": "resource_structure",
+      "color": "#e79345",
+      "pixels": 41470
+    },
+    {
+      "id": 8,
+      "name": "fortress_structure",
+      "color": "#d37aaa",
+      "pixels": 77064
+    },
+    {
+      "id": 9,
+      "name": "tunnel_boundary",
+      "color": "#4169b3",
+      "pixels": 105124
+    },
+    {
+      "id": 10,
+      "name": "fan_frame",
+      "color": "#a3683f",
+      "pixels": 7218
+    },
+    {
+      "id": 11,
+      "name": "other_structure",
+      "color": "#d45757",
+      "pixels": 235730
+    }
+  ],
+  "ramp_candidate_pixels": 315967,
+  "structure_review_pixels": 428985,
+  "physical_validation": false,
+  "compatible_with_legacy_two_layer_mask": false,
+  "limitations": [
+    "topmost geometric surface only; roofs do not imply traversable ground",
+    "tunnel boundaries are not inferred tunnel passages",
+    "camera-specific occlusion, legal forbidden areas and blind predictions are not defined",
+    "slope thresholds are project review heuristics, not official rules"
+  ],
+  "files": {
+    "regions_topdown.png": {
+      "sha256": "c9a4c98d180388988cebcc8beedb7154d69a09ef6e050de800a360b1b2185192",
+      "size_px": [
+        2800,
+        1500
+      ]
+    },
+    "regions_red_bottom.png": {
+      "sha256": "15d3c635a6a09141b55143c48c06b1debd96db9889f731aa8be1dd0a2f4e887b",
+      "size_px": [
+        1500,
+        2800
+      ]
+    },
+    "regions_blue_bottom.png": {
+      "sha256": "1b90754351daa7f26d95c6b7d9892f9bfa1c1b646f75700e3f1cad912ce7ca4e",
+      "size_px": [
+        1500,
+        2800
+      ]
+    },
+    "ramp_candidates_topdown.png": {
+      "sha256": "232cf1b5aa378ff6740736ac359553613c4807b561a30558a0b9140f252bddfd",
+      "size_px": [
+        2800,
+        1500
+      ]
+    },
+    "ramp_candidates_red_bottom.png": {
+      "sha256": "8420dd001373698e298abec114f5ea9c293c79c7d854554378709b5d14d901e6",
+      "size_px": [
+        1500,
+        2800
+      ]
+    },
+    "ramp_candidates_blue_bottom.png": {
+      "sha256": "e4c2d6a6f18fae1e1f064c3e1d6ed564261a969ceb735394b8d404b0e0f6801f",
+      "size_px": [
+        1500,
+        2800
+      ]
+    },
+    "structure_review_topdown.png": {
+      "sha256": "8d54c328d736ec7e5dd64842d1e4b86156955f8c292b5f64a1180d3680cf6651",
+      "size_px": [
+        2800,
+        1500
+      ]
+    },
+    "structure_review_red_bottom.png": {
+      "sha256": "083e2d36543fb921095b9dec75027d4607bc47c868dddc83987608479da7f39f",
+      "size_px": [
+        1500,
+        2800
+      ]
+    },
+    "structure_review_blue_bottom.png": {
+      "sha256": "2b6168ba1e8c0d3951c65e080203e85652d49238010f860699ba4b50cfeeff35",
+      "size_px": [
+        1500,
+        2800
+      ]
+    },
+    "terrain.npz": {
+      "sha256": "1cbc7ce64bb8819deb4e97b6b4540a31debae78479cc061014f6b2ecc62b39f3"
+    },
+    "component_roles.json": {
+      "sha256": "6e97f4b2af5eaf111b33d5d34897a7776a1025eeb4490c2ba681ca6eb2bb0910"
+    },
+    "regions_preview.png": {
+      "sha256": "52fe96540274af4037db6d51baa64718436a6864b6b6b3ed981150a90b92af0e"
+    },
+    "surface_review.png": {
+      "sha256": "0d0823dd9403244be9a61cdc8c2af1196c92501d43cfc70f93de8ae87882725a"
+    }
+  }
+}
