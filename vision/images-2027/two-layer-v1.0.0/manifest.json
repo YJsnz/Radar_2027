@@ -1,0 +1,84 @@
+{
+  "schema": "ysu.radar.two_layer_mask.v1",
+  "profile": "rmuc2027-v1.0.0-two-layer1",
+  "source_sha256": "a5ad3ede3b7674fc98f2e73b71717216383cb2b4b5dcdbe900c2038918bea8e0",
+  "terrain_manifest_sha256": "12e589d3b8ef68ca75f99d8dac8dbe9fba3d88ec97b41af8812b3b2758481c64",
+  "display_manifest_sha256": "1841678979a51452e5eb3501d896ebc68c47d39ea5117f29537d1588ec4e42a0",
+  "mask26_reference_sha256": "92bb953a0e404d997a27ed175c8b0886c6bec4e201caba5e6685d5044b339362",
+  "encoding_rgb": {
+    "M_ground": [
+      0,
+      0,
+      0
+    ],
+    "M_height_r": [
+      0,
+      255,
+      0
+    ]
+  },
+  "highland_region_ids": [
+    3,
+    4,
+    5
+  ],
+  "highland_regions": [
+    "central_highland",
+    "trapezoid_highland",
+    "commanding_structure"
+  ],
+  "boundary_policy": "union of visible highland contours; enclosed object holes filled",
+  "other_regions": "black unless enclosed inside highland external contours",
+  "orientations": {
+    "map_mask27.png": "blue_bottom",
+    "map_mask27_red.png": "red_bottom",
+    "map_mask27_topdown.png": "topdown"
+  },
+  "highland_pixels": 1643350,
+  "enclosed_pixels_filled": 128406,
+  "format_compatible_with_legacy_two_layer_mask": true,
+  "physical_validation": false,
+  "limitations": [
+    "Two homographies approximate different elevations and ramps.",
+    "Requires 2027 camera-to-map calibration; not 2026 matrices.",
+    "This is a layer selector, not an occlusion or forbidden-area mask.",
+    "Default configuration is not switched."
+  ],
+  "files": {
+    "map_mask27_topdown.png": {
+      "sha256": "810b234d05d91954122de5b3c163705ae4fc83634d20fb7ed3d3065c320a27cb",
+      "size_px": [
+        2800,
+        1500
+      ]
+    },
+    "map_mask27_red.png": {
+      "sha256": "4b7e82178f26862717b16f0e76142226a7906c57179678057de09cf1cd411274",
+      "size_px": [
+        1500,
+        2800
+      ]
+    },
+    "map_mask27.png": {
+      "sha256": "bcc76785b607f00ece7f7b7b773b897f6fabf818e1bbcb26b77ca55ac3af9894",
+      "size_px": [
+        1500,
+        2800
+      ]
+    },
+    "overlay_blue.png": {
+      "sha256": "dbe17a4b2b6ddf4c4db1e94da42b369566fc51a0bd9978787846426caf66540f",
+      "size_px": [
+        1500,
+        2800
+      ]
+    },
+    "comparison.png": {
+      "sha256": "b32e4df3a05a1afea8a5a628923101f56d2b38063db76d5bb305f5707e3070ef",
+      "size_px": [
+        1500,
+        1050
+      ]
+    }
+  }
+}
