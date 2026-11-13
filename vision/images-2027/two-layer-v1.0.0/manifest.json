@@ -1,6 +1,6 @@
 {
   "schema": "ysu.radar.two_layer_mask.v1",
-  "profile": "rmuc2027-v1.0.0-two-layer3",
+  "profile": "rmuc2027-v1.0.0-two-layer4",
   "source_sha256": "a5ad3ede3b7674fc98f2e73b71717216383cb2b4b5dcdbe900c2038918bea8e0",
   "terrain_manifest_sha256": "12e589d3b8ef68ca75f99d8dac8dbe9fba3d88ec97b41af8812b3b2758481c64",
   "display_manifest_sha256": "1841678979a51452e5eb3501d896ebc68c47d39ea5117f29537d1588ec4e42a0",
@@ -33,15 +33,17 @@
   ],
   "road_assignment_basis": "CAD road deck about 200 mm above local base ground; include ramps in second-layer footprint",
   "stair_assignment_basis": "merge both central highland stair/edge bands (region 9) into the second-layer footprint, following mask26",
-  "boundary_policy": "union of visible highland contours; enclosed object holes filled",
-  "other_regions": "black unless enclosed inside highland external contours",
+  "boundary_policy": "union of visible highland contours; enclosed object holes filled, then exposed base ground and unknown pixels cleared",
+  "other_regions": "exposed base ground and unknown always black; other objects high only inside selected external contours",
+  "reopened_ground_pixels": 7967,
+  "unknown_pixels_cleared": 12,
   "orientations": {
     "map_mask27.png": "blue_bottom",
     "map_mask27_red.png": "red_bottom",
     "map_mask27_topdown.png": "topdown"
   },
-  "highland_pixels": 2325267,
-  "enclosed_pixels_filled": 145749,
+  "highland_pixels": 2317288,
+  "enclosed_pixels_filled": 137770,
   "format_compatible_with_legacy_two_layer_mask": true,
   "physical_validation": false,
   "limitations": [
@@ -53,35 +55,35 @@
   ],
   "files": {
     "map_mask27_topdown.png": {
-      "sha256": "ce2bc1ab280d2ba65264317ddc9d2167c7c20375618f439af5db19bfb9bb27d0",
+      "sha256": "c04d72316e9fc53bffe16ab6861800e487595fc40ba304e1ae603384e4f312b3",
       "size_px": [
         2800,
         1500
       ]
     },
     "map_mask27_red.png": {
-      "sha256": "4c0664c06e80ee36a220a53471020db36dba9bdc4d187045f107982a7b6ba77c",
+      "sha256": "9ac9ea718c9952ad0fee8f1ed7ee7ba31d99ec8d734dc488ddbe06c76e4b0c8d",
       "size_px": [
         1500,
         2800
       ]
     },
     "map_mask27.png": {
-      "sha256": "6ed79c4fd8ebd83e0ee1b73edf2b9d176a5e62087dcfe2441e81c922b42f1bfa",
+      "sha256": "66109c153b035c0d36ab51532143fb7b7b89cfc0694966cd64bd505768c90140",
       "size_px": [
         1500,
         2800
       ]
     },
     "overlay_blue.png": {
-      "sha256": "7688080f219cd21ee435ee689fdb48f035293f900ffb1fc3eef4bd94fa0f0a1e",
+      "sha256": "ef8af56ace3693a8c60edf2ed11c212162c75c151fed96fd35df91453ddff3c0",
       "size_px": [
         1500,
         2800
       ]
     },
     "comparison.png": {
-      "sha256": "a5f128bccbbdf4296061152d5700c13b6eae677ceeccac4cce9e0ee34f776182",
+      "sha256": "c4ac879e674a63f5c2cd8447f84964d4a7f069f23a28e33d78bb45b2cece1e3f",
       "size_px": [
         1500,
         1050
@@ -92,6 +94,13 @@
       "size_px": [
         1500,
         750
+      ]
+    },
+    "tunnel_detail.png": {
+      "sha256": "c4767832bfdb5ca322f75b5148724fb4f6a1910eb48eccf1f9971eea96c6c457",
+      "size_px": [
+        1200,
+        900
       ]
     }
   }

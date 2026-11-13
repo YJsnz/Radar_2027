@@ -42,6 +42,12 @@ def main():
                                    cv2.CHAIN_APPROX_SIMPLE)
     filled = np.zeros_like(highland)
     cv2.drawContours(filled, contours, -1, 255, cv2.FILLED)
+    # Enclosed flag/base footprints may stay high, but exposed tunnel-mouth
+    # ground must select M_ground even when enclosed by the terrain contours.
+    exposed_ground = np.isin(labels, (1, 2))
+    reopened_ground_pixels = int(np.count_nonzero((filled != 0) & exposed_ground))
+    unknown_pixels_cleared = int(np.count_nonzero((filled != 0) & (labels == 0)))
+    filled[exposed_ground | (labels == 0)] = 0
     mask = np.zeros((*labels.shape, 3), dtype=np.uint8)
     mask[..., 1] = filled  # RGB and OpenCV BGR share the same green encoding.
     masks = {
@@ -83,12 +89,21 @@ def main():
     fig.savefig(output / "stairs_detail.png", dpi=150)
     plt.close(fig)
 
+    fig, axes = plt.subplots(2, 2, figsize=(8, 6), layout="constrained")
+    for row, (start, end, side) in enumerate(((70, 300, "Left"), (1200, 1430, "Right"))):
+        for col, (pixels, title) in enumerate(((blue, "map"), (overlay, "layer overlay"))):
+            axes[row, col].imshow(pixels[1250:1525, start:end], interpolation="nearest")
+            axes[row, col].set_title(f"{side} tunnel mouth - {title}")
+            axes[row, col].axis("off")
+    fig.savefig(output / "tunnel_detail.png", dpi=150)
+    plt.close(fig)
+
     files = {name: {"sha256": digest(output / name),
                     "size_px": list(Image.open(output / name).size)}
-             for name in [*masks, "overlay_blue.png", "comparison.png", "stairs_detail.png"]}
+             for name in [*masks, "overlay_blue.png", "comparison.png", "stairs_detail.png", "tunnel_detail.png"]}
     write_json(output / "manifest.json", {
         "schema": "ysu.radar.two_layer_mask.v1",
-        "profile": "rmuc2027-v1.0.0-two-layer3",
+        "profile": "rmuc2027-v1.0.0-two-layer4",
         "source_sha256": SOURCE_SHA256,
         "terrain_manifest_sha256": digest(terrain / "manifest.json"),
         "display_manifest_sha256": digest(display / "manifest.json"),
@@ -98,8 +113,10 @@ def main():
         "highland_regions": ["central_highland", "trapezoid_highland", "commanding_structure", "road_structure", "tunnel_boundary"],
         "road_assignment_basis": "CAD road deck about 200 mm above local base ground; include ramps in second-layer footprint",
         "stair_assignment_basis": "merge both central highland stair/edge bands (region 9) into the second-layer footprint, following mask26",
-        "boundary_policy": "union of visible highland contours; enclosed object holes filled",
-        "other_regions": "black unless enclosed inside highland external contours",
+        "boundary_policy": "union of visible highland contours; enclosed object holes filled, then exposed base ground and unknown pixels cleared",
+        "other_regions": "exposed base ground and unknown always black; other objects high only inside selected external contours",
+        "reopened_ground_pixels": reopened_ground_pixels,
+        "unknown_pixels_cleared": unknown_pixels_cleared,
         "orientations": {"map_mask27.png": "blue_bottom",
                          "map_mask27_red.png": "red_bottom",
                          "map_mask27_topdown.png": "topdown"},
