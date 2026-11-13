@@ -11,6 +11,7 @@ from export_2027_map import ROOT, SOURCE_SHA256, digest, write_json
 
 def main():
     terrain = ROOT / "vision/images-2027/terrain-v1.0.0"
+    cad = ROOT / "vision/images-2027/cad-v1.0.0"
     display = ROOT / "vision/images-2027/display-v1.0.0"
     output = ROOT / "vision/images-2027/two-layer-v1.0.0"
     terrain_manifest = json.loads((terrain / "manifest.json").read_text())
@@ -29,6 +30,17 @@ def main():
     labels = np.asarray(Image.open(labels_path))
     if labels.shape != (1500, 2800):
         raise ValueError("区域标签尺寸不一致")
+    cad_manifest = json.loads((cad / "manifest.json").read_text())
+    if digest(cad / "manifest.json") != terrain_manifest["cad_manifest_sha256"]:
+        raise ValueError("CAD 高度来源版本不一致")
+    for folder, name, manifest in ((cad, "top_surface.npz", cad_manifest),
+                                   (terrain, "terrain.npz", terrain_manifest)):
+        if digest(folder / name) != manifest["files"][name]["sha256"]:
+            raise ValueError("高度或坡度资产校验失败")
+    with np.load(cad / "top_surface.npz") as data:
+        above_ground = data["above_ground_mm"]
+    with np.load(terrain / "terrain.npz") as data:
+        slopes = data["slope_deg"]
 
     # Use black for base ground and green for elevated terrain footprints.
     # The 2027 road platform is about 200 mm above ground: the legacy
@@ -45,6 +57,12 @@ def main():
     # Enclosed flag/base footprints may stay high, but exposed tunnel-mouth
     # ground must select M_ground even when enclosed by the terrain contours.
     exposed_ground = np.isin(labels, (1, 2))
+    # The floor assembly also contains two thin strips on the road ramps.
+    # Protect those using surface height/normals instead of the part name.
+    # These tolerances are project heuristics, not official height limits.
+    raised_ramp = exposed_ground & (above_ground > 5.0) & (slopes > 4.0) & (slopes < 35.0)
+    protected_ramp_pixels = int(np.count_nonzero((filled != 0) & raised_ramp))
+    exposed_ground &= ~raised_ramp
     reopened_ground_pixels = int(np.count_nonzero((filled != 0) & exposed_ground))
     unknown_pixels_cleared = int(np.count_nonzero((filled != 0) & (labels == 0)))
     filled[exposed_ground | (labels == 0)] = 0
@@ -103,7 +121,7 @@ def main():
              for name in [*masks, "overlay_blue.png", "comparison.png", "stairs_detail.png", "tunnel_detail.png"]}
     write_json(output / "manifest.json", {
         "schema": "ysu.radar.two_layer_mask.v1",
-        "profile": "rmuc2027-v1.0.0-two-layer4",
+        "profile": "rmuc2027-v1.0.0-two-layer5",
         "source_sha256": SOURCE_SHA256,
         "terrain_manifest_sha256": digest(terrain / "manifest.json"),
         "display_manifest_sha256": digest(display / "manifest.json"),
@@ -113,8 +131,12 @@ def main():
         "highland_regions": ["central_highland", "trapezoid_highland", "commanding_structure", "road_structure", "tunnel_boundary"],
         "road_assignment_basis": "CAD road deck about 200 mm above local base ground; include ramps in second-layer footprint",
         "stair_assignment_basis": "merge both central highland stair/edge bands (region 9) into the second-layer footprint, following mask26",
-        "boundary_policy": "union of visible highland contours; enclosed object holes filled, then exposed base ground and unknown pixels cleared",
-        "other_regions": "exposed base ground and unknown always black; other objects high only inside selected external contours",
+        "boundary_policy": "union of visible highland contours; enclosed object holes filled; clear exposed base ground and unknown, preserving raised ramp strips by height/normals",
+        "other_regions": "base ground black except confirmed raised ramp strips inside terrain contours; unknown always black",
+        "height_source_sha256": digest(cad / "top_surface.npz"),
+        "slope_source_sha256": digest(terrain / "terrain.npz"),
+        "ramp_protection_heuristics": {"min_above_ground_mm": 5.0, "slope_range_deg_exclusive": [4.0, 35.0]},
+        "protected_ramp_pixels": protected_ramp_pixels,
         "reopened_ground_pixels": reopened_ground_pixels,
         "unknown_pixels_cleared": unknown_pixels_cleared,
         "orientations": {"map_mask27.png": "blue_bottom",
