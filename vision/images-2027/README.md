@@ -15,4 +15,10 @@
 
 ## STEP 几何来源
 
-用户已提供 `docs/UTF-8__RMUC2027_V1.0.0.stp`，来源为 RoboMaster 高校赛务发布的 [RMU 2027场地图纸&可移动道具开源](https://bbs.robomaster.com/article/1970956?source=9)。毫米单位、装配结构、文件校验值和后续导出步骤见 [STEP 初检记录](../../docs/2027-adaptation/map2027_step_intake.md)。尚未完成 CAD 几何导入或生成可用于定位的地图资产。
+用户已提供 `docs/UTF-8__RMUC2027_V1.0.0.stp`，来源为 RoboMaster 高校赛务发布的 [RMU 2027场地图纸&可移动道具开源](https://bbs.robomaster.com/article/1970956?source=9)。毫米单位、装配结构和文件校验值见 [STEP 初检记录](../../docs/2027-adaptation/map2027_step_intake.md)。
+
+## CAD 参考资产
+
+`cad-v1.0.0/` 已完成几何转换和正交参考图导出，包含横向 2800×1500、红方在下与蓝方在下的 1500×2800 图像，以及部件边界、坐标矩阵和高度参考。CAD 图保留色块与丝印，不含地胶渲染材质。来源、用途限制和复现命令见 [地图资产处理记录](../../docs/2027-adaptation/map2027_asset_processing.md)。
+
+参考资产尚未代替现场相机外参、地形选层掩码或旧比赛地图配置。

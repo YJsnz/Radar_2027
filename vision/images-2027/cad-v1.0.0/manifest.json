@@ -1,0 +1,124 @@
+{
+  "schema": "ysu.radar.map_asset.v1",
+  "profile": "rmuc2027-v1.0.0-cad1",
+  "source_url": "https://bbs.robomaster.com/article/1970956?source=9",
+  "source_sha256": "a5ad3ede3b7674fc98f2e73b71717216383cb2b4b5dcdbe900c2038918bea8e0",
+  "source_filename": "UTF-8__RMUC2027_V1.0.0.stp",
+  "ocp_version": "7.9.3.1",
+  "vtk_version": "9.1.0",
+  "linear_deflection_mm": 5.0,
+  "cad_gltf_bounds_max_error_mm": 0.0019636127119859736,
+  "cad_crop_xy_mm": [
+    -13999.988539070002,
+    14000.002952280003,
+    -5873.086260815919,
+    9121.77361381592
+  ],
+  "ground_slope_deg": [
+    1.499999999152389,
+    1.500000001291433
+  ],
+  "ground_center_y_mm": 1624.3436765000001,
+  "ground_ridge_cad_z_mm": -1641.3436763725556,
+  "field_size_cm": [
+    2800,
+    1500
+  ],
+  "cad_to_field_cm": [
+    [
+      -0.10000003038804493,
+      0.0,
+      1400.000720660719
+    ],
+    [
+      0.0,
+      -0.10003427924909694,
+      912.4900489315058
+    ],
+    [
+      0.0,
+      0.0,
+      1.0
+    ]
+  ],
+  "field_cm_to_cad_mm": [
+    [
+      -9.99999696119643,
+      -0.0,
+      14000.002952280003
+    ],
+    [
+      -0.0,
+      -9.996573249754558,
+      9121.77361381592
+    ],
+    [
+      0.0,
+      0.0,
+      1.0
+    ]
+  ],
+  "transform_convention": "3x3 homogeneous CAD XY mm to field XY cm",
+  "height_convention": "separate CAD absolute Z in mm; not a referee Z coordinate",
+  "boundary_basis": "CAD floor X edges and centreline; handbook 15000 mm along 1.5-degree ground",
+  "origin_description": "red supply-side corner; X towards blue, Y towards red upper corner",
+  "physical_validation": false,
+  "pixel_convention": "edge coordinates; pixel centres are index + 0.5",
+  "image_coordinates": {
+    "topdown.png": [
+      "X_cm",
+      "1500 - Y_cm"
+    ],
+    "red_bottom.png": [
+      "1500 - Y_cm",
+      "2800 - X_cm"
+    ],
+    "blue_bottom.png": [
+      "Y_cm",
+      "X_cm"
+    ]
+  },
+  "limitations": [
+    "reference assets, not camera calibration",
+    "no legacy two-layer projection mask is generated",
+    "CAD colours are retained; standalone curves/textures may not appear"
+  ],
+  "files": {
+    "topdown.png": {
+      "size_px": [
+        2800,
+        1500
+      ],
+      "sha256": "af5e047f96ff845cdf6bc700813155ea5dc987df6196869040098e8e7f024db5",
+      "max_projection_error_px": 4.547473508864641e-13
+    },
+    "red_bottom.png": {
+      "size_px": [
+        1500,
+        2800
+      ],
+      "sha256": "69fc00b1eba57a7f25fa95047b21766b71ab847bbaefe1165955b1fa67d0e2f3",
+      "max_projection_error_px": 2.2737367544323206e-13
+    },
+    "blue_bottom.png": {
+      "size_px": [
+        1500,
+        2800
+      ],
+      "sha256": "fe2b5e629100c417e811f0771b8b60e8168a5a2e619e89a61dd888360a6fcede",
+      "max_projection_error_px": 2.2737367544323206e-13
+    },
+    "top_surface.npz": {
+      "sha256": "cc4a295c226b1ccbfd8293c8f60e2d219c7de1038e7460d932022e953227e070",
+      "valid_fraction": 0.9999971428571428,
+      "meaning": "topmost CAD surface; roofs are not robot traversable ground"
+    },
+    "components.json": {
+      "sha256": "b781558407f94d1aedfaf917c50f12fd30f116e027be738fe816652708af8f98",
+      "leaf_instances": 81
+    },
+    "height_preview.png": {
+      "sha256": "75275d37884f9be264ed6590b1d48a07fac480b414d63987861f425043eaaae1"
+    }
+  }
+}

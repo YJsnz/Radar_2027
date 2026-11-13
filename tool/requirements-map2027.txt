@@ -1,0 +1,7 @@
+# CAD bindings omit VTK so meshing and rendering can run in separate processes.
+cadquery-ocp-novtk==7.9.3.1.1
+cadquery-ocp-proxy==7.9.3.1.1
+numpy==1.26.4
+Pillow>=9
+vtk>=9.1
+matplotlib>=3.6
