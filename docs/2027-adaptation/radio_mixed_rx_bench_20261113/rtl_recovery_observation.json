@@ -1,0 +1,1005 @@
+{
+  "source": "Actual live RX1 ROS status and decoded frames via Dashboard HTTP API; no second RTL hardware reader",
+  "observed_at_local": "2026-11-13 19:35:19 +0800",
+  "uri": "rtlsdr:00000001",
+  "usb": {
+    "physical_port": "1-9",
+    "vid_pid": "0bda:2838",
+    "manufacturer": "RTLSDRBlog",
+    "product": "Blog V4",
+    "serial": "00000001"
+  },
+  "center_frequency_hz": 433200000.0,
+  "gain": {
+    "profile": "broadcast",
+    "backend": "rtlsdr",
+    "uri": "rtlsdr:00000001",
+    "hardware_sample_rate": 2048000,
+    "dsp_sample_rate": 2000000.0,
+    "mode": "manual",
+    "gain_db": 32.8,
+    "configured_min_db": 0.0,
+    "configured_max_db": 49.6
+  },
+  "samples": [
+    {
+      "elapsed_sec": 0.005,
+      "captured_at": 1794569659.6886737,
+      "status_timestamp": 1794569659.5808911,
+      "started": true,
+      "last_error": "",
+      "stats": {
+        "manual_air_payloads": 0,
+        "demod_bit_batches": 21041,
+        "iq_decode_batches": 0,
+        "air_payloads": 3286,
+        "iq_air_payloads": 0,
+        "iq_referee_frames": 0,
+        "frames": 1630,
+        "bridge_outputs": 1630,
+        "iio_capture_batches": 0,
+        "iio_capture_errors": 0
+      },
+      "validation": {
+        "crc8_failures": 1,
+        "length_failures": 0,
+        "crc16_attempts": 1641,
+        "crc16_failures": 11,
+        "crc16_valid_frames": 1630,
+        "command_length_failures": 0,
+        "valid_frames": 1630,
+        "buffered_bytes": 6,
+        "pending_events": 0
+      },
+      "reception_pipeline": {
+        "estimate_available": true,
+        "crc_valid_frames": 467,
+        "end_to_end_loss_rate": 0.0
+      }
+    },
+    {
+      "elapsed_sec": 10.022,
+      "captured_at": 1794569669.705364,
+      "status_timestamp": 1794569669.5830572,
+      "started": true,
+      "last_error": "",
+      "stats": {
+        "manual_air_payloads": 0,
+        "demod_bit_batches": 26885,
+        "iq_decode_batches": 0,
+        "air_payloads": 4218,
+        "iq_air_payloads": 0,
+        "iq_referee_frames": 0,
+        "frames": 2096,
+        "bridge_outputs": 2096,
+        "iio_capture_batches": 0,
+        "iio_capture_errors": 0
+      },
+      "validation": {
+        "crc8_failures": 1,
+        "length_failures": 0,
+        "crc16_attempts": 2107,
+        "crc16_failures": 11,
+        "crc16_valid_frames": 2096,
+        "command_length_failures": 0,
+        "valid_frames": 2096,
+        "buffered_bytes": 17,
+        "pending_events": 0
+      },
+      "reception_pipeline": {
+        "estimate_available": true,
+        "crc_valid_frames": 466,
+        "end_to_end_loss_rate": 0.0
+      }
+    },
+    {
+      "elapsed_sec": 20.018,
+      "captured_at": 1794569679.7015572,
+      "status_timestamp": 1794569679.5881026,
+      "started": true,
+      "last_error": "",
+      "stats": {
+        "manual_air_payloads": 0,
+        "demod_bit_batches": 32613,
+        "iq_decode_batches": 0,
+        "air_payloads": 5152,
+        "iq_air_payloads": 0,
+        "iq_referee_frames": 0,
+        "frames": 2563,
+        "bridge_outputs": 2563,
+        "iio_capture_batches": 0,
+        "iio_capture_errors": 0
+      },
+      "validation": {
+        "crc8_failures": 1,
+        "length_failures": 0,
+        "crc16_attempts": 2574,
+        "crc16_failures": 11,
+        "crc16_valid_frames": 2563,
+        "command_length_failures": 0,
+        "valid_frames": 2563,
+        "buffered_bytes": 0,
+        "pending_events": 0
+      },
+      "reception_pipeline": {
+        "estimate_available": true,
+        "crc_valid_frames": 467,
+        "end_to_end_loss_rate": 0.0
+      }
+    },
+    {
+      "elapsed_sec": 30.02,
+      "captured_at": 1794569689.7030718,
+      "status_timestamp": 1794569689.5811622,
+      "started": true,
+      "last_error": "",
+      "stats": {
+        "manual_air_payloads": 0,
+        "demod_bit_batches": 38414,
+        "iq_decode_batches": 0,
+        "air_payloads": 6086,
+        "iq_air_payloads": 0,
+        "iq_referee_frames": 0,
+        "frames": 3030,
+        "bridge_outputs": 3030,
+        "iio_capture_batches": 0,
+        "iio_capture_errors": 0
+      },
+      "validation": {
+        "crc8_failures": 1,
+        "length_failures": 0,
+        "crc16_attempts": 3041,
+        "crc16_failures": 11,
+        "crc16_valid_frames": 3030,
+        "command_length_failures": 0,
+        "valid_frames": 3030,
+        "buffered_bytes": 6,
+        "pending_events": 0
+      },
+      "reception_pipeline": {
+        "estimate_available": true,
+        "crc_valid_frames": 467,
+        "end_to_end_loss_rate": 0.0
+      }
+    },
+    {
+      "elapsed_sec": 40.02,
+      "captured_at": 1794569699.7027504,
+      "status_timestamp": 1794569699.5802777,
+      "started": true,
+      "last_error": "",
+      "stats": {
+        "manual_air_payloads": 0,
+        "demod_bit_batches": 44236,
+        "iq_decode_batches": 0,
+        "air_payloads": 7020,
+        "iq_air_payloads": 0,
+        "iq_referee_frames": 0,
+        "frames": 3497,
+        "bridge_outputs": 3497,
+        "iio_capture_batches": 0,
+        "iio_capture_errors": 0
+      },
+      "validation": {
+        "crc8_failures": 1,
+        "length_failures": 0,
+        "crc16_attempts": 3508,
+        "crc16_failures": 11,
+        "crc16_valid_frames": 3497,
+        "command_length_failures": 0,
+        "valid_frames": 3497,
+        "buffered_bytes": 26,
+        "pending_events": 0
+      },
+      "reception_pipeline": {
+        "estimate_available": true,
+        "crc_valid_frames": 467,
+        "end_to_end_loss_rate": 0.0
+      }
+    },
+    {
+      "elapsed_sec": 50.018,
+      "captured_at": 1794569709.7012613,
+      "status_timestamp": 1794569709.5857306,
+      "started": true,
+      "last_error": "",
+      "stats": {
+        "manual_air_payloads": 0,
+        "demod_bit_batches": 49893,
+        "iq_decode_batches": 0,
+        "air_payloads": 7951,
+        "iq_air_payloads": 0,
+        "iq_referee_frames": 0,
+        "frames": 3962,
+        "bridge_outputs": 3962,
+        "iio_capture_batches": 0,
+        "iio_capture_errors": 0
+      },
+      "validation": {
+        "crc8_failures": 1,
+        "length_failures": 0,
+        "crc16_attempts": 3973,
+        "crc16_failures": 11,
+        "crc16_valid_frames": 3962,
+        "command_length_failures": 0,
+        "valid_frames": 3962,
+        "buffered_bytes": 41,
+        "pending_events": 0
+      },
+      "reception_pipeline": {
+        "estimate_available": true,
+        "crc_valid_frames": 465,
+        "end_to_end_loss_rate": 0.0
+      }
+    },
+    {
+      "elapsed_sec": 60.022,
+      "captured_at": 1794569719.7054412,
+      "status_timestamp": 1794569719.5816362,
+      "started": true,
+      "last_error": "",
+      "stats": {
+        "manual_air_payloads": 0,
+        "demod_bit_batches": 55636,
+        "iq_decode_batches": 0,
+        "air_payloads": 8886,
+        "iq_air_payloads": 0,
+        "iq_referee_frames": 0,
+        "frames": 4430,
+        "bridge_outputs": 4430,
+        "iio_capture_batches": 0,
+        "iio_capture_errors": 0
+      },
+      "validation": {
+        "crc8_failures": 1,
+        "length_failures": 0,
+        "crc16_attempts": 4441,
+        "crc16_failures": 11,
+        "crc16_valid_frames": 4430,
+        "command_length_failures": 0,
+        "valid_frames": 4430,
+        "buffered_bytes": 6,
+        "pending_events": 0
+      },
+      "reception_pipeline": {
+        "estimate_available": true,
+        "crc_valid_frames": 468,
+        "end_to_end_loss_rate": 0.0
+      }
+    }
+  ],
+  "delta": {
+    "duration_sec": 60.017,
+    "stats": {
+      "manual_air_payloads": 0,
+      "demod_bit_batches": 34595,
+      "iq_decode_batches": 0,
+      "air_payloads": 5600,
+      "iq_air_payloads": 0,
+      "iq_referee_frames": 0,
+      "frames": 2800,
+      "bridge_outputs": 2800,
+      "iio_capture_batches": 0,
+      "iio_capture_errors": 0
+    },
+    "validation": {
+      "crc8_failures": 0,
+      "length_failures": 0,
+      "crc16_attempts": 2800,
+      "crc16_failures": 0,
+      "crc16_valid_frames": 2800,
+      "command_length_failures": 0,
+      "valid_frames": 2800
+    }
+  },
+  "frame_sample_by_command": {
+    "0x0A02": {
+      "seq": 4829,
+      "timestamp": 1794569719.4808714,
+      "role": "rx1",
+      "frame": {
+        "cmd_id": 2562,
+        "cmd_hex": "0x0A02",
+        "command": "enemy_hp",
+        "seq": 161,
+        "data_length": 12,
+        "data_hex": "f40100009001900100009001",
+        "raw_hex": "a50c00a189020af40100009001900100009001268c",
+        "crc_valid": true,
+        "parsed": {
+          "valid_radar_length": true,
+          "official_hp": {
+            "opponent_heavy": 500,
+            "opponent_infantry_3": 400,
+            "opponent_infantry_4": 400,
+            "opponent_sentry": 400
+          },
+          "reserved_hp": {
+            "reserved_robot_2": 0,
+            "reserved_robot_6": 0
+          },
+          "hp": {
+            "opponent_heavy": 500,
+            "opponent_infantry_3": 400,
+            "opponent_infantry_4": 400,
+            "opponent_sentry": 400
+          }
+        }
+      }
+    },
+    "0x0A01": {
+      "seq": 4833,
+      "timestamp": 1794569719.5718927,
+      "role": "rx1",
+      "frame": {
+        "cmd_id": 2561,
+        "cmd_hex": "0x0A01",
+        "command": "enemy_position",
+        "seq": 165,
+        "data_length": 24,
+        "data_hex": "f401dc000000000014050802a4069e0200000000c409ca03",
+        "raw_hex": "a51800a53c010af401dc000000000014050802a4069e0200000000c409ca0332e5",
+        "crc_valid": true,
+        "parsed": {
+          "valid_radar_length": true,
+          "positions_cm": {
+            "opponent_heavy": {
+              "x": 500,
+              "y": 220
+            },
+            "opponent_infantry_3": {
+              "x": 1300,
+              "y": 520
+            },
+            "opponent_infantry_4": {
+              "x": 1700,
+              "y": 670
+            },
+            "opponent_sentry": {
+              "x": 2500,
+              "y": 970
+            }
+          },
+          "official_positions_cm": {
+            "opponent_heavy": {
+              "x": 500,
+              "y": 220
+            },
+            "opponent_infantry_3": {
+              "x": 1300,
+              "y": 520
+            },
+            "opponent_infantry_4": {
+              "x": 1700,
+              "y": 670
+            },
+            "opponent_sentry": {
+              "x": 2500,
+              "y": 970
+            }
+          },
+          "reserved_positions_cm": {
+            "reserved_robot_2": {
+              "x": 0,
+              "y": 0
+            },
+            "reserved_robot_6": {
+              "x": 0,
+              "y": 0
+            }
+          }
+        }
+      }
+    },
+    "0x0A05": {
+      "seq": 4832,
+      "timestamp": 1794569719.5378397,
+      "role": "rx1",
+      "frame": {
+        "cmd_id": 2565,
+        "cmd_hex": "0x0A05",
+        "command": "enemy_buff_status",
+        "seq": 164,
+        "data_length": 47,
+        "data_hex": "0000000000000000000000000000000000000000000000000000000000000000000000010000000000000000000000",
+        "raw_hex": "a52f00a4c6050a000000000000000000000000000000000000000000000000000000000000000000000001000000000000000000000037f5",
+        "crc_valid": true,
+        "parsed": {
+          "valid_radar_length": true,
+          "raw_buff_bytes": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "buff_status": {
+            "opponent_heavy": {
+              "hp_recovery_percent": 0,
+              "shooting_heat_cooling": 0,
+              "defense_percent": 0,
+              "negative_defense_percent": 0,
+              "attack_percent": 0
+            },
+            "opponent_infantry_3": {
+              "hp_recovery_percent": 0,
+              "shooting_heat_cooling": 0,
+              "defense_percent": 0,
+              "negative_defense_percent": 0,
+              "attack_percent": 0
+            },
+            "opponent_infantry_4": {
+              "hp_recovery_percent": 0,
+              "shooting_heat_cooling": 0,
+              "defense_percent": 0,
+              "negative_defense_percent": 0,
+              "attack_percent": 0
+            },
+            "opponent_sentry": {
+              "hp_recovery_percent": 0,
+              "shooting_heat_cooling": 0,
+              "defense_percent": 0,
+              "negative_defense_percent": 0,
+              "attack_percent": 0
+            }
+          },
+          "reserved_buff_bytes": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "sentry_mode": 1,
+          "sentry_mode_name": "offensive",
+          "robot_main_status": {
+            "opponent_heavy": 0,
+            "opponent_infantry_3": 0,
+            "opponent_infantry_4": 0,
+            "opponent_sentry": 0
+          },
+          "reserved_main_status": 0,
+          "robot_main_status_names": {
+            "opponent_heavy": "alive",
+            "opponent_infantry_3": "alive",
+            "opponent_infantry_4": "alive",
+            "opponent_sentry": "alive"
+          },
+          "enemy_armor_fortification": {
+            "active": false,
+            "center_x_mm": 0,
+            "center_y_mm": 0,
+            "radius_mm": 0
+          }
+        }
+      }
+    },
+    "0x0A04": {
+      "seq": 4831,
+      "timestamp": 1794569719.496508,
+      "role": "rx1",
+      "frame": {
+        "cmd_id": 2564,
+        "cmd_hex": "0x0A04",
+        "command": "enemy_macro_status",
+        "seq": 163,
+        "data_length": 12,
+        "data_hex": "f401e8030000000000000000",
+        "raw_hex": "a50c00a335040af401e80300000000000000002294",
+        "crc_valid": true,
+        "parsed": {
+          "valid_radar_length": true,
+          "remaining_coins": 500,
+          "total_coins": 1000,
+          "occupation_state_1": 0,
+          "occupation_state_2": 0,
+          "occupation_bits": 0,
+          "occupation": {
+            "opponent_supply_zone_occupied": false,
+            "red_fortress_buff_zone_status": 0,
+            "blue_fortress_buff_zone_status": 0,
+            "red_base_buff_zone_status": 0,
+            "blue_base_buff_zone_status": 0,
+            "opponent_highland_buff_zone_occupied": false,
+            "red_central_highland_status": 0,
+            "blue_central_highland_status": 0,
+            "red_outpost_buff_zone_status": 0,
+            "blue_outpost_buff_zone_status": 0,
+            "opponent_central_highland_top": false,
+            "ally_central_highland_top": false,
+            "opponent_road_top": false,
+            "ally_road_top": false,
+            "opponent_tunnel_lower": false,
+            "opponent_tunnel_middle": false,
+            "opponent_tunnel_upper": false,
+            "opponent_near_center_trapezoid_low": false,
+            "opponent_near_center_trapezoid_middle": false,
+            "opponent_near_center_trapezoid_high": false,
+            "opponent_far_center_trapezoid_far": false,
+            "opponent_far_center_trapezoid_middle": false,
+            "opponent_far_center_trapezoid_near": false,
+            "ally_tunnel_lower": false,
+            "ally_tunnel_middle": false,
+            "ally_tunnel_upper": false,
+            "ally_near_center_trapezoid_low": false,
+            "ally_near_center_trapezoid_middle": false,
+            "ally_near_center_trapezoid_high": false,
+            "ally_far_center_trapezoid_far": false,
+            "ally_far_center_trapezoid_middle": false,
+            "ally_far_center_trapezoid_near": false,
+            "red_outpost_control_status": 0,
+            "blue_outpost_control_status": 0,
+            "red_base_control_status": 0,
+            "blue_base_control_status": 0
+          }
+        }
+      }
+    },
+    "0x0A03": {
+      "seq": 4830,
+      "timestamp": 1794569719.485624,
+      "role": "rx1",
+      "frame": {
+        "cmd_id": 2563,
+        "cmd_hex": "0x0A03",
+        "command": "enemy_bullet_allowance",
+        "seq": 162,
+        "data_length": 10,
+        "data_hex": "6400c800c80000002c01",
+        "raw_hex": "a50a00a2ba030a6400c800c80000002c011047",
+        "crc_valid": true,
+        "parsed": {
+          "valid_radar_length": true,
+          "official_bullet_allowance": {
+            "opponent_heavy": 100,
+            "opponent_infantry_3": 200,
+            "opponent_infantry_4": 200,
+            "opponent_sentry": 300
+          },
+          "reserved_bullet_allowance": {
+            "reserved_robot_6": 0
+          },
+          "bullet_allowance": {
+            "opponent_heavy": 100,
+            "opponent_infantry_3": 200,
+            "opponent_infantry_4": 200,
+            "opponent_sentry": 300
+          }
+        }
+      }
+    }
+  },
+  "bridge_sample_by_type": {
+    "RadarEnemyHp": {
+      "timestamp": 1794569719.4812212,
+      "role": "rx1",
+      "output": {
+        "type": "RadarEnemyHp",
+        "cmd_hex": "0x0A02",
+        "seq": 161,
+        "payload": {
+          "opponent_heavy": 500,
+          "opponent_infantry_3": 400,
+          "opponent_infantry_4": 400,
+          "opponent_sentry": 400
+        },
+        "timestamp": 1794569719.4807274
+      }
+    },
+    "RadarInfoToClient": {
+      "timestamp": 1794569719.5725503,
+      "role": "rx1",
+      "output": {
+        "type": "RadarInfoToClient",
+        "timestamp": 1794569719.5715232,
+        "payload": {
+          "topic": "RadarInfoToClient",
+          "RadarSingleRobotInfo": [
+            {
+              "target_pos_x": 500,
+              "target_pos_y": 220,
+              "is_high_light": 0
+            },
+            {
+              "target_pos_x": 0,
+              "target_pos_y": 0,
+              "is_high_light": 0
+            },
+            {
+              "target_pos_x": 1300,
+              "target_pos_y": 520,
+              "is_high_light": 0
+            },
+            {
+              "target_pos_x": 1700,
+              "target_pos_y": 670,
+              "is_high_light": 0
+            },
+            {
+              "target_pos_x": 0,
+              "target_pos_y": 0,
+              "is_high_light": 0
+            },
+            {
+              "target_pos_x": 2500,
+              "target_pos_y": 970,
+              "is_high_light": 0
+            },
+            {
+              "target_pos_x": 0,
+              "target_pos_y": 0,
+              "is_high_light": 0
+            },
+            {
+              "target_pos_x": 0,
+              "target_pos_y": 0,
+              "is_high_light": 0
+            },
+            {
+              "target_pos_x": 0,
+              "target_pos_y": 0,
+              "is_high_light": 0
+            },
+            {
+              "target_pos_x": 0,
+              "target_pos_y": 0,
+              "is_high_light": 0
+            },
+            {
+              "target_pos_x": 0,
+              "target_pos_y": 0,
+              "is_high_light": 0
+            },
+            {
+              "target_pos_x": 0,
+              "target_pos_y": 0,
+              "is_high_light": 0
+            }
+          ]
+        }
+      }
+    },
+    "RadarEnemyBuffStatus": {
+      "timestamp": 1794569719.5390623,
+      "role": "rx1",
+      "output": {
+        "type": "RadarEnemyBuffStatus",
+        "cmd_hex": "0x0A05",
+        "seq": 164,
+        "payload": {
+          "buff_status": {
+            "opponent_heavy": {
+              "hp_recovery_percent": 0,
+              "shooting_heat_cooling": 0,
+              "defense_percent": 0,
+              "negative_defense_percent": 0,
+              "attack_percent": 0
+            },
+            "opponent_infantry_3": {
+              "hp_recovery_percent": 0,
+              "shooting_heat_cooling": 0,
+              "defense_percent": 0,
+              "negative_defense_percent": 0,
+              "attack_percent": 0
+            },
+            "opponent_infantry_4": {
+              "hp_recovery_percent": 0,
+              "shooting_heat_cooling": 0,
+              "defense_percent": 0,
+              "negative_defense_percent": 0,
+              "attack_percent": 0
+            },
+            "opponent_sentry": {
+              "hp_recovery_percent": 0,
+              "shooting_heat_cooling": 0,
+              "defense_percent": 0,
+              "negative_defense_percent": 0,
+              "attack_percent": 0
+            }
+          },
+          "sentry_mode": 1,
+          "sentry_mode_name": "offensive",
+          "robot_main_status": {
+            "opponent_heavy": 0,
+            "opponent_infantry_3": 0,
+            "opponent_infantry_4": 0,
+            "opponent_sentry": 0
+          },
+          "robot_main_status_names": {
+            "opponent_heavy": "alive",
+            "opponent_infantry_3": "alive",
+            "opponent_infantry_4": "alive",
+            "opponent_sentry": "alive"
+          },
+          "reserved_buff_bytes": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "reserved_main_status": 0,
+          "enemy_armor_fortification": {
+            "active": false,
+            "center_x_mm": 0,
+            "center_y_mm": 0,
+            "radius_mm": 0
+          }
+        },
+        "timestamp": 1794569719.5372014
+      }
+    },
+    "RadarEnemyMacroStatus": {
+      "timestamp": 1794569719.496609,
+      "role": "rx1",
+      "output": {
+        "type": "RadarEnemyMacroStatus",
+        "cmd_hex": "0x0A04",
+        "seq": 163,
+        "payload": {
+          "remaining_coins": 500,
+          "total_coins": 1000,
+          "occupation_state_1": 0,
+          "occupation_state_2": 0,
+          "occupation_bits": 0,
+          "occupation": {
+            "opponent_supply_zone_occupied": false,
+            "red_fortress_buff_zone_status": 0,
+            "blue_fortress_buff_zone_status": 0,
+            "red_base_buff_zone_status": 0,
+            "blue_base_buff_zone_status": 0,
+            "opponent_highland_buff_zone_occupied": false,
+            "red_central_highland_status": 0,
+            "blue_central_highland_status": 0,
+            "red_outpost_buff_zone_status": 0,
+            "blue_outpost_buff_zone_status": 0,
+            "opponent_central_highland_top": false,
+            "ally_central_highland_top": false,
+            "opponent_road_top": false,
+            "ally_road_top": false,
+            "opponent_tunnel_lower": false,
+            "opponent_tunnel_middle": false,
+            "opponent_tunnel_upper": false,
+            "opponent_near_center_trapezoid_low": false,
+            "opponent_near_center_trapezoid_middle": false,
+            "opponent_near_center_trapezoid_high": false,
+            "opponent_far_center_trapezoid_far": false,
+            "opponent_far_center_trapezoid_middle": false,
+            "opponent_far_center_trapezoid_near": false,
+            "ally_tunnel_lower": false,
+            "ally_tunnel_middle": false,
+            "ally_tunnel_upper": false,
+            "ally_near_center_trapezoid_low": false,
+            "ally_near_center_trapezoid_middle": false,
+            "ally_near_center_trapezoid_high": false,
+            "ally_far_center_trapezoid_far": false,
+            "ally_far_center_trapezoid_middle": false,
+            "ally_far_center_trapezoid_near": false,
+            "red_outpost_control_status": 0,
+            "blue_outpost_control_status": 0,
+            "red_base_control_status": 0,
+            "blue_base_control_status": 0
+          }
+        },
+        "timestamp": 1794569719.496096
+      }
+    },
+    "RadarEnemyBulletAllowance": {
+      "timestamp": 1794569719.4860237,
+      "role": "rx1",
+      "output": {
+        "type": "RadarEnemyBulletAllowance",
+        "cmd_hex": "0x0A03",
+        "seq": 162,
+        "payload": {
+          "opponent_heavy": 100,
+          "opponent_infantry_3": 200,
+          "opponent_infantry_4": 200,
+          "opponent_sentry": 300
+        },
+        "timestamp": 1794569719.4853866
+      }
+    }
+  },
+  "referee_serial_open": false,
+  "referee_tx_count": 0,
+  "rx2_status": {
+    "started": false,
+    "last_error": "RuntimeError: Unable to create context"
+  },
+  "limitations": [
+    "Short receive observation only; no repeated reconnect or long duration acceptance",
+    "No transmitter total count captured; CRC failures are not a total packet-loss rate",
+    "Transmitter test coordinates are not real robot observations",
+    "Pluto absent from USB inventory at observation start; no concurrent two-device acceptance"
+  ],
+  "post_observation_rx2_recovery": {
+    "captured_at": 1794569804.7692528,
+    "action": "SIGTERM only the failed RX2 process; existing ROS launch respawned it; RX1 kept running",
+    "configured": {
+      "radio_side": "blue",
+      "interference_level": 3
+    },
+    "effective": {
+      "radio_side": "blue",
+      "interference_level": 3
+    },
+    "frequency_plan": {
+      "broadcast_hz": 433920000,
+      "interference": {
+        "level": 3,
+        "center_f": 434320000,
+        "BW_ganrao": 250000
+      }
+    },
+    "receivers": {
+      "rx1": {
+        "status_timestamp": 1794569804.5834672,
+        "started": true,
+        "last_error": "",
+        "uri": "rtlsdr:00000001",
+        "stats": {
+          "manual_air_payloads": 0,
+          "demod_bit_batches": 103534,
+          "iq_decode_batches": 0,
+          "air_payloads": 10657,
+          "iq_air_payloads": 0,
+          "iq_referee_frames": 0,
+          "frames": 5316,
+          "bridge_outputs": 5316,
+          "iio_capture_batches": 0,
+          "iio_capture_errors": 0
+        },
+        "rx_gain": {
+          "profile": "broadcast",
+          "backend": "rtlsdr",
+          "uri": "rtlsdr:00000001",
+          "hardware_sample_rate": 2048000,
+          "dsp_sample_rate": 2000000.0,
+          "mode": "manual",
+          "gain_db": 33.0,
+          "configured_min_db": 0.0,
+          "configured_max_db": 49.6
+        },
+        "last_setters": {
+          "cen_f": 433920000,
+          "center_F": 433920000,
+          "BW": 540000,
+          "LowPass": 260000,
+          "bw_re": 540000,
+          "sen_re": 0.7814,
+          "rx_tracking": true,
+          "GainMode": "manual",
+          "Gain": 33.0
+        },
+        "iq_diagnostics": {
+          "sample_count": 4096,
+          "mean_abs": 0.01471671275794506,
+          "max_abs": 0.05959699675440788,
+          "rms_abs": 0.01664665900170803,
+          "rms_dbfs": -35.57345833350598,
+          "component_peak": 0.049762167036533356,
+          "headroom_db": 26.062014306089097,
+          "crest_factor_db": 11.077945835072038,
+          "near_clip_fraction": 0.0,
+          "clip_fraction": 0.0,
+          "signal_state": "ok",
+          "mean_i": -0.0002012948680203408,
+          "mean_q": 0.0004509825084824115,
+          "source": "flowgraph_raw",
+          "mean_phase_step": 0.27858594059944153,
+          "std_phase_step": 1.4411334991455078,
+          "min_phase_step": -3.140270233154297,
+          "max_phase_step": 3.136300802230835
+        }
+      },
+      "rx2": {
+        "status_timestamp": 1794569803.7779317,
+        "started": true,
+        "last_error": "",
+        "uri": "ip:192.168.2.1",
+        "stats": {
+          "manual_air_payloads": 0,
+          "demod_bit_batches": 27446,
+          "iq_decode_batches": 0,
+          "air_payloads": 25,
+          "iq_air_payloads": 0,
+          "iq_referee_frames": 0,
+          "frames": 1,
+          "bridge_outputs": 1,
+          "iio_capture_batches": 0,
+          "iio_capture_errors": 0
+        },
+        "rx_gain": {
+          "profile": "interference",
+          "backend": "iio",
+          "uri": "ip:192.168.2.1",
+          "hardware_sample_rate": 2000000.0,
+          "dsp_sample_rate": 2000000.0,
+          "mode": "fast_attack",
+          "gain_db": 20.0,
+          "configured_min_db": null,
+          "configured_max_db": null
+        },
+        "last_setters": {
+          "cen_f": 434320000,
+          "center_F": 434320000,
+          "BW": 250000,
+          "LowPass": 160000,
+          "bw_re": 250000,
+          "sncy": "sncy_gr",
+          "sen_re": 0.32585,
+          "rx_tracking": true,
+          "GainMode": "fast_attack",
+          "Gain": 20
+        },
+        "iq_diagnostics": {
+          "sample_count": 1024,
+          "mean_abs": 0.0007127163698896766,
+          "max_abs": 0.00244140625,
+          "rms_abs": 0.0008173072128556669,
+          "rms_dbfs": -61.75229336703957,
+          "component_peak": 0.001953125,
+          "headroom_db": 54.18539921951662,
+          "crest_factor_db": 9.505094407684084,
+          "near_clip_fraction": 0.0,
+          "clip_fraction": 0.0,
+          "signal_state": "ok",
+          "mean_i": 6.532669067382812e-05,
+          "mean_q": -3.0517578125e-05,
+          "source": "flowgraph_raw",
+          "mean_phase_step": 0.06990229338407516,
+          "std_phase_step": 1.7015621662139893,
+          "min_phase_step": -3.1415927410125732,
+          "max_phase_step": 3.1415927410125732
+        }
+      }
+    }
+  }
+}

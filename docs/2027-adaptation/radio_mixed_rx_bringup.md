@@ -41,8 +41,10 @@ GNU Radio 实际加载 3.10.7.0，gr-iio 与 runtime ABI 一致；本机 libiio 
 2. **双路 ROS 与网页曾正常取流**：同一台机器上两个真实接收节点均 `started=true`，无加载错误；Dashboard 可见两路频谱与真实硬件状态。调试使用 `ROS_DOMAIN_ID=199`，未启动裁判串口、自动密码或录制服务。接收不到当前位置时不注入模拟点。
 3. **Pluto 干扰波首轮通过**：在用户完成接线／源调整并确认频点后，432.2 MHz、A_BALANCED、2 MS/s 实收约 **8.04 秒、79 帧有效 0x0A06**，密码逐字核对为 `fvXVKC`。CRC16／命令长度失败均为 0，但同步过程中有 **32 次 CRC8 失败**，仍需稳定性与原因检查。首轮原始计数和四个帧样例见 [Pluto 实收 JSON](radio_mixed_rx_bench_20261113/pluto_interference_first_pass.json)。此前无包的记录和临时 433.2 MHz 测试不作为通过依据，默认频率表没有因误填数值而修改。
 4. **重连仍有限制**：Pluto 曾从 USB 列表消失；重插后 IIO 工具已可达，但当时 RX2 进程持续重试失败，手动重启该节点才恢复。完整热拔插自动恢复尚未验收。
-5. **RTL 后续通信异常**：停止接收后出现 USB 控制传输超时 `-7`，一次设备复位未恢复；用户确认同一只重插后枚举成 `0bda:2832`、Generic RTL2832U、序列号 `77771111153705700`，仍超时。没有把这个异常身份写回原 `00000001` 绑定，没有修改 EEPROM。需要先恢复 USB／设备通信，再做重复和长时验证。
+5. **RTL 通信异常及恢复**：停止接收后出现 USB 控制传输超时 `-7`，一次设备复位未恢复；用户确认同一只重插后枚举成 `0bda:2832`、Generic RTL2832U、序列号 `77771111153705700`，仍超时。没有把这个异常身份写回原 `00000001` 绑定，没有修改 EEPROM。后续换接到 USB `1-9` 后，设备恢复为 `0bda:2838`、RTLSDRBlog / Blog V4、原序列号 `00000001`，原 RX1 节点自行启动并实收。这里只确认换接后的恢复现象，未确定此前异常的根因。
 6. **Pluto 的 ROS／网页闭环通过首轮**：重新启动 RX2 后，网页持续显示真实 `fvXVKC`。保存快照时 251 帧有效 0x0A06 对应 251 个桥接结果；原始帧与 `RadarCommand0121/password_cmd=2` 桥接值一致，见 [ROS／Dashboard 快照](radio_mixed_rx_bench_20261113/pluto_ros_dashboard_snapshot.json)。未运行裁判串口，所以这只验证接收与软件桥接，没有实际提交密钥。RTL 异常期间 RX1 暂停。
+7. **RTL 恢复后的 60 秒观察**：2026-11-13 19:34～19:35，在用户开启红方信息波后，只读取正在运行的 RX1 ROS 状态和 Dashboard API，没有额外打开 RTL。433.2 MHz、manual 32.8 dB 下，约 **60.017 秒新增 2800 帧有效信息波、2800 个桥接结果**，约 46.7 帧／秒；观察区间内 CRC8／CRC16／长度检查失败增量均为 0。快照保留 0x0A01～0x0A05 的实际解析及五类桥接样例。节点早期累计已有 1 次 CRC8、11 次 CRC16 失败，不能把一分钟的结果解释成全程无错误或零丢包。详见 [恢复观察 JSON](radio_mixed_rx_bench_20261113/rtl_recovery_observation.json)。裁判串口未打开、实际发送数为 0；测试源坐标不是真实机器人观测。该观察开始时 Pluto 不在 USB 列表中，结束快照 RX2 仍离线，不作为双路同时接收验收。
+8. **本次 Pluto 重接后的节点恢复**：上述一分钟观察后，Pluto 再次出现在 USB 列表中，`iio_info` 可读出原设备序列号，但旧 RX2 节点仍报 `Unable to create context`。只终止该 RX2 进程，由原 ROS launch 拉起新进程后，RX2 恢复取流，两路均 `started=true`、无加载错误，并有新鲜 IQ 诊断；RX1 进程保持运行。恢复后的状态附在同一 JSON 的 `post_observation_rx2_recovery`。该快照时面板已被操作为蓝方 3 级，不将此前红方实收结果作为该设置的验收；没有验证双路持续同时解包，也没有实现自动恢复修复。
 
 ## 5. 复现入口
 
@@ -76,4 +78,4 @@ ros2 run rm_radio_ros rm_gfsk_node --ros-args -r __node:=rm_gfsk_interference_no
 
 `vision/tests` 与 `radio/src/rm_radio_ros/test` 全量 **469 项通过**；新增测试用 mock 硬件构建真实 GNU Radio 图，检查 125/128 实际重采样输出、两类硬件控制分离、拒绝错误采样域；网页测试检查 RTL 探测不额外抢占 USB、错 URI／过期状态不能冒充运行正常，以及 RTL 增益控件不提供负增益。`colcon build --packages-select rm_radio_ros --symlink-install`、Python 编译、启动脚本语法及 `git diff --check` 通过。浏览器实际打开监控页确认密钥显示，控制台无 warning/error。
 
-当前通过的是信息波与干扰波各自首轮台架实收。整体无线电实机、2027 RF、红蓝／等级切换、密钥向真实裁判提交与回读、长期稳定性和重新接线后的复测继续保持 TODO。
+当前通过的是信息波与干扰波各自首轮台架实收，以及 RTL 换接恢复后的一分钟接收观察。整体无线电实机、2027 RF、红蓝／等级切换、密钥向真实裁判提交与回读、长期稳定性和多轮重新接线后的复测继续保持 TODO。
