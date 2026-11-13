@@ -14,16 +14,19 @@ radio:
   side: red
   interference_level: 1
   intelligent_mode: true
-  rx1_uri: ip:192.168.9.110
-  rx2_uri: ip:192.168.9.111
+  # Local mixed-receiver bench: RTL-SDR Blog V4 -> information; Pluto -> interference.
+  # Frequencies/modulation remain the legacy bench profile, not verified 2027 RF parameters.
+  rx1_uri: rtlsdr:00000001
+  rx2_uri: ip:192.168.2.1
+  rtl_driver_library_dir: ~/.local/share/shark-radio/rtl-sdr-blog/lib
   sample_rate: 2000000
-  rx_rf_port: B_BALANCED
-  # Keep RX1 deterministic under adjacent-channel interference. The launcher
-  # requires manual mode and verifies both mode and gain through AD9361 readback.
+  rx_rf_port: A_BALANCED
+  # Keep RX1 deterministic under adjacent-channel interference; Soapy reports
+  # RTL-SDR's actual tuner gain, while IIO boards use AD9361 pre-init readback.
   broadcast_gain_mode: manual
-  broadcast_gain: 32
-  # Deployed AD9361 receivers report hardwaregain_available=[-1 1 73].
-  broadcast_gain_max: 73
+  broadcast_gain: 32.8
+  # This Blog V4 reports a tuner gain range of 0..49.6 dB.
+  broadcast_gain_max: 49.6
   broadcast_low_pass_hz: 260000
   interference_gain_mode: fast_attack
   interference_gain: 20

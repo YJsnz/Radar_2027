@@ -988,6 +988,7 @@ class FlowgraphNode(Node):
             'rx_only': bool(self.get_parameter('rx_only').value),
             'radio_side': str(self.get_parameter('radio_side').value),
             'rx_profile': str(self.get_parameter('rx_profile').value),
+            'rx_uri': str(self.get_parameter('rx_uri').value),
             'frontend_profile': (
                 getattr(self.flowgraph, 'get_frontend_profile', lambda: None)()
                 if self.flowgraph is not None

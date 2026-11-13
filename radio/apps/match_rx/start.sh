@@ -20,7 +20,7 @@ for arg in "$@"; do
 Usage: apps/match_rx/start.sh [--dry-run] [--no-panel] [--panel-only] [--rx-only]
                               [--native-gui|--no-native-gui] [--no-browser]
 
-Starts the match RX application: dual ANTSDR RX, referee serial bridge, and
+Starts the match RX application: dual SDR RX, referee serial bridge, and
 the match web panel. Configuration comes from apps/match_rx/config.yaml and may
 be overridden with environment variables.
 
@@ -362,13 +362,15 @@ fi
 rx2_setters="{\"cen_f\":$int_freq,\"center_F\":$int_freq,\"BW\":$int_bw,\"LowPass\":$int_lp,\"bw_re\":$int_bw,\"sncy\":\"sncy_gr\",\"sen_re\":$int_sen,\"rx_tracking\":true,\"GainMode\":\"$INTERFERENCE_RX_GAIN_MODE\",\"Gain\":$INTERFERENCE_RX_GAIN}"
 
 if is_true "$RUN_RX"; then
-  # GNU Radio 的 fmcomms2 source 不设置 rf_port_select，E310 会沿用设备残留端口。
-  # 433MHz 必须走 5M-3G 路径(B_BALANCED)，因此启动 flowgraph 前先确定性预设两台 RX 端口。
+  # GNU Radio fmcomms2 source 不设置 rf_port_select；按板卡接线预设 IIO RX。
+  # 本机 Pluto 使用 A_BALANCED；原 E310 配置使用 B_BALANCED。
   if ! is_true "$RM_RADIO_DRY_RUN"; then
     # shellcheck disable=SC1091
     source "$RM_RADIO_WS/apps/common/iio_init.sh"
-    echo "[match-rx] 预初始化并回读确认 RX1 信息波: $RX1_URI -> ${RX_RF_PORT:-B_BALANCED}, gain_mode=manual gain=${BROADCAST_RX_GAIN}dB"
-    if ! probe_rx_device "$RX1_URI" >"$LOG_DIR/rx1_preinit.log" 2>&1; then
+    echo "[match-rx] 准备 RX1 信息波: $RX1_URI, gain_mode=manual gain=${BROADCAST_RX_GAIN}dB"
+    if [[ "$RX1_URI" == rtlsdr:* ]]; then
+      echo "[match-rx] RX1 RTL-SDR 由 Soapy 源设置频率／采样率／增益，跳过 AD9361 预初始化。"
+    elif ! probe_rx_device "$RX1_URI" >"$LOG_DIR/rx1_preinit.log" 2>&1; then
       echo "[match-rx][WARN] RX1 信息波未连接或探测超时；跳过预初始化。ROS、裁判系统、视觉通信和面板继续启动，见 $LOG_DIR/rx1_preinit.log" >&2
     elif ! init_ad9361_rx "$RX1_URI" "$broadcast_freq" 540000 manual "$BROADCAST_RX_GAIN" "${RX_RF_PORT:-B_BALANCED}" defer \
       >>"$LOG_DIR/rx1_preinit.log" 2>&1; then
@@ -377,8 +379,10 @@ if is_true "$RUN_RX"; then
       echo "[match-rx] RX1 信息波 manual/${BROADCAST_RX_GAIN}dB 已由硬件回读确认（$LOG_DIR/rx1_preinit.log）"
     fi
     if [[ "${RM_RADIO_RX_SKIP_PREINIT:-false}" != "true" ]]; then
-      echo "[match-rx] 预初始化 RX2 端口 $RX2_URI -> ${RX_RF_PORT:-B_BALANCED}"
-      if ! probe_rx_device "$RX2_URI" >"$LOG_DIR/rx2_preinit.log" 2>&1; then
+      echo "[match-rx] 准备 RX2 干扰波: $RX2_URI"
+      if [[ "$RX2_URI" == rtlsdr:* ]]; then
+        echo "[match-rx] RX2 RTL-SDR 由 Soapy 源设置频率／采样率／增益，跳过 AD9361 预初始化。"
+      elif ! probe_rx_device "$RX2_URI" >"$LOG_DIR/rx2_preinit.log" 2>&1; then
         echo "[match-rx][WARN] RX2 干扰波未连接或探测超时；跳过预初始化并继续启动，见 $LOG_DIR/rx2_preinit.log" >&2
       elif ! init_ad9361_rx "$RX2_URI" "$int_freq" "$int_bw" "$INTERFERENCE_RX_GAIN_MODE" "$INTERFERENCE_RX_GAIN" "${RX_RF_PORT:-B_BALANCED}" defer \
         >>"$LOG_DIR/rx2_preinit.log" 2>&1; then

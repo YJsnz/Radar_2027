@@ -300,6 +300,8 @@ class RadioDashboardNode(Node):
 
     def _load_env_defaults(self) -> None:
         self.state.radio_side = os.environ.get("RM_RADIO_SIDE", self.state.radio_side).strip().lower() or "red"
+        if os.environ.get('RX1_URI', '').startswith('rtlsdr:'):
+            self.state.broadcast_gain_min = 0.0
         try:
             self.state.interference_level = int(os.environ.get("INTERFERENCE_LEVEL", self.state.interference_level))
         except ValueError:
@@ -548,6 +550,7 @@ class RadioDashboardNode(Node):
         with self._lock:
             roles = self._sdr_roles_unlocked()
             uris = {role: self.state.sdr_uris.get(role, "") for role in roles}
+            statuses = {role: dict(self.state.statuses.get(role, {})) for role in roles}
         checks = {}
         iio_info = shutil.which("iio_info")
         for role, uri in uris.items():
@@ -559,6 +562,15 @@ class RadioDashboardNode(Node):
             }
             if not uri:
                 result.update({"available": False, "message": "未配置 URI"})
+            elif uri.startswith('rtlsdr:'):
+                # A second USB owner can interrupt RTL reception; use fresh node status.
+                entry = statuses[role]
+                data = entry.get('data') or {}
+                age = self._age_or_none(entry.get('timestamp'), _now())
+                streaming = (age is not None and age <= 2.5 and data.get('started') is True
+                             and data.get('rx_uri') == uri)
+                result.update({'available': True if streaming else None,
+                               'message': 'RTL-SDR 接收节点运行中' if streaming else 'RTL-SDR 等待接收节点取流确认'})
             elif iio_info is None:
                 result.update({"available": None, "message": "未找到 iio_info，无法检查"})
             else:

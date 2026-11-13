@@ -34,6 +34,33 @@ def _set_started_rx(node, role, *, now=100.0, **data):
     node.state.status_first_seen_at[role] = now - 10.0
 
 
+def test_rtl_probe_uses_fresh_matching_node_status_without_opening_usb(monkeypatch):
+    import rm_radio_ros.app_support.match_dashboard_node as module
+    node = _node_without_init()
+    node.state.sdr_uris = {'rx1': 'rtlsdr:00000001', 'rx2': 'rtlsdr:another'}
+    monkeypatch.setattr(module, '_now', lambda: 100.0)
+    monkeypatch.setattr(module.subprocess, 'run', lambda *a, **k: pytest.fail('must not open a second USB owner'))
+    _set_started_rx(node, 'rx1', now=99.0, rx_uri='rtlsdr:00000001')
+    _set_started_rx(node, 'rx2', now=99.0, rx_uri='rtlsdr:wrong-device')
+    node._check_sdrs()
+    assert node.state.sdr_checks['rx1']['available'] is True
+    assert node.state.sdr_checks['rx2']['available'] is None
+    monkeypatch.setattr(module, '_now', lambda: 104.0)
+    node._check_sdrs()
+    assert node.state.sdr_checks['rx1']['available'] is None
+
+
+def test_rtl_gain_controls_do_not_offer_negative_ad9361_gain(monkeypatch):
+    node = _node_without_init()
+    monkeypatch.setenv('RX1_URI', 'rtlsdr:00000001')
+    monkeypatch.setenv('BROADCAST_RX_GAIN_MAX', '49.6')
+    monkeypatch.setenv('BROADCAST_RX_GAIN', '-1')
+    node._load_env_defaults()
+    assert node.state.broadcast_gain_min == 0
+    assert node.state.broadcast_gain_max == 49.6
+    assert node.state.broadcast_gain == 0
+
+
 def test_dashboard_stream_endpoint_is_incremental_and_state_tail_is_bounded():
     node = _node_without_init()
     callback = RadioDashboardNode._frames_callback(node, "rx1")

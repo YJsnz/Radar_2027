@@ -1,0 +1,86 @@
+{
+  "source": "actual ROS receive + Dashboard HTTP snapshot",
+  "uri": "ip:192.168.2.1",
+  "started": true,
+  "last_error": "",
+  "decoder": {
+    "manual_air_payloads": 0,
+    "demod_bit_batches": 16249,
+    "iq_decode_batches": 0,
+    "air_payloads": 2258,
+    "iq_air_payloads": 0,
+    "iq_referee_frames": 0,
+    "frames": 251,
+    "bridge_outputs": 251,
+    "iio_capture_batches": 0,
+    "iio_capture_errors": 0
+  },
+  "validation": {
+    "primary": {
+      "crc8_failures": 120,
+      "length_failures": 0,
+      "crc16_attempts": 251,
+      "crc16_failures": 0,
+      "crc16_valid_frames": 251,
+      "command_length_failures": 0,
+      "valid_frames": 251,
+      "buffered_bytes": 0,
+      "pending_events": 0
+    },
+    "iq": {
+      "crc8_failures": 0,
+      "length_failures": 0,
+      "crc16_attempts": 0,
+      "crc16_failures": 0,
+      "crc16_valid_frames": 0,
+      "command_length_failures": 0,
+      "valid_frames": 0,
+      "buffered_bytes": 0,
+      "pending_events": 0
+    }
+  },
+  "frame_sample": [
+    {
+      "seq": 254,
+      "timestamp": 1794568825.360531,
+      "role": "rx2",
+      "frame": {
+        "cmd_id": 2566,
+        "cmd_hex": "0x0A06",
+        "command": "interference_password",
+        "seq": 65,
+        "data_length": 6,
+        "data_hex": "667658564b43",
+        "raw_hex": "a50600410a060a667658564b43cd3c",
+        "crc_valid": true,
+        "parsed": {
+          "valid_radar_length": true,
+          "password": "fvXVKC",
+          "password_is_alnum_ascii": true
+        }
+      }
+    }
+  ],
+  "bridge_sample": [
+    {
+      "timestamp": 1794568825.3606298,
+      "role": "rx2",
+      "output": {
+        "type": "RadarCommand0121",
+        "timestamp": 1794568825.360084,
+        "payload": {
+          "cmd_id": "0x0121",
+          "name": "radar_cmd_t",
+          "radar_cmd": 0,
+          "password_cmd": 2,
+          "password": "fvXVKC",
+          "armor_fortify_cmd": 0,
+          "fortify_center_x_mm": 0,
+          "fortify_center_y_mm": 0,
+          "payload_hex": "0002667658564b430000000000"
+        }
+      }
+    }
+  ],
+  "referee_serial_running": false
+}

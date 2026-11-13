@@ -1,0 +1,107 @@
+{
+  "duration_sec": 8.038678683000398,
+  "uri": "ip:192.168.2.1",
+  "center_frequency_hz": 432200000.0,
+  "gain": {
+    "profile": "interference",
+    "backend": "iio",
+    "uri": "ip:192.168.2.1",
+    "hardware_sample_rate": 2000000.0,
+    "dsp_sample_rate": 2000000.0,
+    "mode": "fast_attack",
+    "gain_db": 20.0,
+    "configured_min_db": null,
+    "configured_max_db": null
+  },
+  "counts": {
+    "bits": 170112,
+    "air_payloads": 719,
+    "iq_samples": 15990784,
+    "frames": 79,
+    "commands": {
+      "0x0A06": 79
+    },
+    "rms": 0.3037058711051941,
+    "peak": 0.3616555631160736
+  },
+  "validation": {
+    "crc8_failures": 32,
+    "length_failures": 0,
+    "crc16_attempts": 79,
+    "crc16_failures": 0,
+    "crc16_valid_frames": 79,
+    "command_length_failures": 0,
+    "valid_frames": 79,
+    "buffered_bytes": 14,
+    "pending_events": 111
+  },
+  "frames": [
+    {
+      "cmd_id": 2566,
+      "cmd_hex": "0x0A06",
+      "command": "interference_password",
+      "seq": 70,
+      "data_length": 6,
+      "data_hex": "667658564b43",
+      "raw_hex": "a506004689060a667658564b43e8ea",
+      "crc_valid": true,
+      "parsed": {
+        "valid_radar_length": true,
+        "password": "fvXVKC",
+        "password_is_alnum_ascii": true
+      }
+    },
+    {
+      "cmd_id": 2566,
+      "cmd_hex": "0x0A06",
+      "command": "interference_password",
+      "seq": 71,
+      "data_length": 6,
+      "data_hex": "667658564b43",
+      "raw_hex": "a5060047d7060a667658564b43ed04",
+      "crc_valid": true,
+      "parsed": {
+        "valid_radar_length": true,
+        "password": "fvXVKC",
+        "password_is_alnum_ascii": true
+      }
+    },
+    {
+      "cmd_id": 2566,
+      "cmd_hex": "0x0A06",
+      "command": "interference_password",
+      "seq": 72,
+      "data_length": 6,
+      "data_hex": "667658564b43",
+      "raw_hex": "a506004896060a667658564b43af02",
+      "crc_valid": true,
+      "parsed": {
+        "valid_radar_length": true,
+        "password": "fvXVKC",
+        "password_is_alnum_ascii": true
+      }
+    },
+    {
+      "cmd_id": 2566,
+      "cmd_hex": "0x0A06",
+      "command": "interference_password",
+      "seq": 73,
+      "data_length": 6,
+      "data_hex": "667658564b43",
+      "raw_hex": "a5060049c8060a667658564b43aaec",
+      "crc_valid": true,
+      "parsed": {
+        "valid_radar_length": true,
+        "password": "fvXVKC",
+        "password_is_alnum_ascii": true
+      }
+    }
+  ],
+  "provenance": {
+    "kind": "actual_rf_bench_receive",
+    "transmitter": "user-owned independent test transmitter; confirmed red L1 interference at 432200000 Hz",
+    "expected_password": "fvXVKC",
+    "official_2027_rf_validated": false,
+    "note": "CRC8 failures occurred during synchronization; these are not a measured packet loss ratio."
+  }
+}

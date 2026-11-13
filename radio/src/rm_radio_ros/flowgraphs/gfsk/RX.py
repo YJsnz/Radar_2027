@@ -14,6 +14,7 @@ enabled by the wrapper, the RX2 IQ-assisted decoder.
 from __future__ import annotations
 
 import os
+import re
 import threading
 
 import numpy as np
@@ -274,18 +275,41 @@ class RadioRx(gr.top_block, Qt.QWidget):
         self._layout.setContentsMargins(4, 4, 4, 4)
 
         self.rx_uri = os.environ.get("RM_RADIO_RX_URI", "ip:192.168.2.1").strip() or iio.get_pluto_uri()
-        self.iio_source = iio.fmcomms2_source_fc32(self.rx_uri, [True, True], 32768)
-        self.iio_source.set_len_tag_key("")
-        self.iio_source.set_frequency(int(self.cen_f))
-        self.iio_source.set_samplerate(int(self.sample_rate))
-        _set_iio_rx_bandwidth(self.iio_source, self.bw_re)
-        self.iio_source.set_gain_mode(0, self.GainMode)
-        if self.GainMode == "manual":
-            self.iio_source.set_gain(0, self.Gain)
-        self.iio_source.set_quadrature(self.rx_tracking)
-        self.iio_source.set_rfdc(self.rx_tracking)
-        self.iio_source.set_bbdc(self.rx_tracking)
-        self.iio_source.set_filter_params("Auto", "", 0, 0)
+        self.rx_backend = "rtlsdr" if self.rx_uri.startswith("rtlsdr:") else "iio"
+        self.rx_gain_min = _BROADCAST_RX_GAIN_HARD_MIN
+        if self.rx_backend == "rtlsdr":
+            from gnuradio import soapy
+            serial = self.rx_uri.removeprefix("rtlsdr:")
+            if not re.fullmatch(r"[A-Za-z0-9_-]+", serial):
+                raise ValueError("RTL-SDR URI must be rtlsdr:<hardware serial>")
+            self.rx_source = soapy.source(
+                f"driver=rtlsdr,serial={serial}", "fc32", 1, "", "", [""], [""])
+            gain_range = self.rx_source.get_gain_range(0)
+            self.rx_gain_min = gain_range.minimum()
+            self.broadcast_gain_max = min(self.broadcast_gain_max, gain_range.maximum())
+            # SoapyRTLSDR advertises 2.048 MS/s, not the DSP chain's 2 MS/s.
+            self.rx_source.set_sample_rate(0, 2_048_000)
+            self.rx_source.set_frequency(0, self.cen_f)
+            self.rx_source.set_bandwidth(0, self.bw_re)
+            self.rx_tracking = False  # AD9361 tracking controls do not exist on RTL-SDR.
+            self.set_GainMode(self.GainMode)
+            self.rtl_resampler = filter.rational_resampler_ccc(interpolation=125, decimation=128)
+            self.connect(self.rx_source, self.rtl_resampler)
+            self.iq_source = self.rtl_resampler
+        else:
+            self.rx_source = iio.fmcomms2_source_fc32(self.rx_uri, [True, True], 32768)
+            self.rx_source.set_len_tag_key("")
+            self.rx_source.set_frequency(int(self.cen_f))
+            self.rx_source.set_samplerate(int(self.sample_rate))
+            _set_iio_rx_bandwidth(self.rx_source, self.bw_re)
+            self.rx_source.set_gain_mode(0, self.GainMode)
+            if self.GainMode == "manual":
+                self.rx_source.set_gain(0, self.Gain)
+            self.rx_source.set_quadrature(self.rx_tracking)
+            self.rx_source.set_rfdc(self.rx_tracking)
+            self.rx_source.set_bbdc(self.rx_tracking)
+            self.rx_source.set_filter_params("Auto", "", 0, 0)
+            self.iq_source = self.rx_source
 
         if self.frontend_profile == "broadcast":
             # A real-tap band-pass keeps both positive and negative IQ
@@ -325,11 +349,11 @@ class RadioRx(gr.top_block, Qt.QWidget):
         self.filtered_iq_callback_sink = _ComplexCallbackSink()
 
         if self.frontend_profile == "broadcast":
-            self.connect(self.iio_source, self.broadcast_band_pass, self.demodulator)
+            self.connect(self.iq_source, self.broadcast_band_pass, self.demodulator)
         else:
-            self.connect(self.iio_source, self.low_pass_1, self.low_pass_2, self.demodulator)
+            self.connect(self.iq_source, self.low_pass_1, self.low_pass_2, self.demodulator)
         self.connect(self.demodulator, self.demod_bit_callback_sink)
-        self.connect(self.iio_source, self.iq_callback_sink)
+        self.connect(self.iq_source, self.iq_callback_sink)
         self.connect(self.filtered_iq_source, self.filtered_iq_callback_sink)
 
         self.frequency_sink = None
@@ -394,8 +418,11 @@ class RadioRx(gr.top_block, Qt.QWidget):
         return self.sample_rate
 
     def set_sample_rate(self, value) -> None:
+        if self.rx_backend == "rtlsdr" and float(value) != 2_000_000:
+            raise ValueError("RTL-SDR uses 2.048 MS/s -> 2 MS/s; another DSP rate requires a new resampling ratio")
         self.sample_rate = float(value)
-        self.iio_source.set_samplerate(int(self.sample_rate))
+        if self.rx_backend != "rtlsdr":
+            self.rx_source.set_samplerate(int(self.sample_rate))
         if self.frontend_profile == "broadcast":
             self.broadcast_band_pass.set_taps(self._broadcast_band_pass_taps())
         else:
@@ -421,7 +448,10 @@ class RadioRx(gr.top_block, Qt.QWidget):
 
     def set_cen_f(self, value) -> None:
         self.cen_f = float(value)
-        self.iio_source.set_frequency(int(self.cen_f))
+        if self.rx_backend == "rtlsdr":
+            self.rx_source.set_frequency(0, self.cen_f)
+        else:
+            self.rx_source.set_frequency(int(self.cen_f))
         if self.frequency_sink is not None:
             self.frequency_sink.set_frequency_range(self.cen_f, self.sample_rate)
         if self.waterfall_sink is not None:
@@ -435,7 +465,10 @@ class RadioRx(gr.top_block, Qt.QWidget):
 
     def set_bw_re(self, value) -> None:
         self.bw_re = float(value)
-        _set_iio_rx_bandwidth(self.iio_source, self.bw_re)
+        if self.rx_backend == "rtlsdr":
+            self.rx_source.set_bandwidth(0, self.bw_re)
+        else:
+            _set_iio_rx_bandwidth(self.rx_source, self.bw_re)
 
     def set_LowPass(self, value) -> None:
         self.LowPass = float(value)
@@ -459,30 +492,39 @@ class RadioRx(gr.top_block, Qt.QWidget):
 
     def set_GainMode(self, value) -> None:
         self.GainMode = _clean_rx_gain_mode(value, self.GainMode)
-        self.iio_source.set_gain_mode(0, self.GainMode)
+        if self.rx_backend == "rtlsdr":
+            self.rx_source.set_gain_mode(0, self.GainMode != "manual")
+        else:
+            self.rx_source.set_gain_mode(0, self.GainMode)
         if self.GainMode == "manual":
-            self.iio_source.set_gain(0, self.Gain)
+            self.set_Gain(self.Gain)
 
     def set_Gain(self, value) -> None:
         requested = float(value)
         if self.rx_profile == "broadcast" and not (
-            _BROADCAST_RX_GAIN_HARD_MIN <= requested <= self.broadcast_gain_max
+            self.rx_gain_min <= requested <= self.broadcast_gain_max
         ):
             raise ValueError(
                 f"broadcast RX gain must be within "
-                f"{_BROADCAST_RX_GAIN_HARD_MIN:g}..{self.broadcast_gain_max:g} dB, got {value!r}"
+                f"{self.rx_gain_min:g}..{self.broadcast_gain_max:g} dB, got {value!r}"
             )
         self.Gain = requested
         if self.GainMode == "manual":
-            self.iio_source.set_gain(0, self.Gain)
+            self.rx_source.set_gain(0, self.Gain)
+            if self.rx_backend == "rtlsdr":
+                self.Gain = float(self.rx_source.get_gain(0))
 
     def get_rx_gain_diagnostics(self):
         return {
             "profile": self.rx_profile,
-            "mode": self.GainMode,
+            "backend": self.rx_backend,
+            "uri": self.rx_uri,
+            "hardware_sample_rate": 2_048_000 if self.rx_backend == "rtlsdr" else self.sample_rate,
+            "dsp_sample_rate": self.sample_rate,
+            "mode": ("automatic" if self.rx_backend == "rtlsdr" and self.GainMode != "manual" else self.GainMode),
             "gain_db": float(self.Gain),
             "configured_min_db": (
-                float(_BROADCAST_RX_GAIN_HARD_MIN)
+                float(self.rx_gain_min)
                 if self.rx_profile == "broadcast"
                 else None
             ),
@@ -494,12 +536,15 @@ class RadioRx(gr.top_block, Qt.QWidget):
         }
 
     def set_rx_tracking(self, value) -> None:
+        if self.rx_backend == "rtlsdr":
+            self.rx_tracking = False
+            return
         if isinstance(value, str):
             value = value.strip().lower() in ("1", "true", "yes", "on")
         self.rx_tracking = bool(value)
-        self.iio_source.set_quadrature(self.rx_tracking)
-        self.iio_source.set_rfdc(self.rx_tracking)
-        self.iio_source.set_bbdc(self.rx_tracking)
+        self.rx_source.set_quadrature(self.rx_tracking)
+        self.rx_source.set_rfdc(self.rx_tracking)
+        self.rx_source.set_bbdc(self.rx_tracking)
 
     def set_BT(self, value) -> None:
         self.BT = float(value)

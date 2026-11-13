@@ -250,7 +250,7 @@ def test_match_app_wires_continuous_broadcast_demod_profile():
 
     assert 'broadcast_gain_mode: manual' in config
     assert 'broadcast_gain:' in config
-    assert 'broadcast_gain_max: 73' in config
+    assert 'broadcast_gain_max: 49.6' in config  # Current Blog V4 bench receiver limit.
     assert 'demod_mode: mm' in config
     assert 'frontend_profile: broadcast' in config
     assert 'frontend_profile: interference' in config

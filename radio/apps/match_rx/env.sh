@@ -30,6 +30,15 @@ export INTERFERENCE_LEVEL="${INTERFERENCE_LEVEL:-$(yaml_get radio.interference_l
 export RM_RADIO_INTELLIGENT_MODE="${RM_RADIO_INTELLIGENT_MODE:-$(yaml_get radio.intelligent_mode true)}"
 export RX1_URI="${RX1_URI:-$(yaml_get radio.rx1_uri ip:192.168.9.110)}"
 export RX2_URI="${RX2_URI:-$(yaml_get radio.rx2_uri ip:192.168.9.111)}"
+export RTLSDR_LIBRARY_DIR="${RTLSDR_LIBRARY_DIR:-$(yaml_get radio.rtl_driver_library_dir '')}"
+RTLSDR_LIBRARY_DIR="${RTLSDR_LIBRARY_DIR/#\~\//$HOME/}"
+if [[ -n "$RTLSDR_LIBRARY_DIR" && ( "$RX1_URI" == rtlsdr:* || "$RX2_URI" == rtlsdr:* ) ]]; then
+  if [[ ! -f "$RTLSDR_LIBRARY_DIR/librtlsdr.so.0" ]]; then
+    echo "[match-rx] RTL-SDR driver missing: $RTLSDR_LIBRARY_DIR/librtlsdr.so.0" >&2
+    return 2
+  fi
+  export LD_LIBRARY_PATH="$RTLSDR_LIBRARY_DIR${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+fi
 export RM_RADIO_SAMPLE_RATE="${RM_RADIO_SAMPLE_RATE:-$(yaml_get radio.sample_rate 2000000)}"
 export RX_RF_PORT="${RX_RF_PORT:-$(yaml_get radio.rx_rf_port B_BALANCED)}"
 export BROADCAST_RX_GAIN_MODE="${BROADCAST_RX_GAIN_MODE:-$(yaml_get radio.broadcast_gain_mode manual)}"

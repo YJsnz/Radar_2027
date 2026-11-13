@@ -15,6 +15,10 @@ check_cmd() {
 check_iio() {
   local label="$1"
   local uri="$2"
+  if [[ "$uri" == rtlsdr:* ]]; then
+    echo "warn $label RTL-SDR uri=$uri; GNU Radio Soapy source must confirm live streaming (not an IIO device)"
+    return 0
+  fi
   if [[ "${RM_RADIO_DRY_RUN,,}" == "true" ]]; then
     echo "warn $label dry_run skip iio check uri=$uri"
     return 0
