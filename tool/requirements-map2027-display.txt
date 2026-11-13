@@ -1,0 +1,4 @@
+# Appearance registration/rendering can use the committed CAD assets without OCP.
+numpy==1.26.4
+opencv-python==4.8.0.76
+PyQt5==5.15.11

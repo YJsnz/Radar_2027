@@ -1,0 +1,107 @@
+{
+  "schema": "ysu.radar.display_map.v1",
+  "profile": "rmuc2027-v1.0.0-display1",
+  "appearance_source": "rules V1.0.0 PDF page 30, printed page 29, figure 4-1",
+  "appearance_sha256": "941a9d71368f7650d2b70ee6f46539ffed63adf43b3b428e60de22969e2b3ce9",
+  "source_resolution_px": [
+    981,
+    559
+  ],
+  "svg_rasterizer": "Qt QSvgRenderer",
+  "qt_version": "5.15.18",
+  "pyqt_version": "5.15.11",
+  "cad_manifest_sha256": "262d53a92835dad1f6c5361e5044e8b890e8bc664b9f28d1f5ef0c991d21fee9",
+  "cad_profile": "rmuc2027-v1.0.0-cad1",
+  "source_step_sha256": "a5ad3ede3b7674fc98f2e73b71717216383cb2b4b5dcdbe900c2038918bea8e0",
+  "field_size_cm": [
+    2800,
+    1500
+  ],
+  "image_coordinates": {
+    "topdown.png": [
+      "X_cm",
+      "1500 - Y_cm"
+    ],
+    "red_bottom.png": [
+      "1500 - Y_cm",
+      "2800 - X_cm"
+    ],
+    "blue_bottom.png": [
+      "Y_cm",
+      "X_cm"
+    ]
+  },
+  "source_to_cad_image": [
+    [
+      3.2147757104037074,
+      -0.003307904024518753,
+      -203.89913357087914
+    ],
+    [
+      -0.0015299497773753404,
+      3.2187898091891523,
+      -132.5126898402798
+    ],
+    [
+      0.0,
+      0.0,
+      1.0
+    ]
+  ],
+  "physical_validation": false,
+  "limitations": [
+    "official appearance is upsampled, not higher-resolution source detail",
+    "display registration is approximate; CAD geometry remains the coordinate reference",
+    "camera extrinsics and terrain projection masks must be recalibrated"
+  ],
+  "files": {
+    "topdown.svg": {
+      "sha256": "94f6191469a15c0647b0f868d4fc948cb2d2137fd66815da67a71fb3fdde6cc8",
+      "size_px": [
+        2800,
+        1500
+      ]
+    },
+    "topdown.png": {
+      "sha256": "e537b30abb2a9171893f1cfab6248232c9bd6cb6267df29cd9b29312fee90ae4",
+      "size_px": [
+        2800,
+        1500
+      ]
+    },
+    "red_bottom.svg": {
+      "sha256": "82809ff6c06e146962973474bad69c9aebad99dced59364aec322d83addcc9c5",
+      "size_px": [
+        1500,
+        2800
+      ]
+    },
+    "red_bottom.png": {
+      "sha256": "f30a1239d39d729217ce7d5aa5fdff135292d084300ec61cc56c7f64e35d734d",
+      "size_px": [
+        1500,
+        2800
+      ]
+    },
+    "blue_bottom.svg": {
+      "sha256": "dce0510709722472e70e1e6b455423d1ed72e7c88c68254bbaecfdd6805c025e",
+      "size_px": [
+        1500,
+        2800
+      ]
+    },
+    "blue_bottom.png": {
+      "sha256": "65f1fdbd4f57cb47a48816895a2a54598772b227814d9ee178b7e9400f161050",
+      "size_px": [
+        1500,
+        2800
+      ]
+    },
+    "alignment_check.svg": {
+      "sha256": "8129168877693087a03b4f1e27ddc7da39eadac90a34978acfc8ae5f92d8724f"
+    },
+    "registration.json": {
+      "sha256": "40877e3744a25e4e3fac94edd068d4048b7bcd1c86e23f3019eb8e1d51c202f9"
+    }
+  }
+}
