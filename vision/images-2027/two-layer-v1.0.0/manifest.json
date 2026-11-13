@@ -1,6 +1,6 @@
 {
   "schema": "ysu.radar.two_layer_mask.v1",
-  "profile": "rmuc2027-v1.0.0-two-layer1",
+  "profile": "rmuc2027-v1.0.0-two-layer2",
   "source_sha256": "a5ad3ede3b7674fc98f2e73b71717216383cb2b4b5dcdbe900c2038918bea8e0",
   "terrain_manifest_sha256": "12e589d3b8ef68ca75f99d8dac8dbe9fba3d88ec97b41af8812b3b2758481c64",
   "display_manifest_sha256": "1841678979a51452e5eb3501d896ebc68c47d39ea5117f29537d1588ec4e42a0",
@@ -20,13 +20,16 @@
   "highland_region_ids": [
     3,
     4,
-    5
+    5,
+    6
   ],
   "highland_regions": [
     "central_highland",
     "trapezoid_highland",
-    "commanding_structure"
+    "commanding_structure",
+    "road_structure"
   ],
+  "road_assignment_basis": "CAD road deck about 200 mm above local base ground; include ramps in second-layer footprint",
   "boundary_policy": "union of visible highland contours; enclosed object holes filled",
   "other_regions": "black unless enclosed inside highland external contours",
   "orientations": {
@@ -34,8 +37,8 @@
     "map_mask27_red.png": "red_bottom",
     "map_mask27_topdown.png": "topdown"
   },
-  "highland_pixels": 1643350,
-  "enclosed_pixels_filled": 128406,
+  "highland_pixels": 2203500,
+  "enclosed_pixels_filled": 129106,
   "format_compatible_with_legacy_two_layer_mask": true,
   "physical_validation": false,
   "limitations": [
@@ -46,35 +49,35 @@
   ],
   "files": {
     "map_mask27_topdown.png": {
-      "sha256": "810b234d05d91954122de5b3c163705ae4fc83634d20fb7ed3d3065c320a27cb",
+      "sha256": "6ab192014fdd7965e752db724b1926a53a15ecebd5462766493cbba3790f62b6",
       "size_px": [
         2800,
         1500
       ]
     },
     "map_mask27_red.png": {
-      "sha256": "4b7e82178f26862717b16f0e76142226a7906c57179678057de09cf1cd411274",
+      "sha256": "06fab49df668117cf1eaf7a818bcc4ade061319e1292e0307dec64a902ea2477",
       "size_px": [
         1500,
         2800
       ]
     },
     "map_mask27.png": {
-      "sha256": "bcc76785b607f00ece7f7b7b773b897f6fabf818e1bbcb26b77ca55ac3af9894",
+      "sha256": "f3d12af150cd076b1c96c8e734aa7e91e1a4a729e51788faf9ad28ab69de8487",
       "size_px": [
         1500,
         2800
       ]
     },
     "overlay_blue.png": {
-      "sha256": "dbe17a4b2b6ddf4c4db1e94da42b369566fc51a0bd9978787846426caf66540f",
+      "sha256": "4928042573a9f2305dd6363d5f06ca6266e78a2fca2e358f971cc74eddf47da7",
       "size_px": [
         1500,
         2800
       ]
     },
     "comparison.png": {
-      "sha256": "b32e4df3a05a1afea8a5a628923101f56d2b38063db76d5bb305f5707e3070ef",
+      "sha256": "c46a1d7f2e3adf0b845ee85ccb73ebb54ade708cf9ebd85b03613495d82aae87",
       "size_px": [
         1500,
         1050

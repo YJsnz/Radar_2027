@@ -30,10 +30,12 @@ def main():
     if labels.shape != (1500, 2800):
         raise ValueError("区域标签尺寸不一致")
 
-    # mask26 uses black for ground/road and green for highland footprints.
+    # Use black for base ground and green for elevated terrain footprints.
+    # The 2027 road platform is about 200 mm above ground: the legacy
+    # "ground/road" comment does not describe this season's road geometry.
     # Fill enclosed object holes so a base/flag standing on highland cannot
     # accidentally select the ground homography. Keep the external boundaries.
-    highland = np.isin(labels, (3, 4, 5)).astype(np.uint8) * 255
+    highland = np.isin(labels, (3, 4, 5, 6)).astype(np.uint8) * 255
     contours, _ = cv2.findContours(highland, cv2.RETR_EXTERNAL,
                                    cv2.CHAIN_APPROX_SIMPLE)
     filled = np.zeros_like(highland)
@@ -66,7 +68,7 @@ def main():
         ax.imshow(pixels, interpolation="nearest")
         ax.set_title(title)
         ax.axis("off")
-    fig.suptitle("Black: M_ground (ground / road)    Green: M_height_r (highland)")
+    fig.suptitle("Black: M_ground (base ground)    Green: M_height_r (elevated terrain)")
     fig.savefig(output / "comparison.png", dpi=150)
     plt.close(fig)
 
@@ -75,14 +77,15 @@ def main():
              for name in [*masks, "overlay_blue.png", "comparison.png"]}
     write_json(output / "manifest.json", {
         "schema": "ysu.radar.two_layer_mask.v1",
-        "profile": "rmuc2027-v1.0.0-two-layer1",
+        "profile": "rmuc2027-v1.0.0-two-layer2",
         "source_sha256": SOURCE_SHA256,
         "terrain_manifest_sha256": digest(terrain / "manifest.json"),
         "display_manifest_sha256": digest(display / "manifest.json"),
         "mask26_reference_sha256": digest(old_mask),
         "encoding_rgb": {"M_ground": [0, 0, 0], "M_height_r": [0, 255, 0]},
-        "highland_region_ids": [3, 4, 5],
-        "highland_regions": ["central_highland", "trapezoid_highland", "commanding_structure"],
+        "highland_region_ids": [3, 4, 5, 6],
+        "highland_regions": ["central_highland", "trapezoid_highland", "commanding_structure", "road_structure"],
+        "road_assignment_basis": "CAD road deck about 200 mm above local base ground; include ramps in second-layer footprint",
         "boundary_policy": "union of visible highland contours; enclosed object holes filled",
         "other_regions": "black unless enclosed inside highland external contours",
         "orientations": {"map_mask27.png": "blue_bottom",
