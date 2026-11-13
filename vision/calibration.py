@@ -27,6 +27,8 @@ _force_pyqt5_qt_plugin_path()
 
 import threading
 import time
+import json
+from pathlib import Path
 
 import cv2
 
@@ -51,10 +53,12 @@ from calibration_presets import (
     save_preset,
 )
 from camera_intrinsics import CameraIntrinsicsError, load_runtime_intrinsics
+from map_assets import apply_map_runtime, select_map_side, default_preset_name, file_sha256
 
 import yaml
 with open("config.yaml", "r", encoding="utf-8") as f:  # 指定 UTF-8 编码
     config = yaml.safe_load(f)
+config = apply_map_runtime(config)
 
 
 def update_config_state(selected_state, config_path="config.yaml"):
@@ -340,7 +344,11 @@ class MyUI(QWidget):
         self.initUI()
         requested_preset = os.environ.get(PRESET_ENVIRONMENT_VARIABLE, '').strip()
         if requested_preset:
-            QTimer.singleShot(0, lambda: self.import_preset(requested_preset, confirm=False))
+            QTimer.singleShot(0, lambda: self.import_preset(
+                requested_preset, confirm=False, freeze_frame=not bool(config.get('_map_profile'))))
+        elif config.get('_map_profile'):
+            QTimer.singleShot(0, lambda: self.import_preset(
+                default_preset_name(self.state), confirm=False, freeze_frame=False))
 
     def initUI(self):
         # 左上角部分
@@ -475,6 +483,8 @@ class MyUI(QWidget):
         self.show()
 
     def load_side_assets(self):
+        self.map_binding = select_map_side(config, self.state)
+        self.preset_path = Path(config.get('calibration', {}).get('presets_path', DEFAULT_PRESET_PATH))
         side_key = 'red' if self.state == 'R' else 'blue'
         self.save_path = config['paths']['calibration'][side_key]
         right_image_path = config['paths']['map_images'][side_key]
@@ -502,6 +512,8 @@ class MyUI(QWidget):
 
         self.state = selected_state
         self.load_side_assets()
+        if self.map_binding:
+            self.import_preset(default_preset_name(self.state), confirm=False, freeze_frame=False)
         update_config_state(self.state)
         self.redraw_points()
         opponent_name = '红方' if opponent_state == 'R' else '蓝方'
@@ -733,6 +745,7 @@ class MyUI(QWidget):
             self.preset_path,
             side=self.state,
             points_per_layer=point_count,
+            map_binding=getattr(self, 'map_binding', None),
         )
 
     def _choose_preset(self, title, require_current_point_count=True):
@@ -779,12 +792,15 @@ class MyUI(QWidget):
         if preset is not None:
             self.import_preset(preset['name'])
 
-    def import_preset(self, name, confirm=True):
+    def import_preset(self, name, confirm=True, freeze_frame=True):
         try:
             preset = get_preset(name, self.state, self.preset_path)
         except CalibrationPresetError as error:
             QMessageBox.critical(self, '导入地图预制方案失败', str(error))
             self.append_text(f'导入地图预制方案失败：{error}')
+            return False
+        if preset.get('map_binding') != getattr(self, 'map_binding', None):
+            QMessageBox.warning(self, '地图版本不匹配', '该预设不属于当前地图／掩码版本和阵营。')
             return False
         if preset['points_per_layer'] != self.points_per_layer:
             message = (
@@ -820,7 +836,7 @@ class MyUI(QWidget):
                 self.click_history.append(('map', height, index, None))
         self.dragging_point = None
         self.height = 0
-        if self.capturing:
+        if self.capturing and freeze_frame:
             self.button1_clicked()
         self.redraw_points()
         message = (
@@ -880,6 +896,7 @@ class MyUI(QWidget):
                 self.map_points,
                 path=self.preset_path,
                 overwrite=overwrite,
+                map_binding=getattr(self, 'map_binding', None),
             )
         except (CalibrationPresetError, OSError) as error:
             QMessageBox.critical(self, '保存地图预制方案失败', str(error))
@@ -955,7 +972,8 @@ class MyUI(QWidget):
             return
         image_height, image_width = calibration_frame.shape[:2]
         update_config_state(self.state)
-        np.save(self.save_path, self.T)
+        Path(self.save_path).parent.mkdir(parents=True, exist_ok=True)
+        np.save(self.save_path, np.array(matrices))
         points_save_path = self.save_path.replace('.npy', '_points.npz')
         np.savez(
             points_save_path,
@@ -966,6 +984,8 @@ class MyUI(QWidget):
             image_width=np.int32(image_width),
             image_height=np.int32(image_height),
             intrinsics_id=np.array(active_camera_intrinsics_id),
+            map_binding=np.array(json.dumps(self.map_binding, sort_keys=True)),
+            matrix_sha256=np.array(file_sha256(self.save_path)),
         )
 
         self.append_text('保存计算')

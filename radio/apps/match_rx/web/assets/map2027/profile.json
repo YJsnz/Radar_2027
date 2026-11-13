@@ -1,0 +1,49 @@
+{
+  "schema": "ysu.radar.map_profile.v1",
+  "id": "rmuc2027-v1.0.0-display1-two-layer5",
+  "season": 2027,
+  "field_size_cm": [
+    2800,
+    1500
+  ],
+  "image_size": [
+    1500,
+    2800
+  ],
+  "coordinate_system": "rmuc_reference_xy_cm",
+  "physical_validation": false,
+  "sides": {
+    "R": {
+      "image": {
+        "file": "red_bottom.png",
+        "sha256": "f30a1239d39d729217ce7d5aa5fdff135292d084300ec61cc56c7f64e35d734d"
+      },
+      "mask": {
+        "file": "map_mask27_red.png",
+        "sha256": "6008b52cd24f00dcd906cf77872adb2c8648892de50039e7be3e82aa0f13c3d1"
+      },
+      "points": {
+        "file": "points_R.json",
+        "sha256": "a5a29b4c6326db7679b7062646ad007d4072b244e2d774b18701bb6a502992fc"
+      }
+    },
+    "B": {
+      "image": {
+        "file": "blue_bottom.png",
+        "sha256": "65f1fdbd4f57cb47a48816895a2a54598772b227814d9ee178b7e9400f161050"
+      },
+      "mask": {
+        "file": "map_mask27.png",
+        "sha256": "b20c4037376b960b5ac159e38fe8f97d67ebe1c9be2fc16e028089407ec71670"
+      },
+      "points": {
+        "file": "points_B.json",
+        "sha256": "1ba0933d393ff4c33a486c3cc17147fc5bf4a2ccafaaeb09728bb6a3e0898df1"
+      }
+    }
+  },
+  "topdown": {
+    "file": "topdown.png",
+    "sha256": "e537b30abb2a9171893f1cfab6248232c9bd6cb6267df29cd9b29312fee90ae4"
+  }
+}

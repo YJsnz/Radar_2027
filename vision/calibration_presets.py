@@ -90,10 +90,10 @@ def _normalize_points(points, field_name):
     return normalized_layers
 
 
-def make_preset(name, side, map_points, updated_at=None):
+def make_preset(name, side, map_points, updated_at=None, map_binding=None):
     normalized_map_points = _normalize_points(map_points, "地图点")
     points_per_layer = len(normalized_map_points[0])
-    return {
+    preset = {
         "name": _validate_name(name),
         "side": _validate_side(side),
         "points_per_layer": points_per_layer,
@@ -101,6 +101,14 @@ def make_preset(name, side, map_points, updated_at=None):
         "updated_at": updated_at
         or datetime.now(timezone.utc).isoformat(timespec="seconds"),
     }
+    if map_binding is not None:
+        if (not isinstance(map_binding, dict)
+                or map_binding.get('side') != preset['side']
+                or not map_binding.get('profile_id')
+                or not map_binding.get('profile_sha256')):
+            raise CalibrationPresetError('地图预设的资产绑定无效或阵营不一致')
+        preset['map_binding'] = deepcopy(map_binding)
+    return preset
 
 
 def _normalize_preset(raw_preset):
@@ -111,6 +119,7 @@ def _normalize_preset(raw_preset):
         raw_preset.get("side", ""),
         raw_preset.get("map_points"),
         updated_at=str(raw_preset.get("updated_at") or ""),
+        map_binding=raw_preset.get('map_binding'),
     )
     declared_count = raw_preset.get("points_per_layer")
     if declared_count != preset["points_per_layer"]:
@@ -155,7 +164,7 @@ def load_presets(path=DEFAULT_PRESET_PATH):
     return presets
 
 
-def list_presets(path=DEFAULT_PRESET_PATH, side=None, points_per_layer=None):
+def list_presets(path=DEFAULT_PRESET_PATH, side=None, points_per_layer=None, map_binding=None):
     normalized_side = _validate_side(side) if side is not None else None
     presets = load_presets(path)
     if normalized_side is not None:
@@ -166,6 +175,8 @@ def list_presets(path=DEFAULT_PRESET_PATH, side=None, points_per_layer=None):
             preset for preset in presets
             if preset["points_per_layer"] == expected_count
         ]
+    if map_binding is not None:
+        presets = [preset for preset in presets if preset.get('map_binding') == map_binding]
     return sorted(
         (deepcopy(preset) for preset in presets),
         key=lambda preset: preset["name"].casefold(),
@@ -216,8 +227,9 @@ def save_preset(
     map_points,
     path=DEFAULT_PRESET_PATH,
     overwrite=False,
+    map_binding=None,
 ):
-    preset = make_preset(name, side, map_points)
+    preset = make_preset(name, side, map_points, map_binding=map_binding)
     presets = load_presets(path)
     matching_index = next(
         (

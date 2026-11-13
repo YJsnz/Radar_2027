@@ -29,6 +29,7 @@ def build_vision_telemetry(
     filter_type: str,
     camera_fps: float | None = None,
     source_time: float | None = None,
+    map_binding: dict | None = None,
 ) -> dict:
     robots = {}
     now = float(source_time if source_time is not None else time.time())
@@ -76,6 +77,7 @@ def build_vision_telemetry(
             'camera_fps': measured_camera_fps,
             'inference_ms': round(max(float(inference_ms), 0.0), 2),
             'filter_type': str(filter_type),
+            'map_binding': dict(map_binding) if map_binding is not None else None,
         },
         'robots': robots,
     }

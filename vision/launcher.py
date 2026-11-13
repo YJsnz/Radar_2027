@@ -61,6 +61,8 @@ from calibration_presets import (
 from config_editor import load_config, update_config_values
 from recording_storage import suggest_recording_storage
 from runtime_status import clear_runtime_status, read_runtime_status
+from map_assets import apply_map_runtime, map_binding, default_preset_name
+from camera_calibration import validate_map_calibration
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent
@@ -436,7 +438,7 @@ class MatchLauncher(QMainWindow):
         self.process = None
         self.process_kind = None
         self.serial_devices = set()
-        self.config = load_config(CONFIG_PATH)
+        self.config = apply_map_runtime(load_config(CONFIG_PATH))
 
         self.setWindowTitle("比赛控制中心")
         self._size_for_available_screen()
@@ -656,6 +658,9 @@ class MatchLauncher(QMainWindow):
         self._add_settings_page(serial_section)
 
         calibration_section, calibration_form = self._make_section("标定与测试")
+        self.map_profile_status = QLabel()
+        self.map_profile_status.setWordWrap(True)
+        calibration_form.addRow('地图档案', self.map_profile_status)
         self.calibration_preset = StyledComboBox()
         self.refresh_presets_button = QPushButton()
         self.refresh_presets_button.setObjectName("iconButton")
@@ -911,6 +916,9 @@ class MatchLauncher(QMainWindow):
         self.record_video_checkbox.setChecked(bool(global_config.get("save_img", False)))
         self._initialize_recording_path()
         self.blind_zone.setChecked(bool(self.config.get("blind_zone", {}).get("enabled", True)))
+        if self.config.get('_map_profile'):
+            self.blind_zone.setEnabled(False)
+            self.blind_zone.setToolTip('2027 真实相机盲区尚未标定，旧赛季固定预测点已在运行时停用。')
         configured_transport = self.config.get("referee", {}).get("transport")
         if configured_transport not in ("radio_ros", "legacy_serial"):
             configured_transport = "legacy_serial" if global_config.get("use_serial", False) else "radio_ros"
@@ -934,6 +942,7 @@ class MatchLauncher(QMainWindow):
 
         calibration_config = self.config.get("calibration", {})
         self.points_per_layer.setValue(int(calibration_config.get("points_per_layer", 4)))
+        self.points_per_layer.setEnabled(not bool(self.config.get('_map_profile')))
         self.run_after_save.setChecked(bool(calibration_config.get("run_after_save", True)))
         self._refresh_calibration_presets()
         test_config = global_config.get("test", {})
@@ -977,15 +986,17 @@ class MatchLauncher(QMainWindow):
     def _refresh_calibration_presets(self):
         selected_name = self.calibration_preset.currentData()
         side = "R" if self.red_side.isChecked() else "B"
+        binding = map_binding(self.config, side)
         point_count = self.points_per_layer.value()
         self.calibration_preset.blockSignals(True)
         self.calibration_preset.clear()
         self.calibration_preset.addItem("不使用地图预制", "")
         try:
             presets = list_presets(
-                DEFAULT_PRESET_PATH,
+                self.config.get('calibration', {}).get('presets_path', DEFAULT_PRESET_PATH),
                 side=side,
                 points_per_layer=point_count,
+                map_binding=binding,
             )
         except CalibrationPresetError as error:
             self.calibration_preset.setToolTip(str(error))
@@ -996,7 +1007,11 @@ class MatchLauncher(QMainWindow):
 
         for preset in presets:
             self.calibration_preset.addItem(preset["name"], preset["name"])
+        if binding and not selected_name:
+            selected_name = default_preset_name(side)
         selected_index = self.calibration_preset.findData(selected_name)
+        if binding and selected_index < 0:
+            selected_index = self.calibration_preset.findData(default_preset_name(side))
         self.calibration_preset.setCurrentIndex(max(0, selected_index))
         own_name = "红方" if side == "R" else "蓝方"
         self.calibration_preset.setToolTip(
@@ -1004,6 +1019,15 @@ class MatchLauncher(QMainWindow):
             "视频/相机图像点仍需手动标定，方案可在标定窗口的“地图预制”菜单中管理"
         )
         self.calibration_preset.blockSignals(False)
+        if binding:
+            try:
+                validate_map_calibration(self.config['paths']['calibration']['red' if side == 'R' else 'blue'], binding)
+                detail = '已有配套矩阵；仍需现场精度验收'
+            except ValueError:
+                detail = '待采集相机对应点／新矩阵'
+            self.map_profile_status.setText(f'2027 V1.0.0 · {"红方" if side == "R" else "蓝方"} · {detail}')
+        else:
+            self.map_profile_status.setText('旧赛季配置（2027 地图档案未启用）')
 
     def _update_mode_fields(self):
         mode = self.camera_mode.currentData()
@@ -1165,7 +1189,9 @@ class MatchLauncher(QMainWindow):
             "camera_params.device_serial": self.camera_serial.text().strip(),
         }
         try:
-            self.config = update_config_values(CONFIG_PATH, updates)
+            if self.config.get('_map_profile'):
+                updates.pop('blind_zone.enabled', None)
+            self.config = apply_map_runtime(update_config_values(CONFIG_PATH, updates))
         except Exception as error:
             self._append_log(f"配置保存失败: {error}")
             QMessageBox.critical(self, "配置保存失败", str(error))
@@ -1189,6 +1215,14 @@ class MatchLauncher(QMainWindow):
         if self._process_is_running():
             QMessageBox.warning(self, "程序正在运行", "请先停止当前标定或比赛程序。")
             return
+        if kind != 'calibration':
+            side = 'R' if self.red_side.isChecked() else 'B'
+            try:
+                validate_map_calibration(self.config['paths']['calibration']['red' if side == 'R' else 'blue'], map_binding(self.config, side))
+            except ValueError as error:
+                self._append_log(str(error))
+                QMessageBox.warning(self, '请先完成新地图标定', str(error))
+                return
         if not self._save_configuration(show_message=False):
             return
 

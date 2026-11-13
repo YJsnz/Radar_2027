@@ -23,7 +23,8 @@ from collections import deque
 from pathlib import Path
 import serial
 from camera_availability import wait_for_initial_camera_frame
-from camera_calibration import validate_camera_calibration
+from camera_calibration import validate_camera_calibration, validate_map_calibration
+from map_assets import apply_map_runtime, map_binding, file_sha256, snapshot_map_assets
 from camera_intrinsics import CameraIntrinsicsError, load_runtime_intrinsics
 from information_ui import draw_information_ui
 import cv2
@@ -94,6 +95,7 @@ def _load_hik_sdk():
 
 with open("config.yaml", "r", encoding="utf-8") as f:  # 指定 UTF-8 编码
     config = yaml.safe_load(f)
+config = apply_map_runtime(config)
 
 _runtime_status_error_reported = False
 
@@ -150,6 +152,13 @@ except OSError as error:
 main_program_start_time = time.time()
 
 state = config['global']['state']  # R:红方/B:蓝方
+active_map_binding = map_binding(config, state)
+try:
+    validate_map_calibration(config['paths']['calibration']['red' if state == 'R' else 'blue'], active_map_binding)
+except ValueError as error:
+    print(f'拒绝启动比赛定位：{error}')
+    report_runtime_status(phase='blocked', camera_ready=False, camera_error=str(error), recording=False)
+    sys.exit(2)
 algorithm_mode = str(config.get('algorithm', {}).get('mode', 'legacy')).lower()
 if algorithm_mode not in ('hkust_tracker', 'legacy'):
     print(f"未知算法模式 {algorithm_mode}，已回退到 legacy（2131aef 视觉链路）")
@@ -1627,6 +1636,7 @@ def ser_send():
                         fps=latest_vision_fps,
                         camera_fps=camera_frame_rate.snapshot(),
                         inference_ms=latest_inference_ms,
+                        map_binding=active_map_binding,
                         filter_type=(algorithm_mode if algorithm_mode == 'hkust_tracker'
                                      else config['filter']['type']),
                     )
@@ -2071,7 +2081,7 @@ if initial_camera_frame is None:
     )
     sys.exit(0)
 
-if camera_mode == 'mindvision':
+if camera_mode == 'mindvision' or active_map_binding:
     calibration_path = config['paths']['calibration']['red' if state == 'R' else 'blue']
     try:
         validate_camera_calibration(
@@ -2079,6 +2089,7 @@ if camera_mode == 'mindvision':
             camera_mode,
             initial_camera_frame.shape,
             intrinsics_id=active_camera_intrinsics_id or None,
+            map_binding=active_map_binding,
         )
     except ValueError as error:
         detail = f"新相机尚未完成匹配标定：{error}。请先运行 calibration.py 重新标定。"
@@ -2122,6 +2133,7 @@ if record_video:
             selected_root=recording_selected_root,
             session_name=f"{match_run_id}_vision",
         )
+        recording_map_assets = snapshot_map_assets(config, state, recording_directory)
         video_recorder = AsyncMatchVideoRecorder(
             recording_directory,
             fps=recording_fps,
@@ -2158,6 +2170,10 @@ if record_video:
             "schema": "shark.radar.vision_recording.v1",
             "match_run_id": match_run_id,
             "camera_intrinsics_id": active_camera_intrinsics_id or None,
+            "map_binding": active_map_binding,
+            "calibration_sha256": (recording_map_assets['calibration_sha256'] if recording_map_assets else
+                                   file_sha256(config['paths']['calibration']['red' if state == 'R' else 'blue'])),
+            "map_asset_snapshot": recording_map_assets,
             "component_session_id": recording_directory.name,
             "started_at": time.time(),
             "recording_directory": str(recording_directory),

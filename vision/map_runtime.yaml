@@ -1,0 +1,4 @@
+# 独立地图运行配置：不改写 config.yaml 中的本地设备／录像设置。
+schema: ysu.radar.map_runtime.v1
+enabled: true
+profile: ../radio/apps/match_rx/web/assets/map2027/profile.json

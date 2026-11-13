@@ -5,6 +5,7 @@ __pycache__/
 
 # Local intrinsic-calibration captures and solutions
 tool/data/
+vision/calibration-2027/
 
 # Runtime and hardware SDK logs
 *.log
