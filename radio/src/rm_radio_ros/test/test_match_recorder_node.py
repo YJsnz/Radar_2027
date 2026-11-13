@@ -50,6 +50,14 @@ def test_match_recorder_auto_starts_and_finalizes_from_game_status(tmp_path):
         armor_config = json.loads((session_dir / 'adaptive_armor_config_snapshot.json').read_text())
         assert armor_config['mode'] in ('fixed_center', 'adaptive_coverage')
 
+        callback = node._event_callback('/rm_radar_algorithm/telemetry')
+        bindings = [
+            {'profile_id': 'synthetic-map-profile', 'side': side, 'map_sha256': side * 64}
+            for side in ('R', 'B')
+        ]
+        for binding in bindings:
+            callback(String(data=json.dumps({'vision': {'map_binding': binding}})))
+
         ended = String(
             data=json.dumps(
                 {
@@ -72,11 +80,16 @@ def test_match_recorder_auto_starts_and_finalizes_from_game_status(tmp_path):
         assert node._state == "armed"
         manifest = json.loads((session_dir / "manifest.json").read_text(encoding="utf-8"))
         assert manifest["state"] == "complete"
+        assert manifest['vision_map_binding'] == bindings[-1]
+        assert manifest['map_bindings_seen'] == bindings
         assert (session_dir / "completed.json").exists()
         with gzip.open(session_dir / "events.jsonl.gz", "rt", encoding="utf-8") as stream:
             events = [json.loads(line) for line in stream]
         assert any(event["kind"] == "session_start" for event in events)
         assert any(event["kind"] == "session_complete" for event in events)
+        telemetry_events = [event['data']['vision']['map_binding'] for event in events
+                            if event.get('topic') == '/rm_radar_algorithm/telemetry']
+        assert telemetry_events == bindings
     finally:
         node.destroy_node()
         rclpy.shutdown(context=context)

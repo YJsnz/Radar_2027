@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>SharkRadio 比赛接收台</title>
-    <link rel="stylesheet" href="/styles.css?v=rx-20261111-protocol-roles-v21" />
+    <link rel="stylesheet" href="/styles.css?v=rx-20261113-map2027-v22" />
   </head>
   <body>
     <header class="app-header">
@@ -197,7 +197,7 @@
           </div>
           <div id="radarMapViewport" class="radar-map-viewport">
             <div id="radarMapStage" class="radar-map-stage">
-              <img id="radarMapImage" src="/image_2026_red_bottom.jpg" alt="RoboMaster 2026 赛场地图，红方在下" draggable="false" />
+              <img id="radarMapImage" src="/assets/map2027/red_bottom.png" alt="RoboMaster 2027 赛场地图，红方在下" draggable="false" />
               <canvas id="radarMapCanvas" width="1500" height="2800"></canvas>
               <div id="radarTooltip" class="radar-tooltip" hidden></div>
             </div>
@@ -208,6 +208,7 @@
             <span><i class="shape radio"></i>无线电</span>
             <span><i class="shape expired"></i>无线电过期影子</span>
           </div>
+          <p id="radarMapAssetStatus" class="map-asset-status" role="status">2027 地图档案加载中</p>
         </section>
 
         <aside class="radar-sidebar">
@@ -431,6 +432,6 @@
       </div>
     </div>
 
-    <script src="/app.js?v=rx-20261111-protocol-roles-v21"></script>
+    <script src="/app.js?v=rx-20261113-map2027-v22"></script>
   </body>
 </html>

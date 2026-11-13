@@ -62,6 +62,18 @@ def test_blue_side_maps_radio_positions_to_red_opponents_and_keeps_allies_visual
     assert snapshot['robots']['B1']['final']['source'] == 'vision'
 
 
+def test_fusion_preserves_map_binding_and_does_not_rewrite_positions():
+    state = RadarFusionState('red')
+    telemetry = _vision(B1=(800, 600))
+    binding = {'profile_id': 'synthetic-map-profile', 'side': 'R', 'map_sha256': 'a' * 64}
+    telemetry['vision']['map_binding'] = dict(binding)
+    state.update_vision(telemetry, received_at=10.0)
+    telemetry['vision']['map_binding']['side'] = 'B'
+    snapshot = state.snapshot(10.1)
+    assert snapshot['vision']['map_binding'] == binding
+    assert snapshot['robots']['B1']['final']['position_cm'] == {'x': 800, 'y': 600}
+
+
 def test_stale_vision_keeps_fresh_radio_opponents_and_zeroes_allies():
     state = RadarFusionState('red')
     state.update_vision(_vision(B1=(100, 200), R1=(300, 400)), received_at=10.0)

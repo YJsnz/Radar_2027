@@ -19,6 +19,9 @@ let radarLatest = null;
 let radarDirty = true;
 let selectedRobot = null;
 let radarMapOwnSide = "red";
+const RADAR_MAP_ASSET_ROOT = "/assets/map2027/";
+let radarMapProfile = null;
+let radarMapProfileError = "地图档案加载中";
 const radarDisplayPositions = {};
 const radarHitTargets = [];
 
@@ -1028,12 +1031,64 @@ function updateRadarMapOrientation(side) {
   radarMapOwnSide = cleanSide;
   const label = cleanSide === "red" ? "红方" : "蓝方";
   const image = $("radarMapImage");
-  const expectedSource = cleanSide === "red" ? "/image_2026_red_bottom.jpg" : "/image_2026_blue_bottom.jpg";
-  if (image && image.getAttribute("src") !== expectedSource) image.setAttribute("src", expectedSource);
-  if (image) image.alt = `RoboMaster 2026 赛场地图，${label}在下`;
+  const entry = radarMapProfile?.sides[cleanSide === "red" ? "R" : "B"]?.image;
+  const expectedSource = entry ? `${RADAR_MAP_ASSET_ROOT}${entry.file}?sha=${entry.sha256}` : null;
+  if (image && expectedSource && image.getAttribute("src") !== expectedSource) image.setAttribute("src", expectedSource);
+  if (image) image.alt = `RoboMaster 2027 赛场地图，${label}在下`;
   if ($("radarMapOrientation")) $("radarMapOrientation").textContent = "赛场坐标";
   fitRadarMapStage();
   return cleanSide;
+}
+
+async function loadRadarMapProfile() {
+  try {
+    const response = await fetch(`${RADAR_MAP_ASSET_ROOT}profile.json`, { cache: "no-store" });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const profile = await response.json();
+    if (profile.schema !== "ysu.radar.map_profile.v1" || profile.season !== 2027 || !profile.id ||
+        profile.coordinate_system !== "rmuc_reference_xy_cm" ||
+        String(profile.field_size_cm) !== "2800,1500" || String(profile.image_size) !== "1500,2800") {
+      throw new Error("地图档案版本或尺寸不支持");
+    }
+    if (!profile.topdown || !/^[a-f0-9]{64}$/.test(profile.topdown.sha256)) throw new Error("横向地图档案无效");
+    for (const side of ["R", "B"]) {
+      for (const key of ["image", "mask", "points"]) {
+        const asset = profile.sides?.[side]?.[key];
+        if (!asset || !/^[A-Za-z0-9_.-]+$/.test(asset.file) || !/^[a-f0-9]{64}$/.test(asset.sha256)) {
+          throw new Error("地图档案资源无效");
+        }
+      }
+    }
+    radarMapProfile = profile;
+    radarMapProfileError = "";
+    updateRadarMapOrientation(radarMapOwnSide);
+  } catch (error) {
+    radarMapProfileError = `2027 地图加载失败：${error.message}`;
+  }
+  updateRadarMapAssetStatus(null);
+  radarDirty = true;
+}
+
+function radarVisionMapMatches(binding) {
+  if (!radarMapProfile || radarMapProfileError || !binding) return false;
+  const side = radarMapOwnSide === "red" ? "R" : "B";
+  const expected = radarMapProfile.sides[side];
+  return binding.profile_id === radarMapProfile.id && binding.side === side &&
+    binding.coordinate_system === radarMapProfile.coordinate_system &&
+    binding.map_sha256 === expected.image.sha256 && binding.mask_sha256 === expected.mask.sha256 &&
+    binding.points_sha256 === expected.points.sha256 && binding.topdown_sha256 === radarMapProfile.topdown.sha256;
+}
+
+function updateRadarMapAssetStatus(vision) {
+  const label = $("radarMapAssetStatus");
+  if (!label) return;
+  const binding = vision?.map_binding;
+  const matched = radarVisionMapMatches(binding);
+  label.textContent = radarMapProfileError || (binding && !matched
+    ? "视觉地图档案不匹配，已隐藏该视觉图层及其最终点"
+    : matched ? "2027 V1.0.0 · 视觉档案匹配，现场精度待验收"
+      : "2027 V1.0.0 · 尚无配套视觉标定，仅显示无线电等有效来源");
+  label.className = `map-asset-status ${radarMapProfileError || (binding && !matched) ? "bad" : ""}`;
 }
 
 function radarCanvasPoint(position) {
@@ -1481,6 +1536,7 @@ function renderRadarData(payload) {
   const tx = fusion.tx_0305 || {};
   const serial = fusion.referee_serial || get(state.latest, ["statuses", "referee", "data"], {});
   const ownSide = updateRadarMapOrientation(resolveRadarOwnSide(fusion, serial));
+  updateRadarMapAssetStatus(vision);
   const radarRobotOrder = radarRobotOrderForSide(ownSide);
   const allyPrefix = ownSide === "red" ? "R" : "B";
   const healthSnapshot = payload?.health || get(state.latest, ["health"], {});
@@ -1592,14 +1648,16 @@ function drawRadarMap() {
   const ctx = canvas.getContext("2d");
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   radarHitTargets.length = 0;
+  if (!radarMapProfile || radarMapProfileError) return false;
+  const allowVision = radarVisionMapMatches(fusion.vision?.map_binding);
   let moving = false;
   const colorFor = (name) => name.startsWith("R") ? "#d93d4a" : "#2c7fd1";
 
   for (const name of radarRobotOrder) {
     const item = robots[name] || {};
-    const visual = radarPosition(item.visual);
+    const visual = allowVision ? radarPosition(item.visual) : null;
     const radio = radarPosition(item.radio);
-    const finalTarget = radarPosition(item.final);
+    const finalTarget = item.final?.source === "vision" && !allowVision ? null : radarPosition(item.final);
     let final = null;
     if (finalTarget) {
       const shown = radarDisplayPositions[name] || { ...finalTarget };
@@ -2045,6 +2103,7 @@ $("armorApplyGeometry").addEventListener("click", async () => {
   if (!storageAvailable) status.textContent = "已应用到当前页面；浏览器禁止本地存储，刷新后需重新标定。";
 });
 
+loadRadarMapProfile();
 refresh();
 if (activePage === "radio") dataTick();
 setActivePage(activePage);

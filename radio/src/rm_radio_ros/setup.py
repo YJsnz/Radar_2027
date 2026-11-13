@@ -73,6 +73,14 @@ data_files.extend(flowgraph_files(
     ('untitled.grc',),
 ))
 
+# Include the same portable map bundle and web resources used from the source tree.
+web_root = package_dir.parents[1] / 'apps' / 'match_rx' / 'web'
+for directory, _, filenames in os.walk(web_root):
+    if filenames:
+        relative = Path(directory).relative_to(web_root)
+        data_files.append((f'share/{package_name}/apps/match_rx/web/{relative}',
+                           [os.path.relpath(Path(directory) / name, package_dir) for name in filenames]))
+
 setup(
     name=package_name,
     version='0.1.0',

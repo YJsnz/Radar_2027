@@ -117,6 +117,8 @@ class MatchRecorderNode(Node):
         self._finalize_deadline = 0.0
         self._seen_active_roles: set[str] = set()
         self._stopped_roles: set[str] = set()
+        self._vision_map_binding = None
+        self._map_bindings_seen = {}
         self._event_writer = CompressedJsonlWriter(
             compression=str(self.get_parameter("event_compression").value),
             compression_level=int(self.get_parameter("event_compression_level").value),
@@ -174,6 +176,12 @@ class MatchRecorderNode(Node):
         def callback(msg: String) -> None:
             data = self._json_message(msg)
             with self._lock:
+                if topic == '/rm_radar_algorithm/telemetry' and isinstance(data, dict):
+                    vision = data.get('vision')
+                    binding = vision.get('map_binding') if isinstance(vision, dict) else None
+                    self._vision_map_binding = dict(binding) if isinstance(binding, dict) else None
+                    if self._session_id and self._vision_map_binding and self._state in {'recording', 'post_roll', 'finalizing'}:
+                        self._map_bindings_seen[json.dumps(binding, sort_keys=True)] = dict(binding)
                 if topic == "/rm_gfsk_node/status":
                     self._observe_iq_status_unlocked("rx1", data)
                 elif topic == "/rm_gfsk_interference_node/status":
@@ -312,6 +320,9 @@ class MatchRecorderNode(Node):
                 shutil.copy2(config_path, session_dir / "config_snapshot.yaml")
             self._event_writer.start(session_dir)
             self._session_id = session_id
+            self._map_bindings_seen = {}
+            if self._vision_map_binding:
+                self._map_bindings_seen[json.dumps(self._vision_map_binding, sort_keys=True)] = dict(self._vision_map_binding)
             self._session_dir = session_dir
             self._session_started_at = time.time()
             self._session_stopped_at = 0.0
@@ -462,6 +473,8 @@ class MatchRecorderNode(Node):
             ),
             "session_dir": str(self._session_dir) if self._session_dir else None,
             "config_path": str(self.get_parameter("config_path").value),
+            "vision_map_binding": self._vision_map_binding,
+            "map_bindings_seen": list(self._map_bindings_seen.values()),
             "started_at": self._session_started_at or None,
             "stopped_at": self._session_stopped_at or None,
             "last_game_status": dict(self._last_game_status),

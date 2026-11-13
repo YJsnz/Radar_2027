@@ -1097,3 +1097,6 @@ input:focus, select:focus { outline: 2px solid rgba(29, 95, 159, 0.18); border-c
   .waterfall-panel { min-height: 360px; }
   .decoded-body { max-height: min(55vh, 520px); overflow-y: auto; }
 }
+/* 地图档案状态与数据来源提示。 */
+.map-asset-status { margin: 6px 12px 10px; color: #677784; font-size: 12px; }
+.map-asset-status.bad { color: #b33c48; font-weight: 600; }
