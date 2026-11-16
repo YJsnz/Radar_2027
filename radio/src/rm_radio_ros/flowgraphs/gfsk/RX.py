@@ -319,7 +319,10 @@ class RadioRx(gr.top_block, Qt.QWidget):
                 1,
                 self._broadcast_band_pass_taps(),
             )
-            self.filtered_iq_source = self.broadcast_band_pass
+            # Match the supplied RM2027 receiver: isolate an adjacent strong
+            # channel before the nonlinear AGC and FM discriminator.
+            self.broadcast_guard = filter.fir_filter_ccf(1, self._broadcast_guard_taps())
+            self.filtered_iq_source = self.broadcast_guard
         else:
             self.low_pass_1 = filter.fir_filter_ccf(1, self._low_pass_taps())
             self.low_pass_2 = filter.fir_filter_ccf(1, self._low_pass_taps())
@@ -329,6 +332,7 @@ class RadioRx(gr.top_block, Qt.QWidget):
             self.demodulator = ContinuousGfskDemod(
                 input_sps=self.sps,
                 input_sensitivity=self.sen_re,
+                input_sample_rate=self.sample_rate,
                 bt=self.BT,
                 decimation=2,
             )
@@ -349,7 +353,7 @@ class RadioRx(gr.top_block, Qt.QWidget):
         self.filtered_iq_callback_sink = _ComplexCallbackSink()
 
         if self.frontend_profile == "broadcast":
-            self.connect(self.iq_source, self.broadcast_band_pass, self.demodulator)
+            self.connect(self.iq_source, self.broadcast_band_pass, self.broadcast_guard, self.demodulator)
         else:
             self.connect(self.iq_source, self.low_pass_1, self.low_pass_2, self.demodulator)
         self.connect(self.demodulator, self.demod_bit_callback_sink)
@@ -377,8 +381,15 @@ class RadioRx(gr.top_block, Qt.QWidget):
             float(settings["low_cut"]),
             high_cut,
             float(settings["transition"]),
-            window.WIN_HAMMING,
+            window.WIN_BLACKMAN_hARRIS,
             6.76,
+        )
+
+    def _broadcast_guard_taps(self):
+        cutoff = min(max(1_000.0, float(self.LowPass)), self.sample_rate * 0.49)
+        return firdes.low_pass(
+            1.0, self.sample_rate, cutoff, 20_000.0,
+            window.WIN_BLACKMAN_hARRIS, 6.76,
         )
 
     def _create_gui_sinks(self) -> None:
@@ -425,10 +436,13 @@ class RadioRx(gr.top_block, Qt.QWidget):
             self.rx_source.set_samplerate(int(self.sample_rate))
         if self.frontend_profile == "broadcast":
             self.broadcast_band_pass.set_taps(self._broadcast_band_pass_taps())
+            self.broadcast_guard.set_taps(self._broadcast_guard_taps())
         else:
             taps = self._low_pass_taps()
             self.low_pass_1.set_taps(taps)
             self.low_pass_2.set_taps(taps)
+        if self.demod_mode == "mm":
+            self.demodulator.set_input_sample_rate(self.sample_rate)
         if self.frequency_sink is not None:
             self.frequency_sink.set_frequency_range(self.cen_f, self.sample_rate)
         if self.waterfall_sink is not None:
@@ -474,6 +488,7 @@ class RadioRx(gr.top_block, Qt.QWidget):
         self.LowPass = float(value)
         if self.frontend_profile == "broadcast":
             self.broadcast_band_pass.set_taps(self._broadcast_band_pass_taps())
+            self.broadcast_guard.set_taps(self._broadcast_guard_taps())
         else:
             taps = self._low_pass_taps()
             self.low_pass_1.set_taps(taps)

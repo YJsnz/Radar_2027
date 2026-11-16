@@ -40,6 +40,10 @@ radio:
 decoder:
   broadcast:
     demod_mode: mm
+    # RM2027 receiver acquisition; referee CRCs and command lengths stay strict.
+    access_code_bits: 40
+    max_access_hamming: 6
+    max_length_hamming: 2
     frontend_profile: broadcast
     input_sps: 94
     iq_snapshot_enabled: false

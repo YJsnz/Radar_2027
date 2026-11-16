@@ -50,6 +50,9 @@ export INTERFERENCE_RX_GAIN="${INTERFERENCE_RX_GAIN:-$(yaml_get radio.interferen
 export RM_RADIO_START_AFTER_MATCH_RUNNING="${RM_RADIO_START_AFTER_MATCH_RUNNING:-$(yaml_get radio.start_after_match_running false)}"
 
 export BROADCAST_DEMOD_MODE="${BROADCAST_DEMOD_MODE:-$(yaml_get decoder.broadcast.demod_mode mm)}"
+export BROADCAST_ACCESS_CODE_BITS="${BROADCAST_ACCESS_CODE_BITS:-$(yaml_get decoder.broadcast.access_code_bits 40)}"
+export BROADCAST_MAX_ACCESS_HAMMING="${BROADCAST_MAX_ACCESS_HAMMING:-$(yaml_get decoder.broadcast.max_access_hamming 6)}"
+export BROADCAST_MAX_LENGTH_HAMMING="${BROADCAST_MAX_LENGTH_HAMMING:-$(yaml_get decoder.broadcast.max_length_hamming 2)}"
 export INTERFERENCE_DEMOD_MODE="${INTERFERENCE_DEMOD_MODE:-$(yaml_get decoder.interference.demod_mode legacy)}"
 export BROADCAST_FRONTEND_PROFILE="${BROADCAST_FRONTEND_PROFILE:-$(yaml_get decoder.broadcast.frontend_profile broadcast)}"
 export INTERFERENCE_FRONTEND_PROFILE="${INTERFERENCE_FRONTEND_PROFILE:-$(yaml_get decoder.interference.frontend_profile interference)}"

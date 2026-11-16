@@ -401,6 +401,9 @@ if is_true "$RUN_RX"; then
     broadcast_setters_json:="$rx1_setters" \
     interference_setters_json:="$rx2_setters" \
     broadcast_demod_mode:="$BROADCAST_DEMOD_MODE" \
+    broadcast_air_extractor_access_code_bits:="$BROADCAST_ACCESS_CODE_BITS" \
+    broadcast_air_extractor_max_access_hamming:="$BROADCAST_MAX_ACCESS_HAMMING" \
+    broadcast_air_extractor_max_length_hamming:="$BROADCAST_MAX_LENGTH_HAMMING" \
     interference_demod_mode:="$INTERFERENCE_DEMOD_MODE" \
     broadcast_frontend_profile:="$BROADCAST_FRONTEND_PROFILE" \
     interference_frontend_profile:="$INTERFERENCE_FRONTEND_PROFILE" \

@@ -16,6 +16,8 @@ rm_gfsk_node:
     status_period_sec: 1.0
     setters_apply_settle_sec: 0.15
     air_extractor_max_bits: 16384
+    # Generic/legacy default; match RX1 overrides to suffix 40, access 6, header 2.
+    air_extractor_access_code_bits: 64
     air_extractor_max_access_hamming: 3
     air_extractor_max_length_hamming: 0
     air_extractor_allow_inverted: true

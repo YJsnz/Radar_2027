@@ -1,20 +1,22 @@
 """Continuous GFSK receive chain for the RoboMaster information wave.
 
-The block follows the useful part of dfdtc/RMUC2026_RF's V1.4 broadcast
-receiver while keeping SharkRadio's access-code and referee-frame parsers:
+The block follows the useful part of the supplied RM2027 broadcast receiver
+while keeping SharkRadio's access-code and referee-frame parsers:
 
     complex IQ -> digital AGC -> decimate -> FM discriminator
                -> Gaussian filter -> float AGC -> M&M clock recovery
                -> binary slicer
 
-The live SDR runs at 2 MS/s and 94 samples/symbol.  Decimating by two makes
-the timing loop operate at the rule-book 1 MS/s and 47 samples/symbol, which
-also makes the discriminator sensitivity match the published 1.5628 value.
+The current bench profile runs at 2 MS/s and 94 samples/symbol. Decimating by
+two makes the timing loop operate at 1 MS/s and 47 samples/symbol. These are
+bench settings carried over from the supplied receiver, not confirmed 2027 RF
+parameters.
 """
 
 from __future__ import annotations
 
 from gnuradio import analog, digital, filter, gr
+from gnuradio.fft import window
 from gnuradio.filter import firdes
 
 
@@ -36,6 +38,7 @@ class ContinuousGfskDemod(gr.hier_block2):
         *,
         input_sps: float = 94.0,
         input_sensitivity: float = 1.5628 / 2.0,
+        input_sample_rate: float = 2_000_000.0,
         bt: float = 0.35,
         decimation: int = 2,
         gaussian_taps: int = 60,
@@ -61,12 +64,15 @@ class ContinuousGfskDemod(gr.hier_block2):
             raise ValueError(f'gaussian_taps must be at least 3, got {gaussian_taps!r}')
         if float(bt) <= 0.0:
             raise ValueError(f'bt must be positive, got {bt!r}')
+        if float(input_sample_rate) <= 0.0:
+            raise ValueError('input_sample_rate must be positive')
 
         self._input_sps = float(input_sps)
         self._input_sensitivity = float(input_sensitivity)
         self._bt = float(bt)
         self._decimation = int(decimation)
         self._gaussian_taps = int(gaussian_taps)
+        self._input_sample_rate = float(input_sample_rate)
 
         self.complex_agc = _agc(
             analog.agc_cc,
@@ -78,7 +84,8 @@ class ContinuousGfskDemod(gr.hier_block2):
         self.decimator = filter.rational_resampler_ccc(
             interpolation=1,
             decimation=self._decimation,
-            taps=[],
+            # RM2027/receiver/phy.py explicitly filters before 2 -> 1 MS/s.
+            taps=self._anti_alias_taps(),
             fractional_bw=0,
         )
         self.fm_discriminator = analog.quadrature_demod_cf(self._discriminator_gain())
@@ -134,6 +141,19 @@ class ContinuousGfskDemod(gr.hier_block2):
     def _discriminator_gain(self) -> float:
         return 1.0 / self.output_sensitivity
 
+    def _anti_alias_taps(self):
+        return firdes.low_pass(
+            1.0, self._input_sample_rate,
+            0.47 * self._input_sample_rate / self._decimation,
+            0.01 * self._input_sample_rate, window.WIN_HAMMING, 6.76,
+        )
+
+    def set_input_sample_rate(self, value: float) -> None:
+        if float(value) <= 0.0:
+            raise ValueError('input_sample_rate must be positive')
+        self._input_sample_rate = float(value)
+        self.decimator.set_taps(self._anti_alias_taps())
+
     def _make_gaussian_taps(self):
         return firdes.gaussian(
             1.2,
@@ -170,6 +190,8 @@ class ContinuousGfskDemod(gr.hier_block2):
         return {
             'input_sps': self._input_sps,
             'decimation': self._decimation,
+            'input_sample_rate': self._input_sample_rate,
+            'anti_alias_cutoff_hz': 0.47 * self._input_sample_rate / self._decimation,
             'output_sps': self.output_sps,
             'input_sensitivity': self._input_sensitivity,
             'output_sensitivity': self.output_sensitivity,

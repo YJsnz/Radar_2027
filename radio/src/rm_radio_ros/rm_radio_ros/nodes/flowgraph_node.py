@@ -87,6 +87,7 @@ class FlowgraphNode(Node):
         self.declare_parameter('setters_apply_settle_sec', 0.15)
         self.declare_parameter('status_period_sec', 1.0)
         self.declare_parameter('air_extractor_max_bits', 16384)
+        self.declare_parameter('air_extractor_access_code_bits', 64)
         self.declare_parameter('air_extractor_max_access_hamming', 3)
         self.declare_parameter('air_extractor_max_length_hamming', 0)
         self.declare_parameter('air_extractor_allow_inverted', True)
@@ -270,6 +271,10 @@ class FlowgraphNode(Node):
         rx_profile = str(self.get_parameter('rx_profile').value).strip().lower()
         access_code = ACCESS_CODES.get(rx_profile)
         access_codes = [access_code] if access_code is not None else ACCESS_CODES.values()
+        code_bits = int(self.get_parameter('air_extractor_access_code_bits').value)
+        if code_bits not in (40, 64):
+            raise ValueError('air_extractor_access_code_bits must be 40 or 64')
+        access_codes = [bytes(code)[-(code_bits // 8):] for code in access_codes]
         if access_code is None:
             self.get_logger().warning(
                 f'unknown rx_profile={rx_profile!r}; matching all radar air access codes'
@@ -1008,6 +1013,7 @@ class FlowgraphNode(Node):
             'last_error': self.last_error,
             'decoder': {
                 'max_bits': int(self.get_parameter('air_extractor_max_bits').value),
+                'access_code_bits': int(self.get_parameter('air_extractor_access_code_bits').value),
                 'max_access_hamming': int(self.get_parameter('air_extractor_max_access_hamming').value),
                 'max_length_hamming': int(self.get_parameter('air_extractor_max_length_hamming').value),
                 'allow_inverted': bool(self.get_parameter('air_extractor_allow_inverted').value),
@@ -1208,7 +1214,8 @@ class FlowgraphNode(Node):
             'zeros': len(bits) - sum(bits),
         }
         for name, access in ACCESS_CODES.items():
-            pattern = bytes_to_bits(access)
+            code_bits = int(self.get_parameter('air_extractor_access_code_bits').value)
+            pattern = bytes_to_bits(access)[-code_bits:]
             normal = self._best_hamming(bits, pattern)
             inverted = self._best_hamming(bits, [1 - bit for bit in pattern])
             result[name] = {

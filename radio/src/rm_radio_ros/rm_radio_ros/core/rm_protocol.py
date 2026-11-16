@@ -326,7 +326,12 @@ class AccessCodeAirPacketExtractor:
             if bool(allow_inverted):
                 self.access_variants.append(([1 - bit for bit in pattern], pattern, True))
         self.length_pattern = bytes_to_bits(AIR_LENGTH_FIELD)
-        self.packet_bits = 8 * (8 + 4 + 15)
+        # A receiver may synchronize on the stable suffix of the 8-byte code.
+        # The fixed header and 15-byte payload still immediately follow it.
+        access_bits = len(self.access_patterns[0]) if self.access_patterns else 64
+        if any(len(pattern) != access_bits for pattern in self.access_patterns):
+            raise ValueError('access codes must have the same bit length')
+        self.packet_bits = access_bits + 8 * (4 + 15)
         self.length_bits = 8 * 4
         self.payload_bits = 8 * 15
         self.max_bits = int(max_bits)

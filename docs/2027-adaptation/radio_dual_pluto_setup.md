@@ -6,7 +6,7 @@
 
 | 角色 | 配置入口 | 接收内容 | 验证状态 |
 |---|---|---|---|
-| RX1 | `ip:192.168.2.1` | 信息波，沿用 Gaussian＋M&M 连续解调 | 已识别本次接入的序列号 `03df62ca26572c053ad76ac22e4f341d22`，信息波实收记录见下文。 |
+| RX1 | `ip:192.168.2.1` | 信息波，参考 RM2027 接收程序更新滤波和同步 | 已识别本次接入的序列号 `03df62ca26572c053ad76ac22e4f341d22`，信息波实收记录见下文。 |
 | RX2 | `ip:192.168.3.1` | 干扰波，沿用 legacy 连续解调 | 第二台的部署预设，尚未确认或写入实机。 |
 
 `ip:` 可以通过 Pluto 的 USB 网络接口通信。两台必须具有不同的设备地址和对应主机接口地址，不能把两个 URI 指向同一台设备。如果两台均使用 `192.168.2.1`，先分开连接并配置第二台的网络，再一起接入核对序列号；仅修改项目 YAML 不会修改设备网络。
@@ -33,6 +33,9 @@ ros2 run rm_radio_ros rm_gfsk_node --ros-args \
   -p flowgraph_name:=gfsk -p flowgraph_module:=RX -p flowgraph_class:=RadioRx \
   -p rx_uri:="$RX1_URI" -p rx_profile:=broadcast -p frontend_profile:=broadcast \
   -p radio_side:=red -p demod_mode:=mm -p input_sps:=94.0 \
+  -p air_extractor_access_code_bits:=40 \
+  -p air_extractor_max_access_hamming:=6 \
+  -p air_extractor_max_length_hamming:=2 \
   -p sample_rate:=2000000.0 -p iq_decoder_enabled:=false \
   -p recording_enabled:=false -p disable_gui_sinks:=true
 ```
@@ -60,3 +63,16 @@ ros2 run rm_radio_ros rm_gfsk_node --ros-args \
 - 在同一接收进程上临时比较手动增益：50 dB 下 **10.015 秒 462 帧**，新增 CRC8／CRC16 失败为 1／3；60 dB 下 **10.014 秒 466 帧**，两类失败均未增加。两段结束时 IQ 诊断未见削顶。见 [增益对比](pluto_rx1_bench_20261116/pluto_rx1_gain_comparison.json)。测试顺序与环境未受严格控制，不能把短时比较写成通用最优增益或长期稳定结论。
 - 比较脚本结束时选择了临时 60 dB，随后面板值已变为 15 dB，未再次覆盖。部署初值保留可准确回读的 32 dB；现场需根据信号质量调整，不把本次 60 dB 写成通用默认值。
 - 第二台尚未接入，RX2 离线符合当前接线；没有验证双路同时接收，也没有真实裁判串口发送／回读。
+
+## 信息波接收链路参考适配（2026-11-16）
+
+参考程序位于用户提供的 `RM2027/receiver/`。适配限于信息波 RX1：在现有带通后增加 260 kHz 低通、复用抽取前的 470 kHz 抗混叠滤波，带通窗改为 Blackman-Harris；接入码同步改用官方空口接入码末 40 位，最多 6 位接入码差错、2 位长度字段差错。CRC8、CRC16、命令长度表和业务解析仍由本项目处理且保持严格；RX2 干扰波保留原 64 位、3 位接入码差错、0 位长度差错策略。`radio/apps/match_rx` 的比赛启动和 Dashboard 重启 RX1 均应用这组信息波参数，通用 ROS 节点默认保持旧的严格同步设置。
+
+参考源文件 SHA-256：`receiver/phy.py` 为 `c868fc75ff1562d34ada2b4ffc791507cf485d3aa89b6c6da8cd9fcab8fa174b`，`receiver/profiles.py` 为 `bda92715680211bc38bf29c20fcc4d59a1611d21eb643215dbd35ad0604f1fd5`。参考程序与其 MIT 许可归属见该目录；本项目没有运行时依赖它。
+
+### 对照结果与限制
+
+- 真实 Pluto RX1 在 433.2 MHz、2 MS/s、A_BALANCED、10 dB 下录制的 2 秒 IQ（4,000,000 个复数采样，SHA-256 `edd6797d79028ffa743778dd3bd49ac5a43e9614f9fb3255495f1a90699db687`）离线回放时，新链路与参考链路判决比特完全一致，均解出 92 个 CRC 有效帧，覆盖 0x0A01～0x0A05；旧链路也解出相同 92 帧。因此干净单信号实录只证明兼容性，不能证明解帧率提升。IQ 文件保存在本机 `/tmp/pluto_info_reference_comparison.c64`，没有提交到仓库。
+- 对这段真实 IQ 做可控数字叠加：将目标信号衰减 20 dB 后，叠加位于 −400 kHz、相对目标约 +60 dB 的合成 GFSK 邻道。新链路与参考链路各解出 92 个相同的 CRC 有效帧，CRC8／CRC16 失败均为 0；旧链路解出 0 个有效帧，即使使用 40 位接入码和相同的宽松同步阈值也没有有效帧。该项说明新增滤波在此合成邻道条件下有效，不代表两路真实发射设备同时测试或射频灵敏度验收。
+- 当前正在运行的比赛接收界面确认 RX1 已加载新设置，实机状态为 2 MS/s、manual 32 dB、节点 `started=true`。短时状态采样中，10 秒新增 113 个 CRC 有效帧；同时 CRC8 失败由 29 增至 146、CRC16 失败由 98 增至 354。说明实机可持续出帧，但该时段仍有较多校验失败；没有已知发射端总包数作为分母，不能计算丢包率。RX2 因第二台 Pluto 未接入而报告 `Unable to create context`，符合当前单机接线。
+- 修改后验证：`radio/src/rm_radio_ros/test` 与 `vision/tests` 全量 474 项通过；`colcon build --packages-select rm_radio_ros --symlink-install` 通过。实际运行的 Dashboard 显示 RX1 同步参数为 40／6／2，ROS 有效帧与桥接输出计数一致。双机、红蓝两侧、频点／等级切换、长时稳定性和真实裁判串口仍待验收。

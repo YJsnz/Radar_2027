@@ -535,6 +535,42 @@ def test_extract_air_payload_strict_mode_rejects_access_bit_errors():
     assert payloads == []
 
 
+@pytest.mark.parametrize('inverted', [False, True])
+@pytest.mark.parametrize('corrupt_payload', [False, True])
+def test_information_suffix_sync_recovers_acquisition_errors_but_keeps_crc(inverted, corrupt_payload):
+    frame = bytearray(build_referee_frame(0x0A02, bytes(range(12)), seq=17))
+    if corrupt_payload:
+        frame[9] ^= 1  # Leave the referee CRC unchanged: this must never pass.
+    bitstream = []
+    for chunk in _air_chunks(frame):
+        bits = bytes_to_bits(ACCESS_CODES['broadcast'] + b'\x00\x0f\x00\x0f' + bytes(chunk))
+        # Acquisition damages the first three bytes. Six errors in the stable
+        # suffix and two in the fixed PHY header stay within the reference gate.
+        for index in list(range(24)) + [24, 31, 37, 49, 55, 63, 64, 79]:
+            bits[index] ^= 1
+        bitstream.extend([b ^ int(inverted) for b in bits])
+
+    extractor = AccessCodeAirPacketExtractor(
+        access_codes=[ACCESS_CODES['broadcast'][-5:]],
+        max_access_hamming=6, max_length_hamming=2,
+    )
+    assembler = RefereeFrameAssembler(allowed_cmd_lengths=RADAR_AIR_DATA_LENGTHS)
+    frames = []
+    # Both access and payload straddle callbacks; suffix mode must not wait
+    # for the full 216-bit packet after it has skipped the damaged prefix.
+    for offset in range(0, len(bitstream), 37):
+        for payload in extractor.push_bits(bitstream[offset:offset + 37]):
+            frames.extend(assembler.push_air_payload(payload))
+
+    assert len(frames) == (0 if corrupt_payload else 1)
+    if not corrupt_payload:
+        assert frames[0].data == bytes(range(12)) and frames[0].seq == 17
+    else:
+        assert assembler.diagnostics()['crc16_failures'] > 0
+    # Generic/legacy callers still reject these acquisition errors.
+    assert AccessCodeAirPacketExtractor().push_bits(bitstream) == []
+
+
 def test_build_and_parse_robot_interaction_0212_payload():
     data = build_robot_interaction_data(0x0212, 9, 7, bytes(range(8)))
     parsed = parse_robot_interaction_data(data)

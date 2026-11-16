@@ -86,6 +86,58 @@ def test_continuous_demod_recovers_access_with_symbol_clock_error(tx_sps):
     assert _minimum_hamming(output, access) == 0
 
 
+def test_information_receiver_recovers_crc_frames_with_strong_adjacent_channel():
+    frame = build_referee_frame(0x0A02, bytes(range(12)), seq=29)
+    packet_bits = []
+    for offset in range(0, len(frame), 15):
+        packet_bits.extend(bytes_to_bits(
+            ACCESS_CODES['broadcast'] + b'\x00\x0f\x00\x0f'
+            + frame[offset:offset + 15].ljust(15, b'\0')
+        ))
+    bits = [0, 1] * 200 + packet_bits * 20
+
+    def modulate(values, sensitivity):
+        tb = gr.top_block()
+        source = blocks.vector_source_b(values, False)
+        mod = digital.gfsk_mod(samples_per_symbol=94, sensitivity=sensitivity,
+                               bt=.35, do_unpack=False)
+        sink = blocks.vector_sink_c()
+        tb.connect(source, mod, sink)
+        tb.run()
+        return np.asarray(sink.data(), dtype=np.complex64)
+
+    signal = modulate(bits, 1.5628 / 2)
+    rng = np.random.default_rng(2027)
+    neighbour = modulate(rng.integers(0, 2, len(bits)).tolist(), .6517 / 2)
+    # A deterministic level-3-like neighbour at -400 kHz, 60 dB stronger.
+    # No clipping or random packet fabrication is used to satisfy the test.
+    neighbour *= np.exp(-2j * np.pi * 400_000 * np.arange(len(signal)) / 2_000_000)
+    iq = 1e-4 * signal + .1 * neighbour
+    iq += 1e-6 * (rng.normal(size=len(iq)) + 1j * rng.normal(size=len(iq)))
+
+    ctx = SimpleNamespace(side='red', sample_rate=2_000_000.0, LowPass=260_000.0)
+    tb = gr.top_block()
+    source = blocks.vector_source_c(iq.tolist(), False)
+    bpf = filter.fir_filter_ccf(1, RadioRx._broadcast_band_pass_taps(ctx))
+    guard = filter.fir_filter_ccf(1, RadioRx._broadcast_guard_taps(ctx))
+    demod = ContinuousGfskDemod()
+    sink = blocks.vector_sink_b()
+    tb.connect(source, bpf, guard, demod, sink)
+    tb.run()
+    extractor = AccessCodeAirPacketExtractor(
+        access_codes=[ACCESS_CODES['broadcast'][-5:]],
+        max_access_hamming=6, max_length_hamming=2,
+    )
+    assembler = RefereeFrameAssembler(allowed_cmd_lengths=RADAR_AIR_DATA_LENGTHS)
+    decoded = []
+    output = sink.data()
+    for offset in range(0, len(output), 256):
+        for payload in extractor.push_bit_bytes(output[offset:offset + 256]):
+            decoded.extend(assembler.push_air_payload(payload))
+    assert len(decoded) >= 16
+    assert all(f.cmd_id == 0x0A02 and f.data == bytes(range(12)) for f in decoded)
+
+
 def test_rx1_single_band_pass_recovers_broadcast_access_code():
     input_sensitivity = 1.5628 / 2.0
     access = np.asarray([int(bit) for bit in BROADCAST_ACCESS], dtype=np.uint8)

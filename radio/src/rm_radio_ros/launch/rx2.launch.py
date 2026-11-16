@@ -20,6 +20,9 @@ def generate_launch_description():
     flowgraph_dir = LaunchConfiguration('flowgraph_dir')
     setters_apply_settle_sec = LaunchConfiguration('setters_apply_settle_sec')
     broadcast_setters_json = LaunchConfiguration('broadcast_setters_json')
+    broadcast_access_bits = LaunchConfiguration('broadcast_air_extractor_access_code_bits')
+    broadcast_access_hamming = LaunchConfiguration('broadcast_air_extractor_max_access_hamming')
+    broadcast_length_hamming = LaunchConfiguration('broadcast_air_extractor_max_length_hamming')
     interference_setters_json = LaunchConfiguration('interference_setters_json')
     broadcast_demod_mode = LaunchConfiguration('broadcast_demod_mode')
     interference_demod_mode = LaunchConfiguration('interference_demod_mode')
@@ -112,6 +115,9 @@ def generate_launch_description():
         DeclareLaunchArgument('flowgraph_dir', default_value=''),
         DeclareLaunchArgument('setters_apply_settle_sec', default_value='0.15'),
         DeclareLaunchArgument('broadcast_setters_json', default_value='{}'),
+        DeclareLaunchArgument('broadcast_air_extractor_access_code_bits', default_value='40'),
+        DeclareLaunchArgument('broadcast_air_extractor_max_access_hamming', default_value='6'),
+        DeclareLaunchArgument('broadcast_air_extractor_max_length_hamming', default_value='2'),
         DeclareLaunchArgument('interference_setters_json', default_value='{}'),
         DeclareLaunchArgument('broadcast_demod_mode', default_value='mm'),
         DeclareLaunchArgument('interference_demod_mode', default_value='legacy'),
@@ -173,6 +179,9 @@ def generate_launch_description():
                 **common_params,
                 'rx_uri': ParameterValue(rx1_uri, value_type=str),
                 'rx_profile': 'broadcast',
+                'air_extractor_access_code_bits': ParameterValue(broadcast_access_bits, value_type=int),
+                'air_extractor_max_access_hamming': ParameterValue(broadcast_access_hamming, value_type=int),
+                'air_extractor_max_length_hamming': ParameterValue(broadcast_length_hamming, value_type=int),
                 'frontend_profile': ParameterValue(broadcast_frontend_profile, value_type=str),
                 'demod_mode': ParameterValue(broadcast_demod_mode, value_type=str),
                 'input_sps': ParameterValue(broadcast_input_sps, value_type=float),
