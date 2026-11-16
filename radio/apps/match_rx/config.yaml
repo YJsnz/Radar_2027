@@ -22,7 +22,7 @@ radio:
   rtl_driver_library_dir: ""
   sample_rate: 2000000
   rx_rf_port: A_BALANCED
-  # Keep RX1 deterministic; IIO pre-init verifies manual gain by hardware readback.
+  # Reference RX1 sets manual gain through the same Pluto source initialization.
   broadcast_gain_mode: manual
   broadcast_gain: 10
   # Existing IIO software ceiling; verify gain on the connected board.
