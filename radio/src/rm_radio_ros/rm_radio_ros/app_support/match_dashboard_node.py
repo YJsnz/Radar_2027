@@ -678,6 +678,8 @@ class RadioDashboardNode(Node):
             f"radio_side:={self.state.radio_side}",
             f"rx1_uri:={self.state.sdr_uris['rx1']}",
             f"rx2_uri:={self.state.sdr_uris['rx2']}",
+            f"broadcast_demod_mode:={os.environ.get('BROADCAST_DEMOD_MODE', 'rm2027')}",
+            f"broadcast_setters_json:={json.dumps(broadcast_rx_setters_for_side(self.state.radio_side, self.state.broadcast_gain))}",
             f"broadcast_air_extractor_access_code_bits:={os.environ.get('BROADCAST_ACCESS_CODE_BITS', '40')}",
             f"broadcast_air_extractor_max_access_hamming:={os.environ.get('BROADCAST_MAX_ACCESS_HAMMING', '6')}",
             f"broadcast_air_extractor_max_length_hamming:={os.environ.get('BROADCAST_MAX_LENGTH_HAMMING', '2')}",
@@ -1124,6 +1126,14 @@ class RadioDashboardNode(Node):
         pipeline = data.get("reception_pipeline") if isinstance(data.get("reception_pipeline"), dict) else {}
         if not entry or data.get("started") is not True:
             return {"state": "unknown", "last_seen_age_sec": None, "message": f"{label}未运行，解码质量待检测"}
+        reference = data.get('reference_decoder')
+        if isinstance(reference, dict):
+            valid = int(reference.get('valid_frames') or 0)
+            crc8 = int(reference.get('crc8_errors') or 0)
+            crc16 = int(reference.get('crc16_errors') or 0)
+            return {'state': 'unknown' if not valid else 'warn' if crc8 + crc16 else 'ok',
+                    'last_seen_age_sec': None,
+                    'message': f'{label} RM2027 累计有效 {valid} · CRC8 {crc8} · CRC16 {crc16}；无发射总数，未估算总丢包'}
         if not pipeline:
             state = "unknown" if self._role_uptime_unlocked(role, now) < RX_STARTUP_GRACE_SEC else "warn"
             return {"state": state, "last_seen_age_sec": None, "message": f"{label}运行中但尚无解码流水线诊断"}

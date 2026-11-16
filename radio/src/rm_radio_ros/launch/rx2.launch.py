@@ -119,7 +119,7 @@ def generate_launch_description():
         DeclareLaunchArgument('broadcast_air_extractor_max_access_hamming', default_value='6'),
         DeclareLaunchArgument('broadcast_air_extractor_max_length_hamming', default_value='2'),
         DeclareLaunchArgument('interference_setters_json', default_value='{}'),
-        DeclareLaunchArgument('broadcast_demod_mode', default_value='mm'),
+        DeclareLaunchArgument('broadcast_demod_mode', default_value='rm2027'),
         DeclareLaunchArgument('interference_demod_mode', default_value='legacy'),
         DeclareLaunchArgument('broadcast_frontend_profile', default_value='broadcast'),
         DeclareLaunchArgument('interference_frontend_profile', default_value='interference'),

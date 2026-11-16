@@ -25,8 +25,8 @@ the match web panel. Configuration comes from apps/match_rx/config.yaml and may
 be overridden with environment variables.
 
 By default the launcher opens the Web spectrum/waterfall panel in a normal
-Chrome tab. RX1 uses the continuous Gaussian + M&M decoder, while RX2 uses
-the legacy streaming decoder plus its IQ-assisted path. --native-gui is an
+Chrome tab. RX1 uses the complete vendored RM2027 receiver, while RX2 keeps
+the legacy streaming decoder. --native-gui is an
 optional GNU Radio diagnostic mode, while --no-browser starts the web service
 without opening a browser.
 When no graphical desktop is reachable the launcher falls back to headless
@@ -368,7 +368,9 @@ if is_true "$RUN_RX"; then
     # shellcheck disable=SC1091
     source "$RM_RADIO_WS/apps/common/iio_init.sh"
     echo "[match-rx] 准备 RX1 信息波: $RX1_URI, gain_mode=manual gain=${BROADCAST_RX_GAIN}dB"
-    if [[ "$RX1_URI" == rtlsdr:* ]]; then
+    if [[ "${BROADCAST_DEMOD_MODE,,}" == "rm2027" ]]; then
+      echo "[match-rx] RX1 使用 RM2027 原始 Pluto 初始化顺序；跳过项目 IIO 预写入。"
+    elif [[ "$RX1_URI" == rtlsdr:* ]]; then
       echo "[match-rx] RX1 RTL-SDR 由 Soapy 源设置频率／采样率／增益，跳过 AD9361 预初始化。"
     elif ! probe_rx_device "$RX1_URI" >"$LOG_DIR/rx1_preinit.log" 2>&1; then
       echo "[match-rx][WARN] RX1 信息波未连接或探测超时；跳过预初始化。ROS、裁判系统、视觉通信和面板继续启动，见 $LOG_DIR/rx1_preinit.log" >&2

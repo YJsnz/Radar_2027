@@ -240,7 +240,7 @@ def test_dual_rx_nodes_respawn_after_ethernet_sdr_disconnect():
     assert rx2.count('respawn_delay=2.0') == 2
 
 
-def test_match_app_wires_continuous_broadcast_demod_profile():
+def test_match_app_wires_reference_broadcast_receiver_and_legacy_interference():
     config = _read_root('apps/match_rx/config.yaml')
     env = _read_root('apps/match_rx/env.sh')
     start = _read_root('apps/match_rx/start.sh')
@@ -251,7 +251,8 @@ def test_match_app_wires_continuous_broadcast_demod_profile():
     assert 'broadcast_gain_mode: manual' in config
     assert 'broadcast_gain:' in config
     assert 'broadcast_gain_max: 73' in config  # IIO software ceiling for the Pluto preset.
-    assert 'demod_mode: mm' in config
+    assert 'demod_mode: rm2027' in config
+    assert 'broadcast_gain: 10' in config
     assert 'frontend_profile: broadcast' in config
     assert 'frontend_profile: interference' in config
     assert 'input_sps: 94' in config
@@ -279,7 +280,7 @@ def test_match_app_wires_continuous_broadcast_demod_profile():
     assert 'broadcast_iq_decoder_enabled:="$BROADCAST_IQ_DECODER_ENABLED"' in start
     assert 'iio_capture_decoder_enabled:="$BROADCAST_IIO_CAPTURE_DECODER_ENABLED"' in start
     assert 'broadcast_iq_decoder_autotune_mode:="$BROADCAST_IQ_DECODER_AUTOTUNE_MODE"' in start
-    assert "DeclareLaunchArgument('broadcast_demod_mode', default_value='mm')" in rx2
+    assert "DeclareLaunchArgument('broadcast_demod_mode', default_value='rm2027')" in rx2
     assert "DeclareLaunchArgument('interference_demod_mode', default_value='legacy')" in rx2
     assert "DeclareLaunchArgument('broadcast_frontend_profile', default_value='broadcast')" in rx2
     assert "DeclareLaunchArgument('interference_frontend_profile', default_value='interference')" in rx2

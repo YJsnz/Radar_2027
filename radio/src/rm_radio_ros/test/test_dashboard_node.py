@@ -28,6 +28,19 @@ def _node_without_init():
     return node
 
 
+def test_reference_quality_uses_reference_crc_counts_instead_of_old_loss_estimate():
+    node = _node_without_init()
+    node.state.statuses['rx1'] = {'timestamp': 1.0, 'data': {
+        'started': True,
+        'reference_decoder': {'valid_frames': 92, 'crc8_errors': 0, 'crc16_errors': 0},
+        'reception_pipeline': None,
+    }}
+    result = node._decode_quality_health_unlocked('rx1', 2.0)
+    assert result['state'] == 'ok'
+    assert '累计有效 92' in result['message']
+    assert '未估算总丢包' in result['message']
+
+
 def _set_started_rx(node, role, *, now=100.0, **data):
     payload = {"started": True, **data}
     node.state.statuses[role] = {"timestamp": now, "data": payload}

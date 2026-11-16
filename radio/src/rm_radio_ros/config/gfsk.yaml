@@ -8,8 +8,8 @@ rm_gfsk_node:
     qt_platform: offscreen
     disable_gui_sinks: true
     rx_only: true
-    # auto selects Gaussian + M&M for broadcast and legacy gfsk_demod for interference.
-    demod_mode: auto
+    # RX1 owns the exact RM2027 decoder; RX2 launch explicitly uses legacy.
+    demod_mode: rm2027
     qt_event_period_sec: 0.05
     rx_uri: ip:192.168.2.1
     broadcast_tx_uri: ip:192.168.1.10
@@ -21,7 +21,7 @@ rm_gfsk_node:
     air_extractor_max_access_hamming: 3
     air_extractor_max_length_hamming: 0
     air_extractor_allow_inverted: true
-    iq_decoder_enabled: true
+    iq_decoder_enabled: false
     iq_decoder_window_sec: 1.0
     iq_decoder_period_sec: 0.5
     iq_decoder_sps_values: "92,92.5,93,93.5,94,94.5,95"

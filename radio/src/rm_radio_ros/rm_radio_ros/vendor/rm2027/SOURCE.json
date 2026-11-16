@@ -1,0 +1,31 @@
+{
+  "source": "user supplied RM2027/receiver",
+  "date": "2026-11-16",
+  "files": {
+    "phy.py": {
+      "source_sha256": "c868fc75ff1562d34ada2b4ffc791507cf485d3aa89b6c6da8cd9fcab8fa174b",
+      "vendored_sha256": "b31a838529f39c35f1c652d36a03d794d2ff4296210792c2819a194e616e9b74",
+      "changes": "package-relative imports only"
+    },
+    "profiles.py": {
+      "source_sha256": "bda92715680211bc38bf29c20fcc4d59a1611d21eb643215dbd35ad0604f1fd5",
+      "vendored_sha256": "bda92715680211bc38bf29c20fcc4d59a1611d21eb643215dbd35ad0604f1fd5",
+      "changes": "none"
+    },
+    "protocol.py": {
+      "source_sha256": "ac223f1f71c3d03d03d74e5a517a20a1794f376f15e3d5e1206646ce87d31f7f",
+      "vendored_sha256": "2096bcccc546f666d35679f9559ee43688f76a2290383d9f7413b1a65051e2c3",
+      "changes": "package-relative imports only"
+    },
+    "shark_core/wire2027.py": {
+      "source_sha256": "91c71f5d3da4c445d31c1d14a3389600f2800694c824127cecd169ae358bfb80",
+      "vendored_sha256": "91c71f5d3da4c445d31c1d14a3389600f2800694c824127cecd169ae358bfb80",
+      "changes": "none"
+    },
+    "shark_core/rm_protocol.py": {
+      "source_sha256": "26b3cb290722841c9de79e3b832c977a8238f0a044545033e619f3feace40733",
+      "vendored_sha256": "26b3cb290722841c9de79e3b832c977a8238f0a044545033e619f3feace40733",
+      "changes": "none"
+    }
+  }
+}

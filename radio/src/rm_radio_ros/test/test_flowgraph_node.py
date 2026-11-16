@@ -58,6 +58,23 @@ class FakeTimer:
         self.cancelled = True
 
 
+def test_reference_path_attaches_no_project_streaming_callbacks():
+    class Reference:
+        def take_reference_frames(self):
+            return []
+
+        def set_demod_bits_callback(self, callback):
+            raise AssertionError('project bit decoder must not attach')
+
+        def set_iq_callback(self, callback):
+            raise AssertionError('project IQ work must not run on GNU Radio')
+
+    node = FlowgraphNode.__new__(FlowgraphNode)
+    node.flowgraph = Reference()
+    node.get_logger = FakeLogger
+    FlowgraphNode._attach_flowgraph_decoders(node)
+
+
 @pytest.mark.parametrize("recovered", [False, True])
 def test_auto_start_retry_keeps_node_alive_until_flowgraph_recovers(recovered):
     node = FlowgraphNode.__new__(FlowgraphNode)

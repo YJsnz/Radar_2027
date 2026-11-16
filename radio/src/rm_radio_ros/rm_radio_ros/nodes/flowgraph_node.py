@@ -245,6 +245,9 @@ class FlowgraphNode(Node):
 
         status_period = float(self.get_parameter('status_period_sec').value)
         self.create_timer(max(status_period, 0.1), self._publish_status)
+        # RM2027's GUI takes decoded frames every 250 ms. Keep ROS work out
+        # of its GNU Radio work() callback and use the same polling cadence.
+        self.create_timer(0.25, self._poll_reference_receiver)
 
         self._auto_start_retry_timer = None
         if bool(self.get_parameter('auto_start').value):
@@ -538,6 +541,15 @@ class FlowgraphNode(Node):
             elif setters:
                 self.last_error = 'flowgraph is not loaded; cannot apply setters'
             return
+        reference_apply = getattr(self.flowgraph, 'apply_reference_setters', None)
+        if reference_apply is not None:
+            with self._setters_lock:
+                reference_apply(dict(setters))
+                self.last_setters.update(setters)
+                self.setters_apply_count += 1
+                self.last_setters_apply_time = time.time()
+                self.last_error = ''
+            return
         setters = dict(setters)
         requested_rx_profile = setters.pop('rx_profile', None)
         requested_interference_level = setters.pop('interference_level', None)
@@ -818,6 +830,16 @@ class FlowgraphNode(Node):
         if self.loaded:
             return True
         try:
+            reference_requested = (
+                str(self.get_parameter('flowgraph_class').value) == 'RadioRx'
+                and str(self.get_parameter('rx_profile').value) == 'broadcast'
+                and str(self.get_parameter('demod_mode').value) == 'rm2027'
+            )
+            if reference_requested and (
+                bool(self.get_parameter('iio_capture_decoder_enabled').value)
+                or bool(self.get_parameter('iq_decoder_enabled').value)
+            ):
+                raise ValueError('RM2027 RX1 cannot run a second IIO/snapshot decoder')
             if bool(self.get_parameter('dry_run').value):
                 flowgraph_dir = self._resolve_flowgraph_dir()
                 if not flowgraph_dir.exists():
@@ -825,6 +847,8 @@ class FlowgraphNode(Node):
                 module = self._import_flowgraph_module(flowgraph_dir)
                 class_name = str(self.get_parameter('flowgraph_class').value).strip() or 'RM'
                 getattr(module, class_name)
+                if reference_requested:
+                    from rm2027_rx import RM2027InformationRx  # noqa: F401 - validate installed reference dependency
                 self.loaded = True
                 self.last_error = ''
                 self.get_logger().info(
@@ -850,7 +874,11 @@ class FlowgraphNode(Node):
             self._ensure_qt_application()
             module = self._import_flowgraph_module(flowgraph_dir)
             class_name = str(self.get_parameter('flowgraph_class').value).strip() or 'RM'
-            flowgraph_cls = getattr(module, class_name)
+            if reference_requested:
+                from rm2027_rx import RM2027InformationRx
+                flowgraph_cls = RM2027InformationRx
+            else:
+                flowgraph_cls = getattr(module, class_name)
             self.flowgraph = flowgraph_cls()
             self._attach_flowgraph_decoders()
             self._apply_setters()
@@ -870,6 +898,9 @@ class FlowgraphNode(Node):
                         stop()
                     if wait is not None:
                         wait()
+                    close = getattr(self.flowgraph, 'close_receiver', None)
+                    if close is not None:
+                        close()
             except Exception:
                 pass
             self.flowgraph = None
@@ -897,6 +928,9 @@ class FlowgraphNode(Node):
 
     def _attach_flowgraph_decoders(self) -> None:
         if self.flowgraph is None:
+            return
+        if hasattr(self.flowgraph, 'take_reference_frames'):
+            self.get_logger().info('RM2027 reference owns DSP, synchronization and protocol decoding; ROS polls at 250 ms')
             return
         setter = getattr(self.flowgraph, 'set_demod_bits_callback', None)
         if setter is not None:
@@ -973,6 +1007,9 @@ class FlowgraphNode(Node):
         was_started = self.started
         if not self.stop_flowgraph():
             return False
+        close = getattr(self.flowgraph, 'close_receiver', None)
+        if close is not None:
+            close()
         self.flowgraph = None
         self.loaded = False
         self._reset_decode_state()
@@ -1058,7 +1095,41 @@ class FlowgraphNode(Node):
         }
         if getattr(self, '_recording_init_error', ''):
             payload['recording']['last_error'] = self._recording_init_error
+        reference = getattr(self.flowgraph, 'reference_status', None)
+        if reference is not None:
+            payload['reference_decoder'] = reference()
+            payload['decoder'].update({'implementation': 'RM2027/receiver',
+                                       'max_bits': None, 'access_code_bits': 40,
+                                       'max_access_hamming': 6, 'max_length_hamming': 2})
+            # The reference does not expose rejected-frame sequence events.
+            # Do not label the bypassed project assembler's counters as live.
+            payload['reception_pipeline'] = None
+            payload['frame_validation']['primary'] = None
+            payload['recording'] = {'enabled': False, 'active': False,
+                                    'reason': 'RM2027 reference path has no continuous filtered IQ recording tap'}
         return json.dumps(payload, ensure_ascii=False)
+
+    def _poll_reference_receiver(self) -> None:
+        flowgraph = self.flowgraph
+        if not self.started or flowgraph is None or not hasattr(flowgraph, 'take_reference_frames'):
+            return
+        try:
+            from ..core.rm2027_adapter import adapt_reference_frame
+            frames = [adapt_reference_frame(frame) for frame in flowgraph.take_reference_frames()]
+            self._publish_frames(frames)
+            # This probe is explicitly latest-only telemetry, not a recording
+            # or a second reader of the Pluto source.
+            self._handle_reference_spectrum(flowgraph)
+        except Exception as exc:
+            self.last_error = f'RM2027 frame polling failed: {exc}'
+            self.get_logger().error(self.last_error)
+
+    def _handle_reference_spectrum(self, flowgraph) -> None:
+        import numpy as np
+        data = np.asarray(flowgraph.web_probe.level(), dtype=np.complex64)
+        if data.size:
+            self.iq_diagnostics = self._iq_diagnostics_payload(data, 'rm2027_latest_probe')
+            self._maybe_publish_spectrum(data, tap='raw')
 
     def _publish_status(self) -> None:
         msg = String()
@@ -1112,6 +1183,8 @@ class FlowgraphNode(Node):
             self.get_logger().warning(self.last_error)
 
     def _handle_recording_control(self, msg: String) -> None:
+        if hasattr(self.flowgraph, 'take_reference_frames'):
+            return
         recorder = getattr(self, '_iq_recorder', None)
         if recorder is None or not recorder.enabled:
             return
@@ -2070,6 +2143,9 @@ class FlowgraphNode(Node):
 
     def destroy_node(self) -> bool:
         self.stop_flowgraph()
+        close = getattr(self.flowgraph, 'close_receiver', None)
+        if close is not None:
+            close()
         recorder = getattr(self, '_iq_recorder', None)
         if recorder is not None:
             recorder.stop('node_shutdown', timeout=3.0)

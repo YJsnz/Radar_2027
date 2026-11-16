@@ -17,7 +17,7 @@ GFSK_FLOWGRAPH_SPS = 94
 GFSK_TX_FLOWGRAPH_SAMPLE_RATE = OFFICIAL_GFSK_SAMPLE_RATE
 GFSK_TX_FLOWGRAPH_SPS = OFFICIAL_GFSK_SPS
 
-BROADCAST_RX_GAIN_DEFAULT = 20.0
+BROADCAST_RX_GAIN_DEFAULT = 10.0
 # Both deployed RX devices report AD9361 manual hardwaregain_available as
 # ``[-1 1 73]``. Align the operator range with the hardware instead of keeping
 # the former 0..25 dB application-only restriction.

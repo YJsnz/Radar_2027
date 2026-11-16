@@ -64,8 +64,12 @@ data_files = [
 data_files.extend(flowgraph_files(
     'gfsk',
     gfsk_dir,
-    ('RX.py', 'continuous_gfsk_demod.py'),
+    ('RX.py', 'continuous_gfsk_demod.py', 'rm2027_rx.py'),
 ))
+data_files.append((f'share/{package_name}/vendor/rm2027', [
+    'rm_radio_ros/vendor/rm2027/LICENSE.SHARK',
+    'rm_radio_ros/vendor/rm2027/SOURCE.json',
+]))
 data_files.extend(flowgraph_files(
     'ganraoyuan',
     ganrao_dir,

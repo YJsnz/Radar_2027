@@ -626,6 +626,18 @@ function renderLossDiagnostics(data) {
   const pipeline = get(data, ["statuses", "rx1", "data", "reception_pipeline"], null);
   const badge = $("lossBadge");
   const container = $("lossDiagnostics");
+  const reference = get(data, ["statuses", "rx1", "data", "reference_decoder"], null);
+  $("lossTitle").textContent = reference ? "信息波解析诊断 · RM2027 累计" : "信息波解析诊断 · 最近 10 秒";
+  if (reference) {
+    badge.className = "badge unknown";
+    badge.textContent = "RM2027 原始解码器";
+    const cells = [["累计分片", reference.fragments], ["累计有效帧", reference.valid_frames],
+      ["头部拒绝", reference.header_reject], ["CRC8 错误", reference.crc8_errors],
+      ["CRC16 错误", reference.crc16_errors], ["最近 1 秒有效帧", get(data, ["reception_rates", "rx1_hz"], 0)]];
+    container.innerHTML = cells.map(([label, value]) => `<div class="loss-cell"><span>${label}</span><strong>${escapeHtml(value ?? 0)}</strong></div>`).join("")
+      + `<div class="loss-debug">计数与 RM2027 接收程序一致；无发射端总数，不估算总丢包。</div>`;
+    return;
+  }
   if (!pipeline) {
     badge.className = "badge unknown";
     badge.textContent = "样本不足";

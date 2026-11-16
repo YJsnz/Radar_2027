@@ -1,0 +1,25 @@
+{
+  "method": "production RM2027InformationRx graph with finite vector source replacing hardware only",
+  "sample_count": 4000000,
+  "sample_rate_hz": 2000000,
+  "iq_sha256": "edd6797d79028ffa743778dd3bd49ac5a43e9614f9fb3255495f1a90699db687",
+  "reference_status": {
+    "implementation": "RM2027/receiver",
+    "profile": "红方信息波",
+    "frequency_hz": 433200000,
+    "access": 186,
+    "best_access_distance": 0,
+    "access_bits": 40,
+    "best_access_hex": "74B914492E",
+    "best_access_inverted": false,
+    "fragments": 186,
+    "header_reject": 0,
+    "crc8_errors": 0,
+    "crc16_errors": 0,
+    "valid_frames": 92
+  },
+  "frame_count": 92,
+  "same_ordered_frame_hashes_as_original_reference": true,
+  "processing_wall_sec": 0.22918206899976212,
+  "ros_envelope_and_reference_decoded_present": true
+}

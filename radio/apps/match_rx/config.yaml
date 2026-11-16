@@ -24,7 +24,7 @@ radio:
   rx_rf_port: A_BALANCED
   # Keep RX1 deterministic; IIO pre-init verifies manual gain by hardware readback.
   broadcast_gain_mode: manual
-  broadcast_gain: 32
+  broadcast_gain: 10
   # Existing IIO software ceiling; verify gain on the connected board.
   broadcast_gain_max: 73
   broadcast_low_pass_hz: 260000
@@ -32,14 +32,13 @@ radio:
   interference_gain: 20
   start_after_match_running: false
 
-# This experimental branch runs RX1 continuously through FM discrimination,
-# Gaussian filtering and M&M timing recovery. The old IQ snapshot scanner is
-# retained as a configurable fallback but disabled by default to avoid duplicate
-# frames and a second CPU-heavy decoder. RX2 also uses only its Legacy streaming
-# path; the IQ snapshot decoder remains available as an explicit diagnostic.
+# This branch runs the vendored RM2027 RX1 source/DSP/deframer/protocol chain.
+# RX1 has no project streaming IQ callbacks or snapshot decoder; ROS takes
+# completed reference frames every 250 ms. RX2 retains its Legacy path.
 decoder:
   broadcast:
-    demod_mode: mm
+    # Exact vendored RM2027 DSP + PHY deframer + business decoder.
+    demod_mode: rm2027
     # RM2027 receiver acquisition; referee CRCs and command lengths stay strict.
     access_code_bits: 40
     max_access_hamming: 6

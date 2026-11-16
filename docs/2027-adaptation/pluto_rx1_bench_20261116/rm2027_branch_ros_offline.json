@@ -1,0 +1,51 @@
+{
+  "started": true,
+  "demod_mode": "rm2027",
+  "reference_decoder": {
+    "implementation": "RM2027/receiver",
+    "profile": "红方信息波",
+    "frequency_hz": 433200000,
+    "access": 186,
+    "best_access_distance": 0,
+    "access_bits": 40,
+    "best_access_hex": "74B914492E",
+    "best_access_inverted": false,
+    "fragments": 186,
+    "header_reject": 0,
+    "crc8_errors": 0,
+    "crc16_errors": 0,
+    "valid_frames": 92
+  },
+  "frame_validation": {
+    "primary": null,
+    "iq": {
+      "crc8_failures": 0,
+      "length_failures": 0,
+      "crc16_attempts": 0,
+      "crc16_failures": 0,
+      "crc16_valid_frames": 0,
+      "command_length_failures": 0,
+      "valid_frames": 0,
+      "buffered_bytes": 0,
+      "pending_events": 0
+    }
+  },
+  "reception_pipeline": null,
+  "recording": {
+    "enabled": false,
+    "active": false,
+    "reason": "RM2027 reference path has no continuous filtered IQ recording tap"
+  },
+  "stats": {
+    "manual_air_payloads": 0,
+    "demod_bit_batches": 0,
+    "iq_decode_batches": 0,
+    "air_payloads": 0,
+    "iq_air_payloads": 0,
+    "iq_referee_frames": 0,
+    "frames": 92,
+    "bridge_outputs": 92,
+    "iio_capture_batches": 0,
+    "iio_capture_errors": 0
+  }
+}

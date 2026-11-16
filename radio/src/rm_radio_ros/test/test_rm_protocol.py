@@ -276,7 +276,7 @@ def test_broadcast_rx_setters_keep_strong_adjacent_channel_profile():
 
     assert setters['cen_f'] == 433200000
     assert setters['GainMode'] == 'manual'
-    assert setters['Gain'] == 20
+    assert setters['Gain'] == 10
     assert setters['LowPass'] == 260000
     assert broadcast_rx_setters_for_side('red', -1)['Gain'] == -1
     assert broadcast_rx_setters_for_side('red', 73)['Gain'] == 73

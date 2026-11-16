@@ -240,6 +240,7 @@
   - 双 Pluto 配置软件验证：相关启动／脚本、Dashboard 与接收后端 73 项测试通过，环境加载、脚本语法及 diff 检查通过。首台 Pluto 回读增益步进为 1 dB，已将原 RTL 的 32.8 dB 改为可准确回读的 32 dB。
   - 首台 Pluto 信息波实收（2026-11-16）：已识别 USB／IIO 序列号并收到 0x0A01～0x0A05。32 dB 下 30.012 秒 352 帧但 CRC 失败较多；临时 60 dB 对比段 10.014 秒 466 帧、无新增 CRC8／CRC16 失败、末次 IQ 未见削顶。仅通过首台首轮台架，第二台、双路同时接收、增益稳定性与真实裁判链路继续待验收；证据见 [双 Pluto 配置与实收记录](docs/2027-adaptation/radio_dual_pluto_setup.md)。
   - [x] 参考用户提供的 RM2027 接收程序改善信息波前端滤波、抽取抗混叠和接入码同步；CRC 与命令校验保持严格，RX2 策略不变。全量 474 项测试和 ROS 包构建通过；真实 Pluto 录制回放对照及数字邻道压力对照见[适配记录](docs/2027-adaptation/radio_dual_pluto_setup.md)。当前短时实机仍观测到 CRC 失败，且双 Pluto、长稳和裁判闭环未验收，因此无线电实机联调父项继续未勾选。
+  - [x] 在 `codex/rx1-rm2027-identical` 分支直接采用 RM2027 的 RX1 解调／同步／组帧／业务解析源码，并对齐 Pluto 初始化、10 dB 初值和 250 ms 取帧；保留 ROS／Dashboard 适配，RX2 逻辑不变。全量 **486 项测试**及 ROS 构建通过，已有真实 IQ 完整流图和 ROS 执行器重放均为 92 有效帧、92 桥接输出，与参考完整帧一致。见[分支说明](docs/2027-adaptation/radio_rm2027_rx1_port.md)。本轮未连接 Pluto，实机长稳继续待验收；该参考路径的 RX1 连续 IQ 录制暂不支持，事件录制保留。
   - [x] 接入 RTL-SDR／IIO 混合接收源，按硬件序列号选择 RTL，2.048 MS/s 经 125/128 重采样复用原 2 MS/s 解调；完成独立测试源首轮实收：RTL 信息波约 8.15 秒 373 帧，Pluto 干扰波约 8.04 秒 79 帧，密钥 `fvXVKC` 核对一致。见 [混合接收台架记录](docs/2027-adaptation/radio_mixed_rx_bringup.md)。
   - 软件验证（2026-11-13）：全量 469 项测试、ROS 包构建、Python 编译、启动脚本语法及 diff 检查通过；Pluto 实收经 ROS 到 Dashboard 的快照含 251 帧与同数桥接输出，浏览器密钥显示核对通过。未启动真实裁判串口；无线电大项继续未勾选。
   - 恢复复测（2026-11-13）：RTL 换接 USB 口后恢复 Blog V4／原序列号，原 RX1 节点自行启动；60.017 秒新增 2800 帧有效信息波和 2800 个桥接结果，区间内无新增 CRC8／CRC16／长度失败。节点早期仍累计 1 次 CRC8、11 次 CRC16 失败；此次观察未覆盖双路同时接收和真实裁判发送，见 [恢复观察](docs/2027-adaptation/radio_mixed_rx_bench_20261113/rtl_recovery_observation.json)。
