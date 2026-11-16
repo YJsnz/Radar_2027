@@ -24,7 +24,7 @@ radio:
   rx_rf_port: A_BALANCED
   # Keep RX1 deterministic; IIO pre-init verifies manual gain by hardware readback.
   broadcast_gain_mode: manual
-  broadcast_gain: 32.8
+  broadcast_gain: 32
   # Existing IIO software ceiling; verify gain on the connected board.
   broadcast_gain_max: 73
   broadcast_low_pass_hz: 260000

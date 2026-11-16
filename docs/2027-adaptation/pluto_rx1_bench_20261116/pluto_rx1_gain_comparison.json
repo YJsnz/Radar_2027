@@ -1,0 +1,105 @@
+{
+  "source": "Actual existing Pluto RX1 stream; transient manual gain comparison via Dashboard API",
+  "baseline_32dB_observation": "pluto_rx1_information_observation.json",
+  "results": [
+    {
+      "gain_db": 50,
+      "duration_sec": 10.015,
+      "validation_delta": {
+        "valid_frames": 462,
+        "crc8_failures": 1,
+        "crc16_failures": 3,
+        "crc16_attempts": 465
+      },
+      "started": true,
+      "last_error": "",
+      "actual_node_gain": {
+        "profile": "broadcast",
+        "backend": "iio",
+        "uri": "ip:192.168.2.1",
+        "hardware_sample_rate": 2000000.0,
+        "dsp_sample_rate": 2000000.0,
+        "mode": "manual",
+        "gain_db": 50.0,
+        "configured_min_db": -1.0,
+        "configured_max_db": 73.0
+      },
+      "raw_iq": {
+        "sample_count": 4096,
+        "mean_abs": 0.009423810988664627,
+        "max_abs": 0.02013235166668892,
+        "rms_abs": 0.009919492527842522,
+        "rms_dbfs": -40.070210907713104,
+        "component_peak": 0.01953125,
+        "headroom_db": 34.18539921951662,
+        "crest_factor_db": 6.148101066404056,
+        "near_clip_fraction": 0.0,
+        "clip_fraction": 0.0,
+        "signal_state": "ok",
+        "mean_i": -0.00016510486602783203,
+        "mean_q": -0.00011336803436279297,
+        "source": "flowgraph_raw",
+        "mean_phase_step": -0.6071897745132446,
+        "std_phase_step": 0.5696544647216797,
+        "min_phase_step": -3.033581018447876,
+        "max_phase_step": 3.1415927410125732
+      }
+    },
+    {
+      "gain_db": 60,
+      "duration_sec": 10.014,
+      "validation_delta": {
+        "valid_frames": 466,
+        "crc8_failures": 0,
+        "crc16_failures": 0,
+        "crc16_attempts": 466
+      },
+      "started": true,
+      "last_error": "",
+      "actual_node_gain": {
+        "profile": "broadcast",
+        "backend": "iio",
+        "uri": "ip:192.168.2.1",
+        "hardware_sample_rate": 2000000.0,
+        "dsp_sample_rate": 2000000.0,
+        "mode": "manual",
+        "gain_db": 60.0,
+        "configured_min_db": -1.0,
+        "configured_max_db": 73.0
+      },
+      "raw_iq": {
+        "sample_count": 2048,
+        "mean_abs": 0.03295021504163742,
+        "max_abs": 0.06823370605707169,
+        "rms_abs": 0.03408597782254219,
+        "rms_dbfs": -29.34848485810548,
+        "component_peak": 0.0673828125,
+        "headroom_db": 23.429017318051134,
+        "crest_factor_db": 6.028464063397342,
+        "near_clip_fraction": 0.0,
+        "clip_fraction": 0.0,
+        "signal_state": "ok",
+        "mean_i": 0.000118255615234375,
+        "mean_q": 0.0013804435729980469,
+        "source": "flowgraph_raw",
+        "mean_phase_step": 0.003376851323992014,
+        "std_phase_step": 0.6455327868461609,
+        "min_phase_step": -2.97721266746521,
+        "max_phase_step": 2.8348326683044434
+      }
+    }
+  ],
+  "selected_runtime_gain_db": 60,
+  "note": "Short sequential bench comparison; source stationarity and long-term stability not established",
+  "subsequent_runtime_snapshot": {
+    "captured_at": 1794839761.0029833,
+    "rx1_gain": {
+      "configured_db": 15.0,
+      "min_db": -1.0,
+      "max_db": 73.0,
+      "actual_db": 15.0,
+      "mode": "manual"
+    },
+    "note": "Runtime gain changed after comparison; do not interpret the selected comparison setting as the current operator setting"
+  }
+}
