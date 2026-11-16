@@ -1,0 +1,232 @@
+{
+  "clean_bits_sha256": "21aa382de5ee5b8f612298930717c0d010d4f4595ba95181c1e2e5c3b1e9a0dd",
+  "cases": [
+    {
+      "signal": "clean",
+      "chunk_bits": 22,
+      "project_frames": 92,
+      "reference_frames": 92,
+      "same_frames": true,
+      "project_fragments": 186,
+      "reference_fragments": 186,
+      "project_validation": {
+        "crc8_failures": 0,
+        "length_failures": 0,
+        "crc16_attempts": 92,
+        "crc16_failures": 0,
+        "crc16_valid_frames": 92,
+        "command_length_failures": 0,
+        "valid_frames": 92,
+        "buffered_bytes": 0,
+        "pending_events": 92
+      },
+      "reference_validation": {
+        "access": 186,
+        "best_access_distance": 0,
+        "access_bits": 40,
+        "best_access_hex": "74B914492E",
+        "best_access_inverted": false,
+        "fragments": 186,
+        "header_reject": 0,
+        "crc8_errors": 0,
+        "crc16_errors": 0,
+        "valid_frames": 92
+      },
+      "project_seconds": 0.24004953100029525,
+      "reference_seconds": 0.12411806599993724
+    },
+    {
+      "signal": "clean",
+      "chunk_bits": 256,
+      "project_frames": 92,
+      "reference_frames": 92,
+      "same_frames": true,
+      "project_fragments": 186,
+      "reference_fragments": 186,
+      "project_validation": {
+        "crc8_failures": 0,
+        "length_failures": 0,
+        "crc16_attempts": 92,
+        "crc16_failures": 0,
+        "crc16_valid_frames": 92,
+        "command_length_failures": 0,
+        "valid_frames": 92,
+        "buffered_bytes": 0,
+        "pending_events": 92
+      },
+      "reference_validation": {
+        "access": 186,
+        "best_access_distance": 0,
+        "access_bits": 40,
+        "best_access_hex": "74B914492E",
+        "best_access_inverted": false,
+        "fragments": 186,
+        "header_reject": 0,
+        "crc8_errors": 0,
+        "crc16_errors": 0,
+        "valid_frames": 92
+      },
+      "project_seconds": 0.11287972900026944,
+      "reference_seconds": 0.0709848400001647
+    },
+    {
+      "signal": "clean",
+      "chunk_bits": 4096,
+      "project_frames": 92,
+      "reference_frames": 92,
+      "same_frames": true,
+      "project_fragments": 186,
+      "reference_fragments": 186,
+      "project_validation": {
+        "crc8_failures": 0,
+        "length_failures": 0,
+        "crc16_attempts": 92,
+        "crc16_failures": 0,
+        "crc16_valid_frames": 92,
+        "command_length_failures": 0,
+        "valid_frames": 92,
+        "buffered_bytes": 0,
+        "pending_events": 92
+      },
+      "reference_validation": {
+        "access": 186,
+        "best_access_distance": 0,
+        "access_bits": 40,
+        "best_access_hex": "74B914492E",
+        "best_access_inverted": false,
+        "fragments": 186,
+        "header_reject": 0,
+        "crc8_errors": 0,
+        "crc16_errors": 0,
+        "valid_frames": 92
+      },
+      "project_seconds": 0.5983425100002933,
+      "reference_seconds": 0.06535504699968442
+    },
+    {
+      "signal": "clean",
+      "chunk_bits": 20000,
+      "project_frames": 75,
+      "reference_frames": 92,
+      "same_frames": false,
+      "project_fragments": 153,
+      "reference_fragments": 186,
+      "project_validation": {
+        "crc8_failures": 0,
+        "length_failures": 0,
+        "crc16_attempts": 76,
+        "crc16_failures": 1,
+        "crc16_valid_frames": 75,
+        "command_length_failures": 0,
+        "valid_frames": 75,
+        "buffered_bytes": 0,
+        "pending_events": 76
+      },
+      "reference_validation": {
+        "access": 186,
+        "best_access_distance": 0,
+        "access_bits": 40,
+        "best_access_hex": "74B914492E",
+        "best_access_inverted": false,
+        "fragments": 186,
+        "header_reject": 0,
+        "crc8_errors": 0,
+        "crc16_errors": 0,
+        "valid_frames": 92
+      },
+      "project_seconds": 1.6593046280004273,
+      "reference_seconds": 0.06541200399988156
+    },
+    {
+      "signal": "synthetic_bit_flips",
+      "probability": 0.002,
+      "chunk_bits": 256,
+      "project_frames": 52,
+      "reference_frames": 52,
+      "same_frames": true,
+      "project_fragments": 186,
+      "reference_fragments": 186,
+      "project_validation": {
+        "crc8_failures": 4,
+        "length_failures": 0,
+        "crc16_attempts": 85,
+        "crc16_failures": 33,
+        "crc16_valid_frames": 52,
+        "command_length_failures": 0,
+        "valid_frames": 52,
+        "buffered_bytes": 0,
+        "pending_events": 89
+      },
+      "reference_validation": {
+        "access": 186,
+        "best_access_distance": 0,
+        "access_bits": 40,
+        "best_access_hex": "74B914492E",
+        "best_access_inverted": false,
+        "fragments": 186,
+        "header_reject": 0,
+        "crc8_errors": 3,
+        "crc16_errors": 33,
+        "valid_frames": 52
+      },
+      "project_seconds": 0.11270389899982547,
+      "reference_seconds": 0.07069966600010957
+    },
+    {
+      "signal": "synthetic_bit_flips",
+      "probability": 0.01,
+      "chunk_bits": 256,
+      "project_frames": 11,
+      "reference_frames": 11,
+      "same_frames": true,
+      "project_fragments": 186,
+      "reference_fragments": 186,
+      "project_validation": {
+        "crc8_failures": 22,
+        "length_failures": 0,
+        "crc16_attempts": 60,
+        "crc16_failures": 49,
+        "crc16_valid_frames": 11,
+        "command_length_failures": 0,
+        "valid_frames": 11,
+        "buffered_bytes": 0,
+        "pending_events": 82
+      },
+      "reference_validation": {
+        "access": 186,
+        "best_access_distance": 0,
+        "access_bits": 40,
+        "best_access_hex": "74B914492E",
+        "best_access_inverted": false,
+        "fragments": 186,
+        "header_reject": 0,
+        "crc8_errors": 18,
+        "crc16_errors": 49,
+        "valid_frames": 11
+      },
+      "project_seconds": 0.11135680899951694,
+      "reference_seconds": 0.06878644500011433
+    }
+  ],
+  "oversize_header": {
+    "payload_length": 65535,
+    "following_valid_frames": 10,
+    "project_frames": 0,
+    "reference_frames": 10,
+    "project_buffered_bytes": 315,
+    "reference_buffered_bytes": 0
+  },
+  "runtime": "GNU Radio 3.10.7.0; Python /usr/bin/python3",
+  "frozen_iq": {
+    "path": "/tmp/pluto_info_reference_comparison.c64",
+    "sha256": "edd6797d79028ffa743778dd3bd49ac5a43e9614f9fb3255495f1a90699db687",
+    "samples": 4000000,
+    "sample_rate_hz": 2000000,
+    "project_bits": 42548,
+    "reference_bits": 42548,
+    "different_bits": 0,
+    "project_frames": 92,
+    "reference_own_deframer_frames": 92,
+    "same_ordered_frame_hashes": true
+  }
+}
