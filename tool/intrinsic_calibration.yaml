@@ -13,7 +13,7 @@ camera:
 board:
   columns: 11                  # 9 行 × 12 列方格对应 11 列内角点
   rows: 8                      # 9 行 × 12 列方格对应 8 行内角点
-  square_size_mm: 16           # 用户实测方格边长，单位 mm
+  square_size_mm: 17           # 用户实测方格边长，单位 mm
 capture:
   min_samples: 15               # 工程采样门槛，不代表达到此数就一定准确
   max_samples: 80
