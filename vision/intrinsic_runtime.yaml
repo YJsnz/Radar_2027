@@ -6,7 +6,7 @@ max_rms_px: 0.5
 
 solution:
   # 填写 tool/intrinsic_calibration.yaml 输出的 solution-*/ 目录；相对本 YAML 解析。
-  directory: ""
+  directory: "../tool/data/intrinsics/20261119T091649Z-8bfb585a/solution-20261119T091745Z-97c124b0"
 
 camera:
   model: MV-SUA133GC-T
