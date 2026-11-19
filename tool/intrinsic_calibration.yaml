@@ -11,9 +11,9 @@ camera:
   lens: ""                     # 填写实际镜头型号/焦距，不能从相机型号推定
   focus: ""                    # 记录对焦位置/锁定方式；标定后不要改焦距或对焦
 board:
-  columns: null                # 内角点列数 = 方格列数 - 1
-  rows: null                   # 内角点行数 = 方格行数 - 1
-  square_size_mm: null         # 实测一个方格的边长，单位 mm
+  columns: 11                  # 9 行 × 12 列方格对应 11 列内角点
+  rows: 8                      # 9 行 × 12 列方格对应 8 行内角点
+  square_size_mm: 16           # 用户实测方格边长，单位 mm
 capture:
   min_samples: 15               # 工程采样门槛，不代表达到此数就一定准确
   max_samples: 80
