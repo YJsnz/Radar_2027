@@ -179,7 +179,7 @@ class IntrinsicWindow(QMainWindow):
         split.setSizes([365, 885])
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.refresh)
-        self.timer.start(100)
+        self.timer.start(66)
         self.update_summary()
         self.refresh()
 
@@ -392,7 +392,7 @@ class IntrinsicWindow(QMainWindow):
                 cv2.drawChessboardCorners(display, self.settings.board[:2], detection['corners'], True)
             rgb = cv2.cvtColor(display, cv2.COLOR_BGR2RGB)
             image = QImage(rgb.data, rgb.shape[1], rgb.shape[0], rgb.strides[0], QImage.Format_RGB888).copy()
-            self.preview.setPixmap(QPixmap.fromImage(image).scaled(self.preview.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation))
+            self.preview.setPixmap(QPixmap.fromImage(image).scaled(self.preview.size(), Qt.KeepAspectRatio, Qt.FastTransformation))
             device = metadata.get('device') or {}
             self.camera_label.setText(
                 f"{'实时' if live else '最后一帧 / 离线'} · {frame.shape[1]}×{frame.shape[0]} · "

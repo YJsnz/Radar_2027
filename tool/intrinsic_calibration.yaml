@@ -5,7 +5,7 @@ camera:
   serial: ""                   # 单台可留空；多台必须填写 SDK 序列号
   exposure_us: 11000            # 使用项目现有手动曝光接口，单位 μs
   frame_timeout_ms: 500
-  preview_fps: 8
+  preview_fps: 15
   expected_width: null          # 可填写比赛使用的实际输出宽度；不填则读取首帧
   expected_height: null         # 不自动修改/缩放相机分辨率或 ROI
   lens: ""                     # 填写实际镜头型号/焦距，不能从相机型号推定

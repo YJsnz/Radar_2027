@@ -119,13 +119,18 @@ def detect_board(image, settings):
         return {'corners': None, 'reason': '请在 YAML 填写内角点列数、行数和方格边长'}
     columns, rows, _ = settings.board
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    if hasattr(cv2, 'findChessboardCornersSB'):
+    found, corners = cv2.findChessboardCorners(
+        gray, (columns, rows), cv2.CALIB_CB_NORMALIZE_IMAGE | cv2.CALIB_CB_FAST_CHECK
+    )
+    if found:
+        corners = cv2.cornerSubPix(
+            gray, corners, (5, 5), (-1, -1),
+            (cv2.TERM_CRITERIA_EPS+cv2.TERM_CRITERIA_MAX_ITER, 30, .001),
+        )
+    elif hasattr(cv2, 'findChessboardCornersSB'):
+        # Keep the more robust detector for low-contrast or strongly skewed boards;
+        # it is intentionally a fallback because it is much slower per preview frame.
         found, corners = cv2.findChessboardCornersSB(gray, (columns, rows), cv2.CALIB_CB_NORMALIZE_IMAGE)
-    else:
-        found, corners = cv2.findChessboardCorners(gray, (columns, rows))
-        if found:
-            corners = cv2.cornerSubPix(gray, corners, (5, 5), (-1, -1),
-                                      (cv2.TERM_CRITERIA_EPS+cv2.TERM_CRITERIA_MAX_ITER, 30, .001))
     if not found:
         return {'corners': None, 'reason': '未检测到完整棋盘格，请检查内角点行列数、曝光和摆放'}
     points = corners.reshape(rows, columns, 2)
