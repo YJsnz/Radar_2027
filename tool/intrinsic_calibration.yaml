@@ -1,7 +1,7 @@
 # 所有参数在此填写；修改后点击工具中的“重新加载 YAML / 新建数据集”。
 schema: shark.radar.intrinsic_tool.v1
 camera:
-  expected_model: MV-SUA133GC-T  # 记录目标型号；SDK 实际产品名另行保存，不猜测同名/别名
+  expected_model: MV-SUA133GC  # 与 MindVision SDK 实际返回的产品名一致
   serial: ""                   # 单台可留空；多台必须填写 SDK 序列号
   exposure_us: 11000            # 使用项目现有手动曝光接口，单位 μs
   frame_timeout_ms: 500

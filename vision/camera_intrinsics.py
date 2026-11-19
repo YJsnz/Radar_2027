@@ -106,13 +106,20 @@ class RuntimeCameraIntrinsics:
         except (OSError, yaml.YAMLError) as error:
             raise CameraIntrinsicsError(f"无法读取相机内参运行配置 {path}: {error}") from error
 
-        expected = {"schema", "enabled", "physical_validation_confirmed", "max_rms_px", "solution", "camera"}
+        expected = {
+            "schema", "enabled", "physical_validation_confirmed",
+            "allow_unverified_candidate", "max_rms_px", "solution", "camera",
+        }
         if not isinstance(values, dict) or set(values) != expected:
             raise CameraIntrinsicsError(f"内参运行 YAML 顶层字段应为：{sorted(expected)}")
         if values["schema"] != "shark.radar.intrinsic_runtime.v1":
             raise CameraIntrinsicsError("不支持的相机内参运行配置 schema")
-        if not isinstance(values["enabled"], bool) or not isinstance(values["physical_validation_confirmed"], bool):
-            raise CameraIntrinsicsError("enabled 与 physical_validation_confirmed 必须填写 true/false")
+        if any(not isinstance(values[key], bool) for key in (
+            "enabled", "physical_validation_confirmed", "allow_unverified_candidate",
+        )):
+            raise CameraIntrinsicsError(
+                "enabled、physical_validation_confirmed 与 allow_unverified_candidate 必须填写 true/false"
+            )
         if isinstance(values["max_rms_px"], bool) or not isinstance(values["max_rms_px"], (int, float)):
             raise CameraIntrinsicsError("max_rms_px 必须是数值")
         if not math.isfinite(values["max_rms_px"]) or not 0.01 <= values["max_rms_px"] <= 10:
@@ -127,12 +134,14 @@ class RuntimeCameraIntrinsics:
 
         if not values["enabled"]:
             return None
-        if not values["physical_validation_confirmed"]:
+        allow_candidate = values["allow_unverified_candidate"]
+        if not values["physical_validation_confirmed"] and not allow_candidate:
             raise CameraIntrinsicsError(
                 "内参尚未通过实体棋盘和独立几何核验；完成核验后才可在 YAML 中确认 physical_validation_confirmed"
             )
-        if any(not values["camera"][key].strip() for key in camera_fields):
-            raise CameraIntrinsicsError("启用内参前必须填写并核对相机型号、序列号、镜头和对焦位置")
+        required_identity = ("model", "serial") if allow_candidate else camera_fields
+        if any(not values["camera"][key].strip() for key in required_identity):
+            raise CameraIntrinsicsError("启用内参前必须填写并核对相机型号和序列号；正式验收还需记录镜头与对焦")
         solution_text = str(values["solution"]["directory"] or "").strip()
         if not solution_text:
             raise CameraIntrinsicsError("启用内参时必须填写 solution.directory")
@@ -161,14 +170,13 @@ class RuntimeCameraIntrinsics:
             raise CameraIntrinsicsError("内参报告缺少 SDK 相机身份信息")
         expected_camera = values["camera"]
         profile_pairs = (
-            (metadata.get("expected_model"), expected_camera["model"], "YAML 目标型号"),
             (device.get("product_name"), expected_camera["model"], "SDK 产品型号"),
             (device.get("serial"), expected_camera["serial"], "相机序列号"),
             (metadata.get("lens"), expected_camera["lens"], "镜头记录"),
             (metadata.get("focus"), expected_camera["focus"], "对焦记录"),
         )
         for actual, expected_value, label in profile_pairs:
-            if not actual or str(actual).strip() != expected_value.strip():
+            if (not allow_candidate and not actual) or str(actual or "").strip() != expected_value.strip():
                 raise CameraIntrinsicsError(f"运行 YAML 的{label}与内参报告不一致或为空")
         resolution = metadata.get("resolution")
         image_size = metadata.get("image_size")
@@ -240,5 +248,5 @@ class RuntimeCameraIntrinsics:
 
 
 def load_runtime_intrinsics(config_path=None):
-    """未启用时返回 None；启用时必须已有经确认的实机标定结果。"""
+    """未启用时返回 None；未核验候选解须由 YAML 显式允许。"""
     return RuntimeCameraIntrinsics.load(config_path)

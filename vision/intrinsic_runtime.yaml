@@ -1,7 +1,8 @@
-# 比赛图像与外参标定使用同一套去畸变设置。完成真实棋盘格采集和独立核验前保持关闭。
+# 当前为显式启用的本机候选解；通过身份/图像模式检查，但尚未完成独立几何核验。
 schema: shark.radar.intrinsic_runtime.v1
-enabled: false
+enabled: true
 physical_validation_confirmed: false
+allow_unverified_candidate: true
 max_rms_px: 0.5
 
 solution:
@@ -9,7 +10,7 @@ solution:
   directory: "../tool/data/intrinsics/20261119T091649Z-8bfb585a/solution-20261119T091745Z-97c124b0"
 
 camera:
-  model: MV-SUA133GC-T
-  serial: ""  # 与 SDK 及标定报告中的序列号完全一致
-  lens: ""    # 与内参采集 YAML 中的记录完全一致
-  focus: ""   # 与内参采集 YAML 中的记录完全一致
+  model: MV-SUA133GC
+  serial: "048170110020"  # 来自本次内参采集报告
+  lens: ""    # 尚未记录；候选模式不据此声称已完成实体验收
+  focus: ""   # 尚未记录；候选模式不据此声称已完成实体验收

@@ -176,6 +176,8 @@ if config['filter']['type'] == 'sliding_window':
 # 图像测试模式
 camera_mode = config['global']['camera_mode']  # test / hik / mindvision / video
 runtime_camera_intrinsics = load_runtime_intrinsics()
+if runtime_camera_intrinsics is not None and not runtime_camera_intrinsics.values["physical_validation_confirmed"]:
+    print("警告：当前加载的是未完成独立几何核验的本机候选内参；仅供当前设备调试，不代表比赛验收")
 if runtime_camera_intrinsics is not None and camera_mode != 'mindvision':
     raise ValueError('已启用的 MV-SUA133GC-T 内参只能用于 mindvision 相机输入')
 serial_error = None
